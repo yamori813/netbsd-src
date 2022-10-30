@@ -1,0 +1,29 @@
+#	$NetBSD$
+#
+#	standard NetBSD/evbarm options for Mindspeed Comcerto 1000
+#
+
+machine		evbarm arm
+include		"arch/evbarm/conf/std.evbarm"
+
+# Pull in i.mx31 config definitions.
+include		"arch/evbarm/conf/files.m83xxx"
+
+makeoptions 	CPUFLAGS="-march=armv6k -mtune=arm1136j-s -mfpu=vfp"
+
+options 	ARM11_PMC
+options 	ARM11_CACHE_WRITE_THROUGH
+options 	ARM_HAS_VBAR
+options 	FPU_VFP
+options 	__HAVE_CPU_COUNTER
+options 	__HAVE_FAST_SOFTINTS            # should be in types.h
+options 	__HAVE_CPU_UAREA_ALLOC_IDLELWP
+options 	TPIDRPRW_IS_CURCPU
+
+
+makeoptions 	LOADADDRESS="0x80100000"
+makeoptions 	BOARDTYPE="imx31"
+makeoptions 	BOARDMKFRAG="${THISARM}/conf/mk.m83xxx"
+
+options 	ARM_INTR_IMPL="<arch/arm/imx/imx31_intr.h>"
+options 	ARM_GENERIC_TODR

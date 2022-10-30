@@ -1,0 +1,9 @@
+#	$NetBSD$
+#
+#	Mindspeed Comcerto 1000
+#
+
+file	arch/evbarm/mindspeed/m83xxx_machdep.c
+
+# CPU support and integrated peripherals
+include "arch/arm/mindspeed/files.m83xxx"
