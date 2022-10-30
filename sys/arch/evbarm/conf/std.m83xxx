@@ -22,7 +22,7 @@ options 	TPIDRPRW_IS_CURCPU
 
 
 makeoptions 	LOADADDRESS="0x80100000"
-makeoptions 	BOARDTYPE="imx31"
+makeoptions 	BOARDTYPE="m83xxx"
 makeoptions 	BOARDMKFRAG="${THISARM}/conf/mk.m83xxx"
 
 options 	ARM_INTR_IMPL="<arch/arm/imx/imx31_intr.h>"
