@@ -1,6 +1,6 @@
-#	$NetBSD: files.imx31,v 1.8 2017/09/08 05:29:12 hkenken Exp $
+#	$NetBSD$
 #
-# Configuration info for the Freescale i.MX31
+# Configuration info for the Mindspeed Comcerto 1000
 #
 
 defparam opt_imx.h				MEMSIZE
