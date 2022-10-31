@@ -1,4 +1,4 @@
-/*	$NetBSD: imx31lk_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $	*/
+/*	$NetBSD: m83xxx_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $	*/
 /*-
  * Copyright (c) 2011 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -32,7 +32,7 @@
 #include <arm/armreg.h>
 #include "assym.h"
 
-RCSID("$NetBSD: imx31lk_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $")
+RCSID("$NetBSD: m83xxx_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $")
 
 #ifndef SDRAM_START
 #define SDRAM_START 0x80000000
@@ -45,9 +45,9 @@ RCSID("$NetBSD: imx31lk_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $")
 
 	.text
 
-	.global _C_LABEL(imx31lk_start)
+	.global _C_LABEL(m83xxx_start)
 
-ENTRY_NP(imx31lk_start)
+ENTRY_NP(m83xxx_start)
 	cpsid	if, #PSR_SVC32_MODE
 
 	/*
@@ -126,4 +126,4 @@ ENTRY_NP(imx31lk_start)
 	.word	0x80000000|L1_S_AP_KRW|L1_S_C|L1_S_B|L1_TYPE_S
 .Lio_pde:
 	.word	0x43f00000|L1_S_AP_KRW|L1_TYPE_S
-END(imx31lk_start)
+END(m83xxx_start)

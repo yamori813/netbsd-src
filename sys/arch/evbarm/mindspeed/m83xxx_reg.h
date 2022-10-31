@@ -1,4 +1,4 @@
-/* $NetBSD: imx31lk_reg.h,v 1.2 2008/04/27 18:58:46 matt Exp $ */
+/* $NetBSD: m83xxx_reg.h,v 1.2 2008/04/27 18:58:46 matt Exp $ */
 
 /* derived from: */
 /*	NetBSD: viper_reg.h,v 1.2 2005/12/11 12:17:11 christos Exp */
@@ -35,14 +35,12 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _EVBARM_IMX31_IMX31LK_REG_H
-#define _EVBARM_IMX31_IMX31LK_REG_H
+#ifndef _EVBARM_MINDSPEED_M83XXX_REG_H
+#define _EVBARM_MINDSPEED_M83XXX_REG_H
 
-
-#define IMX31LITEKIT_UART1_VBASE	0xfd000000
-#define IMX31LITEKIT_SM0_BASE		0xb4100000	/* physical */
+#define M83XXX_UART1_VBASE	0xfd000000
 
 #define ioreg_read(a)		(*(volatile uint32_t *)(a))
 #define ioreg_write(a,v)	(*(volatile uint32_t *)(a)=(v))
 
-#endif /* _EVBARM_IMX31_IMX31LK_REG_H */
+#endif /* _EVBARM_MINDSPEED_M83XXX_REG_H */
