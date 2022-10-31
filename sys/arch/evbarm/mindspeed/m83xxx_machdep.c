@@ -1,9 +1,4 @@
-/* $NetBSD: m83xxx_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $ */
-
-/*
- * Startup routines for the ZOOM iMX31 LITEKIT.
- * Below you can trace the increasingly impressive lineage ;)
- */
+/* $NetBSD$ */
 
 /*
  * Copyright (c) 2002, 2003, 2005  Genetec Corporation.  All rights reserved.
@@ -110,7 +105,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: m83xxx_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_arm_debug.h"
 #include "opt_console.h"
