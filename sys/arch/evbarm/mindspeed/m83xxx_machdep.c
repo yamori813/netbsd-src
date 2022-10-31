@@ -1,4 +1,4 @@
-/* $NetBSD: imx31lk_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $ */
+/* $NetBSD: m83xxx_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $ */
 
 /*
  * Startup routines for the ZOOM iMX31 LITEKIT.
@@ -110,7 +110,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: imx31lk_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $");
+__KERNEL_RCSID(0, "$NetBSD: m83xxx_machdep.c,v 1.29 2021/08/17 22:00:28 andvar Exp $");
 
 #include "opt_arm_debug.h"
 #include "opt_console.h"
@@ -200,7 +200,7 @@ pv_addr_t kernel_pt_table[NUM_KERNEL_PTS];
 void	process_kernel_args(char *);
 #endif
 
-void	imx31lk_consinit(int);
+void	m83xxx_consinit(int);
 void	kgdb_port_init(void);
 void	change_clock(uint32_t v);
 
@@ -294,7 +294,7 @@ cpu_reboot(int howto, char *bootstr)
 
 /*
  * Static device mappings. These peripheral registers are mapped at
- * fixed virtual addresses very early in imx31lk_start() so that we
+ * fixed virtual addresses very early in m83xxx_start() so that we
  * can use them while booting the kernel, and stay at the same address
  * throughout whole kernel's life time.
  *
@@ -305,9 +305,9 @@ cpu_reboot(int howto, char *bootstr)
 #define _A(a)   ((a) & ~L1_S_OFFSET)
 #define _S(s)   (((s) + L1_S_SIZE - 1) & ~(L1_S_SIZE-1))
 
-static const struct pmap_devmap imx31lk_devmap[] = {
+static const struct pmap_devmap m83xxx_devmap[] = {
     {
-	IMX31LITEKIT_UART1_VBASE,
+	M83XXX_UART1_VBASE,
 	_A(UART1_BASE),
 	_S(L1_S_SIZE),
 	VM_PROT_READ|VM_PROT_WRITE,
@@ -344,10 +344,10 @@ initarm(void *arg)
 	vaddr_t l1pagetable;
 
 	disable_interrupts(I32_bit|F32_bit);
-		/* XXX move to imx31lk_start.S */
+		/* XXX move to m83xxx_start.S */
 
 	/* Register devmap for devices we mapped in start */
-	pmap_devmap_register(imx31lk_devmap);
+	pmap_devmap_register(m83xxx_devmap);
 
 #ifdef NOTYET
 	/* start 32.768 kHz OSC */
@@ -372,7 +372,7 @@ initarm(void *arg)
 	kgdb_port_init();
 #endif
 	/* Talk to the user */
-	printf("\nNetBSD/evbarm (imx31lk) booting ...\n");
+	printf("\nNetBSD/evbarm (m83xxx) booting ...\n");
 
 #if 0
 	/*
@@ -606,7 +606,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 	 * map integrated peripherals at same address in l1pagetable
 	 * so that we can continue to use console.
 	 */
-	pmap_devmap_bootstrap(l1pagetable, imx31lk_devmap);
+	pmap_devmap_bootstrap(l1pagetable, m83xxx_devmap);
 
 	/*
 	 * Now we have the real page tables in place so we can switch to them.
@@ -640,7 +640,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 	cpu_setttb(kernel_l1pt.pv_pa, true);
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2));
-	//imx31lk_consinit(2);
+	//m83xxx_consinit(2);
 
 	/*
 	 * Moved from cpu_startup() as data_abort_handler() references
@@ -772,7 +772,7 @@ int comkgdbmode = KGDB_DEVMODE;
 
 #if 0
 void
-imx31lk_consinit(int phase)
+m83xxx_consinit(int phase)
 {
 	static int ophase = 0;
 	intptr_t bh;
@@ -784,7 +784,7 @@ imx31lk_consinit(int phase)
 			imxuart_init(0, UART1_BASE);
 			break;
 		case 2:
-			bh = IMX31LITEKIT_UART1_VBASE;
+			bh = M83XXX_UART1_VBASE;
 			bh |= (UART1_BASE & ~_A(UART1_BASE));
 			imxuart_init(0, bh);
 			break;
@@ -796,7 +796,7 @@ imx31lk_consinit(int phase)
 void
 consinit(void)
 {
-	// imx31lk_consinit(2);
+	// m83xxx_consinit(2);
 }
 
 #ifdef KGDB
