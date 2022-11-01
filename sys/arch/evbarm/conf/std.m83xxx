@@ -9,7 +9,7 @@ include		"arch/evbarm/conf/std.evbarm"
 # Pull in i.mx31 config definitions.
 include		"arch/evbarm/conf/files.m83xxx"
 
-makeoptions 	CPUFLAGS="-march=armv6k -mtune=arm1136j-s -mfpu=vfp"
+makeoptions 	CPUFLAGS="-march=armv6k -mtune=arm1136j-s"
 
 options 	ARM11_PMC
 options 	ARM11_CACHE_WRITE_THROUGH
