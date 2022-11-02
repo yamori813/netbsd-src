@@ -162,6 +162,11 @@ __KERNEL_RCSID(0, "$NetBSD$");
  */
 #define KERNEL_VM_SIZE		0x0C000000
 
+/* filled in before cleaning bss. keep in .data */
+u_int uboot_args[4] __attribute__((__section__(".data")));
+
+u_long kern_vtopdiff;
+
 BootConfig bootconfig;		/* Boot config storage */
 char *boot_args = NULL;
 char *boot_file = NULL;
@@ -303,7 +308,8 @@ cpu_reboot(int howto, char *bootstr)
 static const struct pmap_devmap m83xxx_devmap[] = {
     {
 	M83XXX_UART1_VBASE,
-	_A(UART1_BASE),
+//	_A(UART1_BASE),
+	_A(0x10090000),
 	_S(L1_S_SIZE),
 	VM_PROT_READ|VM_PROT_WRITE,
 	PTE_NOCACHE,
@@ -820,3 +826,22 @@ kgdb_port_init(void)
 #endif
 }
 #endif
+
+void m83xxx_platform_early_putchar(char c);
+void __noasan
+m83xxx_platform_early_putchar(char c)
+{
+#ifdef CONSADDR
+//#define CONSADDR_VA     (CONSADDR - EXYNOS_CORE_PBASE + EXYNOS_CORE_VBASE)
+
+	volatile uint32_t *uartaddr = cpu_earlydevice_va_p() ?
+//	    (volatile uint32_t *)CONSADDR_VA :
+	    (volatile uint32_t *)CONSADDR :
+	    (volatile uint32_t *)CONSADDR;
+
+	while ((uartaddr[5] & (1 << 9)) != 0)
+		;
+
+        uartaddr[0] = c;
+#endif
+}
