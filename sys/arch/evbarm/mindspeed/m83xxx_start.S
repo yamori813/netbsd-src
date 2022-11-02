@@ -48,6 +48,9 @@ RCSID("$NetBSD: m83xxx_start.S,v 1.7 2020/11/28 14:29:31 skrll Exp $")
 	.global _C_LABEL(m83xxx_start)
 
 ENTRY_NP(m83xxx_start)
+	ldr	r2, .Luart
+	mov	r1, #78
+	strb	r1, [r2]
 	cpsid	if, #PSR_SVC32_MODE
 
 	/*
@@ -125,5 +128,8 @@ ENTRY_NP(m83xxx_start)
 .Lsdram_pde:
 	.word	0x80000000|L1_S_AP_KRW|L1_S_C|L1_S_B|L1_TYPE_S
 .Lio_pde:
-	.word	0x43f00000|L1_S_AP_KRW|L1_TYPE_S
+/*	.word	0x43f00000|L1_S_AP_KRW|L1_TYPE_S*/
+	.word	0x10000000|L1_S_AP_KRW|L1_TYPE_S
+.Luart:
+	.word	0x10090000
 END(m83xxx_start)

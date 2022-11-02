@@ -38,7 +38,7 @@
 #ifndef _EVBARM_MINDSPEED_M83XXX_REG_H
 #define _EVBARM_MINDSPEED_M83XXX_REG_H
 
-#define M83XXX_UART1_VBASE	0x10090000
+#define M83XXX_UART1_VBASE	0xfd000000
 
 #define ioreg_read(a)		(*(volatile uint32_t *)(a))
 #define ioreg_write(a,v)	(*(volatile uint32_t *)(a)=(v))
