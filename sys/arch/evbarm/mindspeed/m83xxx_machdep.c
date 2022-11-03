@@ -834,14 +834,16 @@ m83xxx_platform_early_putchar(char c)
 #ifdef CONSADDR
 //#define CONSADDR_VA     (CONSADDR - EXYNOS_CORE_PBASE + EXYNOS_CORE_VBASE)
 
-	volatile uint32_t *uartaddr = cpu_earlydevice_va_p() ?
-//	    (volatile uint32_t *)CONSADDR_VA :
-	    (volatile uint32_t *)CONSADDR :
-	    (volatile uint32_t *)CONSADDR;
+	volatile uint32_t *uartaddr;
+	if(cpu_earlydevice_va_p()) {
+//		uartaddr = (volatile uint32_t *)CONSADDR_VA;
+	} else {
+		uartaddr = (volatile uint32_t *)CONSADDR;
 
-	while ((uartaddr[5] & (1 << 6)) == 0)
-		;
+		while ((uartaddr[5] & (1 << 6)) == 0)
+			;
 
-	uartaddr[0] = c;
+		uartaddr[0] = c;
+	}
 #endif
 }
