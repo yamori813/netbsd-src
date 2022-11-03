@@ -839,9 +839,9 @@ m83xxx_platform_early_putchar(char c)
 	    (volatile uint32_t *)CONSADDR :
 	    (volatile uint32_t *)CONSADDR;
 
-	while ((uartaddr[5] & (1 << 9)) != 0)
+	while ((uartaddr[5] & (1 << 6)) == 0)
 		;
 
-        uartaddr[0] = c;
+	uartaddr[0] = c;
 #endif
 }
