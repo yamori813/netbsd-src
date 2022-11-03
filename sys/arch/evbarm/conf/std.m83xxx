@@ -14,7 +14,6 @@ makeoptions 	CPUFLAGS="-march=armv6k -mtune=arm1136j-s"
 options 	ARM11_PMC
 options 	ARM11_CACHE_WRITE_THROUGH
 options 	ARM_HAS_VBAR
-options 	FPU_VFP
 options 	__HAVE_CPU_COUNTER
 options 	__HAVE_FAST_SOFTINTS            # should be in types.h
 options 	__HAVE_CPU_UAREA_ALLOC_IDLELWP
