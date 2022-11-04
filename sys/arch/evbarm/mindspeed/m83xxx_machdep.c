@@ -196,6 +196,7 @@ pv_addr_t kernel_pt_table[NUM_KERNEL_PTS];
 
 /* Prototypes */
 
+void m83xxx_platform_early_putchar(char c);
 #if 0
 void	process_kernel_args(char *);
 #endif
@@ -349,6 +350,7 @@ initarm(void *arg)
 
 	/* Register devmap for devices we mapped in start */
 	pmap_devmap_register(m83xxx_devmap);
+m83xxx_platform_early_putchar('M');
 
 #ifdef NOTYET
 	/* start 32.768 kHz OSC */
@@ -827,7 +829,6 @@ kgdb_port_init(void)
 }
 #endif
 
-void m83xxx_platform_early_putchar(char c);
 void __noasan
 m83xxx_platform_early_putchar(char c)
 {
@@ -836,7 +837,12 @@ m83xxx_platform_early_putchar(char c)
 
 	volatile uint32_t *uartaddr;
 	if(cpu_earlydevice_va_p()) {
-//		uartaddr = (volatile uint32_t *)CONSADDR_VA;
+		uartaddr = (volatile uint32_t *)M83XXX_UART1_VBASE;
+
+		while ((uartaddr[5] & (1 << 6)) == 0)
+			;
+
+		uartaddr[0] = c;
 	} else {
 		uartaddr = (volatile uint32_t *)CONSADDR;
 
