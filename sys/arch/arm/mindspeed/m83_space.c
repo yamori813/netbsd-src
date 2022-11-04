@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /* derived from: */
-/*	$NetBSD: m83_space.c,v 1.6 2018/03/16 17:56:31 ryo Exp $ */
+/*	$NetBSD$ */
 
 /*
  * Copyright (c) 2001, 2002 Wasabi Systems, Inc.
@@ -74,7 +74,7 @@
  */
 
 /*
- * bus_space(9) support for Freescale iMX31 processor
+ * bus_space(9) support for Mindspeed Comcerto 1000
  */
 
 #include <sys/param.h>
