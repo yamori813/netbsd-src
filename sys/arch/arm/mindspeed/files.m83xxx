@@ -19,7 +19,7 @@ file	arch/arm/imx/imx31_l2cc.c		l2cc
 # iMX AHB
 device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	ahb at mainbus
-file	arch/arm/imx/imx31_ahb.c		ahb
+file	arch/arm/mindspeed/m83xxx_ahb.c		ahb
 
 # iMX AdVanced Interrupt Controller
 include "arch/arm/pic/files.pic"
@@ -62,9 +62,9 @@ defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 
 # iMX UART
 device	imxuart
-attach	imxuart at aips with imx31_uart
+attach	imxuart at aips with m83xxx_uart
 file	arch/arm/imx/imxuart.c			imxuart	needs-flag
-file	arch/arm/imx/imx31_uart.c		imx31_uart
+file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
 defflag	opt_imxuart.h				IMXUARTCONSOLE
 
 attach	ehci at ahb with ehci_ahb : bus_dma_generic
