@@ -370,6 +370,7 @@ m83xxx_platform_early_putchar('M');
 #endif
 
 	consinit();
+m83xxx_platform_early_putchar('.');
 
 #ifdef KGDB
 	kgdb_port_init();
@@ -794,12 +795,31 @@ m83xxx_consinit(int phase)
 		}
 	}
 }
-#endif
 
 void
 consinit(void)
 {
 	// m83xxx_consinit(2);
+}
+#endif
+
+
+void
+consinit(void)
+{
+//	bus_space_handle_t ioh;
+	static int consinit_called = 0;
+
+	if (consinit_called)
+		return;
+
+	consinit_called = 1;
+
+	/* map the serial interface range to get a bus handle */
+//	bus_space_map(&m83xxx_bs_tag, 0x10090000, 0x4000, 0, &ioh);
+
+	/* initialize the console functions */
+//	imxuart_cnattach(&m83xxx_bs_tag, 0x10090000, 9600, 0);
 }
 
 #ifdef KGDB
