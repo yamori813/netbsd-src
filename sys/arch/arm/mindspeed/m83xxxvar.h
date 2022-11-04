@@ -1,9 +1,9 @@
-/*	$NetBSD: imx31var.h,v 1.3 2010/11/13 05:00:31 bsh Exp $	*/
+/*	$NetBSD$	*/
 
-#ifndef _ARM_IMX_IMX31VAR_H
-#define _ARM_IMX_IMX31VAR_H
+#ifndef _ARM_MINDSPEED_M83VAR_H
+#define _ARM_MINDSPEED_M83VAR_H
 
-extern struct bus_space imx_bs_tag;
+extern struct bus_space m83_bs_tag;
 
 struct aips_attach_args {
 	const char	*aipsa_name;
@@ -23,4 +23,4 @@ struct ahb_attach_args {
 	int		ahba_irqbase;
 };
 
-#endif	/* _ARM_IMX_IMX31VAR_H */
+#endif	/* _ARM_MINDSPEED_M83VAR_H */

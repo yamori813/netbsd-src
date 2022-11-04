@@ -8,13 +8,13 @@ defflag opt_imx.h				IMX51
 
 define	bus_dma_generic
 
-file	arch/arm/imx/imx_space.c
-file	arch/arm/imx/imx_dma.c		bus_dma_generic
+file	arch/arm/mindspeed/m83_space.c
+file	arch/arm/mindsoeed/m83_dma.c		bus_dma_generic
 
 # iMX L2 Cache Controller
-device	l2cc
-attach	l2cc at mainbus
-file	arch/arm/imx/imx31_l2cc.c		l2cc
+#device	l2cc
+#attach	l2cc at mainbus
+#file	arch/arm/imx/imx31_l2cc.c		l2cc
 
 # iMX AHB
 device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
