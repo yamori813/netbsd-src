@@ -1,10 +1,8 @@
-/* $NetBSD$ */
-/*-
- * Copyright (c) 2007 The NetBSD Foundation, Inc.
- * All rights reserved.
- *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Matt Thomas.
+/*	$NetBSD$ */
+
+/*
+ * Copyright (c) 2009  Genetec Corporation.  All rights reserved.
+ * Written by Hashimoto Kenichi for Genetec Corporation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * THIS SOFTWARE IS PROVIDED BY GENETEC CORPORATION ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL GENETEC CORPORATION
  * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -28,14 +26,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M83REG_H_
-#define _ARM_MINDSPEED_M83REG_H_
+/*
+ * bus dma tag for i.MX31 processor.
+ * (Currently used only for LCD frame buffer)
+ */
 
-#define	UART1_BASE	0x43f90000
+#include <sys/cdefs.h>
+__KERNEL_RCSID(0, "$NetBSD$");
 
-#define	INTC_BASE	0x68000000
-#define	GPIO1_BASE	0x53fcc000
-#define	GPIO2_BASE	0x53fd0000
-#define	GPIO3_BASE	0x53fa4000
+#include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/device.h>
+#include <sys/mbuf.h>
 
-#endif /* _ARM_MINDSPEED_M83REG_H_ */
+#include <uvm/uvm_extern.h>
+
+#define	_ARM32_BUS_DMA_PRIVATE
+#include <sys/bus.h>
+
+struct arm32_bus_dma_tag m83_bus_dma_tag = {
+	_BUS_DMAMAP_FUNCS,
+	_BUS_DMAMEM_FUNCS,
+	_BUS_DMATAG_FUNCS,
+};
+

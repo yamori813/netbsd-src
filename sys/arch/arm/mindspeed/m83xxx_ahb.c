@@ -158,7 +158,7 @@ ahb_attach(device_t parent, device_t self, void *aux)
 
 	ahb_sc = sc;
 	sc->sc_dev = self;
-	sc->sc_memt = &imx_bs_tag;
+	sc->sc_memt = &m83_bs_tag;
 #if NBUS_DMA_GENERIC > 0
 	sc->sc_dmat = &imx_bus_dma_tag;
 #else
