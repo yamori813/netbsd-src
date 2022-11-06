@@ -5,5 +5,9 @@
 
 file	arch/evbarm/mindspeed/m83xxx_machdep.c
 
+file	arch/arm/arm32/arm32_boot.c
+file	arch/arm/arm32/arm32_kvminit.c
+file	arch/arm/arm32/arm32_reboot.c
+
 # CPU support and integrated peripherals
 include "arch/arm/mindspeed/files.m83xxx"

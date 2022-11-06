@@ -63,7 +63,7 @@ defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 # iMX UART
 device	imxuart
 attach	imxuart at aips with m83xxx_uart
-file	arch/arm/imx/imxuart.c			imxuart	needs-flag
+file	arch/arm/mindspeed/m83uart.c		imxuart	needs-flag
 file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
 defflag	opt_imxuart.h				IMXUARTCONSOLE
 
