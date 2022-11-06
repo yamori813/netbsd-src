@@ -156,6 +156,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #define	KERNEL_TEXT_BASE	(KERNEL_BASE + 0x00100000)
 #define	KERNEL_VM_BASE		(KERNEL_BASE + 0x01000000)
 
+#define KERNEL_BASE_PHYS	0x80000000
+
 /*
  * The range 0x81000000 - 0x8cffffff is available for kernel VM space
  * Core-logic registers and I/O mappings occupy 0xfd000000 - 0xffffffff
@@ -165,24 +167,28 @@ __KERNEL_RCSID(0, "$NetBSD$");
 /* filled in before cleaning bss. keep in .data */
 u_int uboot_args[4] __attribute__((__section__(".data")));
 
-u_long kern_vtopdiff;
+//u_long kern_vtopdiff;
 
 BootConfig bootconfig;		/* Boot config storage */
 char *boot_args = NULL;
 char *boot_file = NULL;
 
+/*
 vaddr_t physical_start;
 vaddr_t physical_freestart;
 vaddr_t physical_freeend;
 vaddr_t physical_end;
+*/
 u_int free_pages;
+
+extern struct bus_space m83_bs_tag;
 
 /*int debug_flags;*/
 #ifndef PMAP_STATIC_L1S
 int max_processes = 64;			/* Default number */
 #endif	/* !PMAP_STATIC_L1S */
 
-paddr_t msgbufphys;
+//paddr_t msgbufphys;
 
 #define KERNEL_PT_SYS		0	/* Page table for mapping proc0 zero page */
 #define KERNEL_PT_KERNEL	1	/* Page table for mapping kernel */
@@ -202,6 +208,7 @@ void	process_kernel_args(char *);
 #endif
 
 void	m83xxx_consinit(int);
+void	consinit2(void);
 void	kgdb_port_init(void);
 void	change_clock(uint32_t v);
 
@@ -231,6 +238,7 @@ int comcnmode = CONMODE;
  * Deal with any syncing, unmounting, dumping and shutdown hooks,
  * then reset the CPU.
  */
+#if 0
 void
 cpu_reboot(int howto, char *bootstr)
 {
@@ -292,6 +300,7 @@ cpu_reboot(int howto, char *bootstr)
 	cpu_reset();
 	/*NOTREACHED*/
 }
+#endif
 
 /*
  * Static device mappings. These peripheral registers are mapped at
@@ -305,6 +314,16 @@ cpu_reboot(int howto, char *bootstr)
 
 #define _A(a)   ((a) & ~L1_S_OFFSET)
 #define _S(s)   (((s) + L1_S_SIZE - 1) & ~(L1_S_SIZE-1))
+
+#ifndef CONMODE
+#define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
+#endif
+#ifndef CONSPEED
+#define CONSPEED        115200
+#endif
+
+int consmode = CONMODE;
+int consrate = CONSPEED;
 
 static const struct pmap_devmap m83xxx_devmap[] = {
     {
@@ -322,7 +341,7 @@ static const struct pmap_devmap m83xxx_devmap[] = {
 #define MEMSTART	0x80000000
 #endif
 #ifndef MEMSIZE
-#define MEMSIZE		0x8000000
+#define MEMSIZE		0x8000000		/* 128MB */
 #endif
 
 /*
@@ -341,15 +360,31 @@ static const struct pmap_devmap m83xxx_devmap[] = {
 vaddr_t
 initarm(void *arg)
 {
+/*
 	int loop;
 	int loop1;
 	vaddr_t l1pagetable;
+*/
+//	extern char KERNEL_BASE_phys[];
 
-	disable_interrupts(I32_bit|F32_bit);
+	/*
+	 * Heads up ... Setup the CPU / MMU / TLB functions
+	 */
+	if (set_cpufuncs())
+		panic("cpu not recognized!");
+m83xxx_platform_early_putchar('M');
+
+	kern_vtopdiff = KERNEL_BASE - KERNEL_BASE_PHYS;
+
+//	disable_interrupts(I32_bit|F32_bit);
 		/* XXX move to m83xxx_start.S */
 
+
 	/* Register devmap for devices we mapped in start */
-	pmap_devmap_register(m83xxx_devmap);
+//	pmap_devmap_register(m83xxx_devmap);
+	extern char ARM_BOOTSTRAP_LxPT[];
+	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m83xxx_devmap);
+
 m83xxx_platform_early_putchar('M');
 
 #ifdef NOTYET
@@ -359,18 +394,14 @@ m83xxx_platform_early_putchar('M');
 	imx31_intr_bootstrap(IMX31_INTCTL_VBASE);
 #endif
 
-	/*
-	 * Heads up ... Setup the CPU / MMU / TLB functions
-	 */
-	if (set_cpufuncs())
-		panic("cpu not recognized!");
+	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
+m83xxx_platform_early_putchar('M');
 
 #if 0
 	/* Calibrate the delay loop. */
 #endif
 
-	consinit();
-m83xxx_platform_early_putchar('.');
+	consinit2();
 
 #ifdef KGDB
 	kgdb_port_init();
@@ -394,6 +425,13 @@ m83xxx_platform_early_putchar('.');
 	bootconfig.dram[0].address = MEMSTART;
 	bootconfig.dram[0].pages = MEMSIZE / PAGE_SIZE;
 
+	arm32_bootmem_init(bootconfig.dram[0].address, MEMSIZE,
+//	     (uintptr_t) KERNEL_BASE_phys);
+	     (uintptr_t) 0x81000000);
+	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_HIGH, 0, m83xxx_devmap, true);
+	int rt =  initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE, NULL, 0);
+	return rt;
+#if 0
 	/*
 	 * Set up the variables that define the availability of
 	 * physical memory.  For now, we're going to set
@@ -415,6 +453,7 @@ m83xxx_platform_early_putchar('.');
 
 	physmem = (physical_end - physical_start) / PAGE_SIZE;
 
+m83xxx_platform_early_putchar('.');
 #ifdef VERBOSE_INIT_ARM
 	/* Tell the user about the memory */
 	printf("physmemory: %"PRIuPSIZE" pages at 0x%08lx -> 0x%08lx\n", physmem,
@@ -439,12 +478,14 @@ m83xxx_platform_early_putchar('.');
 	 * least one 16K aligned region.
 	 */
 
+m83xxx_platform_early_putchar('.');
 #ifdef VERBOSE_INIT_ARM
 	printf("Allocating page tables\n");
 #endif
 
 	free_pages = (physical_freeend - physical_freestart) / PAGE_SIZE;
 
+m83xxx_platform_early_putchar('x');
 #ifdef VERBOSE_INIT_ARM
 	printf("freestart = 0x%08lx, free_pages = %d (0x%08x)\n",
 	       physical_freestart, free_pages, free_pages);
@@ -463,8 +504,10 @@ m83xxx_platform_early_putchar('.');
 	free_pages -= (np);				\
 	memset((char *)(var), 0, ((np) * PAGE_SIZE));
 
+m83xxx_platform_early_putchar('x');
 	loop1 = 0;
 	for (loop = 0; loop <= NUM_KERNEL_PTS; ++loop) {
+m83xxx_platform_early_putchar('+');
 		/* Are we 16KB aligned for an L1 ? */
 		if (((physical_freeend - L1_TABLE_SIZE) & (L1_TABLE_SIZE - 1)) == 0
 		    && kernel_l1pt.pv_pa == 0) {
@@ -476,6 +519,7 @@ m83xxx_platform_early_putchar('.');
 		}
 	}
 
+m83xxx_platform_early_putchar('x');
 	/* This should never be able to happen but better confirm that. */
 	if (!kernel_l1pt.pv_pa || (kernel_l1pt.pv_pa & (L1_TABLE_SIZE-1)) != 0)
 		panic("initarm: Failed to align the kernel page directory");
@@ -486,6 +530,7 @@ m83xxx_platform_early_putchar('.');
 	 * shared by all processes.
 	 */
 	alloc_pages(systempage.pv_pa, 1);
+m83xxx_platform_early_putchar('x');
 
 	/* Allocate stacks for all modes */
 	valloc_pages(irqstack, IRQ_STACK_SIZE);
@@ -493,6 +538,7 @@ m83xxx_platform_early_putchar('.');
 	valloc_pages(undstack, UND_STACK_SIZE);
 	valloc_pages(kernelstack, UPAGES);
 
+m83xxx_platform_early_putchar('x');
 #ifdef VERBOSE_INIT_ARM
 	printf("IRQ stack: p0x%08lx v0x%08lx\n", irqstack.pv_pa,
 	    irqstack.pv_va);
@@ -510,6 +556,7 @@ m83xxx_platform_early_putchar('.');
 	 */
 	alloc_pages(msgbufphys, round_page(MSGBUFSIZE) / PAGE_SIZE);
 
+m83xxx_platform_early_putchar('.');
 	/*
 	 * Ok we have allocated physical pages for the primary kernel
 	 * page tables
@@ -541,6 +588,7 @@ m83xxx_platform_early_putchar('.');
 	pmap_curmaxkvaddr =
 	    KERNEL_VM_BASE + (KERNEL_PT_VMDATA_NUM * 0x00400000);
 
+m83xxx_platform_early_putchar('.');
 #ifdef VERBOSE_INIT_ARM
 	printf("Mapping kernel\n");
 #endif
@@ -572,6 +620,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 		    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	}
 
+m83xxx_platform_early_putchar('y');
 #ifdef VERBOSE_INIT_ARM
 	printf("Constructing L2 page tables\n");
 #endif
@@ -633,6 +682,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 		    (physical_freeend - physical_freestart) / PAGE_SIZE;
 	}
 
+m83xxx_platform_early_putchar('z');
 	/* Switch tables */
 #ifdef VERBOSE_INIT_ARM
 	printf("freestart = 0x%08lx, free_pages = %d (0x%x)\n",
@@ -645,6 +695,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2));
 	//m83xxx_consinit(2);
+	consinit2();
 
 	/*
 	 * Moved from cpu_startup() as data_abort_handler() references
@@ -724,6 +775,7 @@ printf("%s: textsize %#lx, totalsize %#lx\n",
 #endif
 	/* We return the new stack pointer address */
 	return kernelstack.pv_va + USPACE_SVC_STACK_TOP;
+#endif
 }
 
 #if 0
@@ -795,17 +847,18 @@ m83xxx_consinit(int phase)
 		}
 	}
 }
+#endif
 
 void
 consinit(void)
 {
 	// m83xxx_consinit(2);
+	imxuart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
 }
-#endif
 
 
 void
-consinit(void)
+consinit2(void)
 {
 //	bus_space_handle_t ioh;
 	static int consinit_called = 0;
@@ -816,10 +869,16 @@ consinit(void)
 	consinit_called = 1;
 
 	/* map the serial interface range to get a bus handle */
-//	bus_space_map(&m83xxx_bs_tag, 0x10090000, 0x4000, 0, &ioh);
+/*
+	if(bus_space_map(&m83_bs_tag, 0x10090000, 0x4000, 0, &ioh) == 0)
+m83xxx_platform_early_putchar('O');
+	else
+m83xxx_platform_early_putchar('X');
+*/
 
+//	bus_space_write_1(&m83_bs_tag, ioh, 0, 'C');
 	/* initialize the console functions */
-//	imxuart_cnattach(&m83xxx_bs_tag, 0x10090000, 9600, 0);
+	imxuart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
 }
 
 #ifdef KGDB

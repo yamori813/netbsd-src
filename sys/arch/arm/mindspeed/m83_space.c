@@ -1,13 +1,12 @@
-/* $Id$ */
-
-/* derived from: */
-/*	$NetBSD$ */
+/*	$NetBSD: m83_bus_space.c,v 1.5 2018/03/16 17:56:31 ryo Exp $ */
 
 /*
- * Copyright (c) 2001, 2002 Wasabi Systems, Inc.
+ * Based on ep93xx_space.c
+ * Copyright (c) 2007 Embedtronics Oy
  * All rights reserved.
  *
- * Written by Jason R. Thorpe for Wasabi Systems, Inc.
+ * Copyright (c) 2004 Jesse Off
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -17,71 +16,40 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed for the NetBSD Project by
- *	Wasabi Systems, Inc.
- * 4. The name of Wasabi Systems, Inc. may not be used to endorse
- *    or promote products derived from this software without specific prior
- *    written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY WASABI SYSTEMS, INC. ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL WASABI SYSTEMS, INC
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-/*
- * Copyright (c) 1997 Mark Brinicombe.
- * Copyright (c) 1997 Causality Limited.
- * All rights reserved.
- *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Ichiro FUKUHARA.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Mark Brinicombe.
- * 4. The name of the company nor the name of the author may be used to
- *    endorse or promote products derived from this software without specific
- *    prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * THIS SOFTWARE IS PROVIDED BY ICHIRO FUKUHARA ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL ICHIRO FUKUHARA OR THE VOICES IN HIS HEAD BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
+#include <sys/cdefs.h>
+__KERNEL_RCSID(0, "$NetBSD: m83_bus_space.c,v 1.5 2018/03/16 17:56:31 ryo Exp $");
+
 /*
- * bus_space(9) support for Mindspeed Comcerto 1000
+ * bus_space I/O functions for ep93xx
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <uvm/uvm_extern.h>
+#include <sys/queue.h>
+
+#include <uvm/uvm.h>
+
 #include <sys/bus.h>
 
+#include <arm/mindspeed/m83xxxvar.h>
+//#include <arm/ep93xx/ep93xxreg.h>
+//#include <arm/ep93xx/ep93xxvar.h>
+
+/* Proto types for all the bus_space structure functions */
 bs_protos(m83);
 bs_protos(generic);
 bs_protos(generic_armv4);
@@ -97,14 +65,14 @@ struct bus_space m83_bs_tag = {
 	.bs_subregion = m83_bs_subregion,
 
 	/* allocation/deallocation */
-	.bs_alloc = m83_bs_alloc,	/* not implemented */
-	.bs_free = m83_bs_free,		/* not implemented */
+	.bs_alloc = m83_bs_alloc,
+	.bs_free = m83_bs_free,
 
 	/* get kernel virtual address */
 	.bs_vaddr = m83_bs_vaddr,
 
-	/* mmap */
-	.bs_mmap = bs_notimpl_bs_mmap,
+	/* mmap bus space for userland */
+	.bs_mmap = m83_bs_mmap,
 
 	/* barrier */
 	.bs_barrier = m83_bs_barrier,
@@ -152,9 +120,9 @@ struct bus_space m83_bs_tag = {
 	.bs_sm_8 = bs_notimpl_bs_sm_8,
 
 	/* set region */
-	.bs_sr_1 = generic_bs_sr_1,
+	.bs_sr_1 = bs_notimpl_bs_sr_1,
 	.bs_sr_2 = generic_armv4_bs_sr_2,
-	.bs_sr_4 = bs_notimpl_bs_sr_4,
+	.bs_sr_4 = generic_bs_sr_4,
 	.bs_sr_8 = bs_notimpl_bs_sr_8,
 
 	/* copy */
@@ -162,53 +130,19 @@ struct bus_space m83_bs_tag = {
 	.bs_c_2 = generic_armv4_bs_c_2,
 	.bs_c_4 = bs_notimpl_bs_c_4,
 	.bs_c_8 = bs_notimpl_bs_c_8,
-
-#ifdef __BUS_SPACE_HAS_STREAM_METHODS
-	/* read (single) */
-	.bs_r_1_s = generic_bs_r_1,
-	.bs_r_2_s = generic_armv4_bs_r_2,
-	.bs_r_4_s = generic_bs_r_4,
-	.bs_r_8_s = bs_notimpl_bs_r_8,
-
-	/* read multiple */
-	.bs_rm_1_s = generic_bs_rm_1,
-	.bs_rm_2_s = generic_armv4_bs_rm_2,
-	.bs_rm_4_s = generic_bs_rm_4,
-	.bs_rm_8_s = bs_notimpl_bs_rm_8,
-
-	/* read region */
-	.bs_rr_1_s = generic_bs_rr_1,
-	.bs_rr_2_s = generic_armv4_bs_rr_2,
-	.bs_rr_4_s = generic_bs_rr_4,
-	.bs_rr_8_s = bs_notimpl_bs_rr_8,
-
-	/* write (single) */
-	.bs_w_1_s = generic_bs_w_1,
-	.bs_w_2_s = generic_armv4_bs_w_2,
-	.bs_w_4_s = generic_bs_w_4,
-	.bs_w_8_s = bs_notimpl_bs_w_8,
-
-	/* write multiple */
-	.bs_wm_1_s = generic_bs_wm_1,
-	.bs_wm_2_s = generic_armv4_bs_wm_2,
-	.bs_wm_4_s = generic_bs_wm_4,
-	.bs_wm_8_s = bs_notimpl_bs_wm_8,
-
-	/* write region */
-	.bs_wr_1_s = generic_bs_wr_1,
-	.bs_wr_2_s = generic_armv4_bs_wr_2,
-	.bs_wr_4_s = generic_bs_wr_4,
-	.bs_wr_8_s = bs_notimpl_bs_wr_8,
-#endif
 };
 
 int
 m83_bs_map(void *t, bus_addr_t bpa, bus_size_t size,
-	      int flag, bus_space_handle_t *bshp)
+	      int cacheable, bus_space_handle_t *bshp)
 {
 	const struct pmap_devmap	*pd;
-	paddr_t startpa, endpa, pa;
-	vaddr_t va;
+
+	paddr_t		startpa;
+        paddr_t		endpa;
+        paddr_t		pa;
+        paddr_t		offset;
+        vaddr_t		va;
 
 	if ((pd = pmap_devmap_find_pa(bpa, size)) != NULL) {
 		/* Device was statically mapped. */
@@ -216,21 +150,24 @@ m83_bs_map(void *t, bus_addr_t bpa, bus_size_t size,
 		return 0;
 	}
 
-	startpa = trunc_page(bpa);
 	endpa = round_page(bpa + size);
+	offset = bpa & PAGE_MASK;
+	startpa = trunc_page(bpa);
 
-	/* XXX use extent manager to check duplicate mapping */
-
+	/* Get some VM.  */
 	va = uvm_km_alloc(kernel_map, endpa - startpa, 0,
 	    UVM_KMF_VAONLY | UVM_KMF_NOWAIT);
-	if (! va)
-		return(ENOMEM);
+	if (va == 0)
+		return ENOMEM;
 
-	*bshp = (bus_space_handle_t)(va + (bpa - startpa));
+	/* Store the bus space handle */
+	*bshp = va + offset;
 
+	/* Now map the pages */
 	for (pa = startpa; pa < endpa; pa += PAGE_SIZE, va += PAGE_SIZE) {
-		pmap_kenter_pa(va, pa, VM_PROT_READ | VM_PROT_WRITE,
-		    (flag & BUS_SPACE_MAP_CACHEABLE) ? 0 : PMAP_NOCACHE);
+		pmap_enter(pmap_kernel(), va, pa,
+		    VM_PROT_READ | VM_PROT_WRITE,
+		    VM_PROT_READ | VM_PROT_WRITE | PMAP_WIRED);
 	}
 	pmap_update(pmap_kernel());
 
@@ -241,61 +178,60 @@ void
 m83_bs_unmap(void *t, bus_space_handle_t bsh, bus_size_t size)
 {
 	vaddr_t	va;
-	vsize_t	sz;
+	vaddr_t	endva;
 
 	if (pmap_devmap_find_va(bsh, size) != NULL) {
 		/* Device was statically mapped; nothing to do. */
 		return;
 	}
 
+	endva = round_page(bsh + size);
 	va = trunc_page(bsh);
-	sz = round_page(bsh + size) - va;
 
-	pmap_kremove(va, sz);
+	pmap_remove(pmap_kernel(), va, endva);
 	pmap_update(pmap_kernel());
-	uvm_km_free(kernel_map, va, sz, UVM_KMF_VAONLY);
+	uvm_km_free(kernel_map, va, endva - va, UVM_KMF_VAONLY);
 }
 
+int
+m83_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
+	bus_size_t size, bus_size_t alignment, bus_size_t boundary, int cacheable,
+	bus_addr_t *bpap, bus_space_handle_t *bshp)
+{
+	panic("m83_bs_alloc(): not implemented\n");
+}
+
+void    
+m83_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
+{
+	panic("m83_bs_free(): not implemented\n");
+}
 
 int
 m83_bs_subregion(void *t, bus_space_handle_t bsh, bus_size_t offset,
-    bus_size_t size, bus_space_handle_t *nbshp)
+	bus_size_t size, bus_space_handle_t *nbshp)
 {
-
 	*nbshp = bsh + offset;
 	return (0);
+}
+
+void *
+m83_bs_vaddr(void *t, bus_space_handle_t bsh)
+{
+	return ((void *)bsh);
+}
+
+paddr_t
+m83_bs_mmap(void *t, bus_addr_t addr, off_t off, int prot, int flags)
+{
+	/* Not supported. */
+	return (-1);
 }
 
 void
 m83_bs_barrier(void *t, bus_space_handle_t bsh, bus_size_t offset,
     bus_size_t len, int flags)
 {
-
-	/* Nothing to do. */
-}
-
-void *
-m83_bs_vaddr(void *t, bus_space_handle_t bsh)
-{
-
-	return ((void *)bsh);
-}
-
-
-int
-m83_bs_alloc(void *t, bus_addr_t rstart, bus_addr_t rend,
-    bus_size_t size, bus_size_t alignment, bus_size_t boundary, int flags,
-    bus_addr_t *bpap, bus_space_handle_t *bshp)
-{
-
-	panic("m83_io_bs_alloc(): not implemented\n");
-}
-
-void    
-m83_bs_free(void *t, bus_space_handle_t bsh, bus_size_t size)
-{
-
-	panic("m83_io_bs_free(): not implemented\n");
-}
-
-
+/* NULL */
+}	
+/* End of m83_io.c */
