@@ -25,19 +25,19 @@
  *
  */
 
-#include "opt_imxuart.h"
+#include "opt_m83uart.h"
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/device.h>
 #include <arm/mindspeed/m83xxxreg.h>
 #include <arm/mindspeed/m83xxxvar.h>
-#include <arm/imx/imxuartreg.h>
-#include <arm/imx/imxuartvar.h>
+#include <arm/mindspeed/m83uartreg.h>
+#include <arm/mindspeed/m83uartvar.h>
 
 static int m83xxx_uart_match(device_t, struct cfdata *, void *);
 static void m83xxx_uart_attach(device_t, device_t, void *);
 
-CFATTACH_DECL_NEW(m83xxx_uart, sizeof(struct imxuart_softc),
+CFATTACH_DECL_NEW(m83xxx_uart, sizeof(struct m83uart_softc),
     m83xxx_uart_match, m83xxx_uart_attach, NULL, NULL);
 
 void m83xxx_platform_early_putchar(char c);
@@ -63,7 +63,7 @@ m83xxx_uart_attach(device_t parent, device_t self, void *aux)
 {
 	struct aips_attach_args * aa = aux;
 
-	imxuart_attach_common(parent, self,
+	m83uart_attach_common(parent, self,
 	    aa->aipsa_memt, aa->aipsa_addr, aa->aipsa_size, aa->aipsa_intr, 0);
 }
 
