@@ -2195,12 +2195,10 @@ imxuart_init(struct imxuart_regs *regsp, int rate, tcflag_t cflag, int domap)
 	uint32_t ufcr;
 */
 	int error;
-m83xxx_platform_early_putchar('@');
 
 	if (domap && (error = bus_space_map(regsp->ur_iot, regsp->ur_iobase,
 	     IMX_UART_SIZE, 0, &regsp->ur_ioh)) != 0)
 		return error;
-m83xxx_platform_early_putchar('@');
 #if 0
 	if (imxuart_freq != 0) {
 		if (imxuspeed(rate, &ratio) < 0)
@@ -2247,7 +2245,6 @@ m83xxx_platform_early_putchar('@');
 	    IMX_UCR1_UARTEN);
 
 #endif
-m83xxx_platform_early_putchar('@');
 	return (0);
 }
 
@@ -2278,7 +2275,6 @@ imxuart_cnattach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
 	cn_tab = &imxucons;
 	cn_init_magic(&imxuart_cnm_state);
 	cn_set_magic("\047\001"); /* default magic is BREAK */
-m83xxx_platform_early_putchar('C');
 
 	imxuconsrate = rate;
 	imxuconscflag = cflag;
