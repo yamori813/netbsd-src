@@ -147,9 +147,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/arm32/pte.h>
 #include <arm/arm32/machdep.h>
 
-#include <arm/imx/imx31reg.h>
-#include <arm/imx/imxuartreg.h>
-#include <arm/imx/imxuartvar.h>
+//#include <arm/imx/imx31reg.h>
+#include <arm/mindspeed/m83uartreg.h>
+#include <arm/mindspeed/m83uartvar.h>
 #include <evbarm/mindspeed/m83xxx_reg.h>
 
 /* Kernel text starts 1MB in from the bottom of the kernel address space. */
@@ -389,7 +389,7 @@ consinit(void)
 	consinit_called = 1;
 
 	/* initialize the console functions */
-	imxuart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
+	m83uart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
 }
 
 #ifdef KGDB

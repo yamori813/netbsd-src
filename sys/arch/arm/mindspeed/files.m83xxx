@@ -61,11 +61,11 @@ file	arch/arm/imx/imx31_ccm.c	imxccm		needs-flag
 defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 
 # iMX UART
-device	imxuart
-attach	imxuart at aips with m83xxx_uart
-file	arch/arm/mindspeed/m83uart.c		imxuart	needs-flag
+device	m83uart
+attach	m83uart at aips with m83xxx_uart
+file	arch/arm/mindspeed/m83uart.c		m83uart	needs-flag
 file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
-defflag	opt_imxuart.h				IMXUARTCONSOLE
+defflag	opt_m83uart.h				IMXUARTCONSOLE
 
 attach	ehci at ahb with ehci_ahb : bus_dma_generic
 file	arch/arm/imx/echi_ahb.c			ehci_ahb

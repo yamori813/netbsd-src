@@ -1,4 +1,4 @@
-/* $NetBSD: imxuart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $ */
+/* $NetBSD: m83uart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $ */
 
 /*
  * Copyright (c) 2009, 2010  Genetec Corporation.  All rights reserved.
@@ -96,31 +96,31 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: imxuart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: m83uart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $");
 
-#include "opt_imxuart.h"
+#include "opt_m83uart.h"
 #include "opt_ddb.h"
 #include "opt_ddbparam.h"
 #include "opt_kgdb.h"
 #include "opt_lockdebug.h"
 #include "opt_multiprocessor.h"
 #include "opt_ntp.h"
-#include "opt_imxuart.h"
+#include "opt_m83uart.h"
 
 #ifdef RND_COM
 #include <sys/rndsource.h>
 #endif
 
-#ifndef	IMXUART_TOLERANCE
-#define	IMXUART_TOLERANCE	30	/* baud rate tolerance, in 0.1% units */
+#ifndef	M83UART_TOLERANCE
+#define	M83UART_TOLERANCE	30	/* baud rate tolerance, in 0.1% units */
 #endif
 
-#ifndef	IMXUART_FREQDIV
-#define	IMXUART_FREQDIV		2	/* XXX */
+#ifndef	M83UART_FREQDIV
+#define	M83UART_FREQDIV		2	/* XXX */
 #endif
 
-#ifndef	IMXUART_FREQ
-#define	IMXUART_FREQ	(56900000)
+#ifndef	M83UART_FREQ
+#define	M83UART_FREQ	(56900000)
 #endif
 
 /*
@@ -158,84 +158,84 @@ __KERNEL_RCSID(0, "$NetBSD: imxuart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $
 
 #include <ddb/db_active.h>
 
-#include <arm/imx/imxuartreg.h>
-#include <arm/imx/imxuartvar.h>
+#include <arm/mindspeed/m83uartreg.h>
+#include <arm/mindspeed/m83uartvar.h>
 #include <dev/cons.h>
 
-#ifndef	IMXUART_RING_SIZE
-#define	IMXUART_RING_SIZE	2048
+#ifndef	M83UART_RING_SIZE
+#define	M83UART_RING_SIZE	2048
 #endif
 
 void m83xxx_platform_early_putchar(char);
 
-int	imxuspeed(long, struct imxuart_baudrate_ratio *);
-int	imxuparam(struct tty *, struct termios *);
-void	imxustart(struct tty *);
-int	imxuhwiflow(struct tty *, int);
+int	m83uspeed(long, struct m83uart_baudrate_ratio *);
+int	m83uparam(struct tty *, struct termios *);
+void	m83ustart(struct tty *);
+int	m83uhwiflow(struct tty *, int);
 
-void	imxuart_shutdown(struct imxuart_softc *);
-void	imxuart_loadchannelregs(struct imxuart_softc *);
-void	imxuart_hwiflow(struct imxuart_softc *);
-void	imxuart_break(struct imxuart_softc *, bool);
-void	imxuart_modem(struct imxuart_softc *, int);
-void	tiocm_to_imxu(struct imxuart_softc *, u_long, int);
-int	imxuart_to_tiocm(struct imxuart_softc *);
-void	imxuart_iflush(struct imxuart_softc *);
-int	imxuintr(void *);
+void	m83uart_shutdown(struct m83uart_softc *);
+void	m83uart_loadchannelregs(struct m83uart_softc *);
+void	m83uart_hwiflow(struct m83uart_softc *);
+void	m83uart_break(struct m83uart_softc *, bool);
+void	m83uart_modem(struct m83uart_softc *, int);
+void	tiocm_to_m83u(struct m83uart_softc *, u_long, int);
+int	m83uart_to_tiocm(struct m83uart_softc *);
+void	m83uart_iflush(struct m83uart_softc *);
+int	m83uintr(void *);
 
-int	imxuart_common_getc(dev_t, struct imxuart_regs *);
-void	imxuart_common_putc(dev_t, struct imxuart_regs *, int);
+int	m83uart_common_getc(dev_t, struct m83uart_regs *);
+void	m83uart_common_putc(dev_t, struct m83uart_regs *, int);
 
 
-int	imxuart_init(struct imxuart_regs *, int, tcflag_t, int);
+int	m83uart_init(struct m83uart_regs *, int, tcflag_t, int);
 
-int	imxucngetc(dev_t);
-void	imxucnputc(dev_t, int);
-void	imxucnpollc(dev_t, int);
+int	m83ucngetc(dev_t);
+void	m83ucnputc(dev_t, int);
+void	m83ucnpollc(dev_t, int);
 
-static void imxuintr_read(struct imxuart_softc *);
-static void imxuintr_send(struct imxuart_softc *);
+static void m83uintr_read(struct m83uart_softc *);
+static void m83uintr_send(struct m83uart_softc *);
 
-static void imxuart_enable_debugport(struct imxuart_softc *);
-static void imxuart_disable_all_interrupts(struct imxuart_softc *);
-static void imxuart_control_rxint(struct imxuart_softc *, bool);
-static void imxuart_control_txint(struct imxuart_softc *, bool);
-static u_int imxuart_txfifo_space(struct imxuart_softc *sc);
+static void m83uart_enable_debugport(struct m83uart_softc *);
+static void m83uart_disable_all_interrupts(struct m83uart_softc *);
+static void m83uart_control_rxint(struct m83uart_softc *, bool);
+static void m83uart_control_txint(struct m83uart_softc *, bool);
+static u_int m83uart_txfifo_space(struct m83uart_softc *sc);
 
 static	uint32_t	cflag_to_ucr2(tcflag_t, uint32_t);
 
 #define	integrate	static inline
-void 	imxusoft(void *);
-integrate void imxuart_rxsoft(struct imxuart_softc *, struct tty *);
-integrate void imxuart_txsoft(struct imxuart_softc *, struct tty *);
-integrate void imxuart_stsoft(struct imxuart_softc *, struct tty *);
-integrate void imxuart_schedrx(struct imxuart_softc *);
-void	imxudiag(void *);
-static void imxuart_load_speed(struct imxuart_softc *);
-static void imxuart_load_params(struct imxuart_softc *);
-integrate void imxuart_load_pendings(struct imxuart_softc *);
+void 	m83usoft(void *);
+integrate void m83uart_rxsoft(struct m83uart_softc *, struct tty *);
+integrate void m83uart_txsoft(struct m83uart_softc *, struct tty *);
+integrate void m83uart_stsoft(struct m83uart_softc *, struct tty *);
+integrate void m83uart_schedrx(struct m83uart_softc *);
+void	m83udiag(void *);
+static void m83uart_load_speed(struct m83uart_softc *);
+static void m83uart_load_params(struct m83uart_softc *);
+integrate void m83uart_load_pendings(struct m83uart_softc *);
 
 
-extern struct cfdriver imxuart_cd;
+extern struct cfdriver m83uart_cd;
 
-dev_type_open(imxuopen);
-dev_type_close(imxuclose);
-dev_type_read(imxuread);
-dev_type_write(imxuwrite);
-dev_type_ioctl(imxuioctl);
-dev_type_stop(imxustop);
-dev_type_tty(imxutty);
-dev_type_poll(imxupoll);
+dev_type_open(m83uopen);
+dev_type_close(m83uclose);
+dev_type_read(m83uread);
+dev_type_write(m83uwrite);
+dev_type_ioctl(m83uioctl);
+dev_type_stop(m83ustop);
+dev_type_tty(m83utty);
+dev_type_poll(m83upoll);
 
-const struct cdevsw imxcom_cdevsw = {
-	.d_open = imxuopen,
-	.d_close = imxuclose,
-	.d_read = imxuread,
-	.d_write = imxuwrite,
-	.d_ioctl = imxuioctl,
-	.d_stop = imxustop,
-	.d_tty = imxutty,
-	.d_poll = imxupoll,
+const struct cdevsw m83com_cdevsw = {
+	.d_open = m83uopen,
+	.d_close = m83uclose,
+	.d_read = m83uread,
+	.d_write = m83uwrite,
+	.d_ioctl = m83uioctl,
+	.d_stop = m83ustop,
+	.d_tty = m83utty,
+	.d_poll = m83upoll,
 	.d_mmap = nommap,
 	.d_kqfilter = ttykqfilter,
 	.d_discard = nodiscard,
@@ -246,51 +246,51 @@ const struct cdevsw imxcom_cdevsw = {
  * Make this an option variable one can patch.
  * But be warned:  this must be a power of 2!
  */
-u_int imxuart_rbuf_size = IMXUART_RING_SIZE;
+u_int m83uart_rbuf_size = M83UART_RING_SIZE;
 
 /* Stop input when 3/4 of the ring is full; restart when only 1/4 is full. */
-u_int imxuart_rbuf_hiwat = (IMXUART_RING_SIZE * 1) / 4;
-u_int imxuart_rbuf_lowat = (IMXUART_RING_SIZE * 3) / 4;
+u_int m83uart_rbuf_hiwat = (M83UART_RING_SIZE * 1) / 4;
+u_int m83uart_rbuf_lowat = (M83UART_RING_SIZE * 3) / 4;
 
-static struct imxuart_regs imxuconsregs;
-static int imxuconsattached;
-static int imxuconsrate;
-static tcflag_t imxuconscflag;
-static struct cnm_state imxuart_cnm_state;
+static struct m83uart_regs m83uconsregs;
+static int m83uconsattached;
+static int m83uconsrate;
+static tcflag_t m83uconscflag;
+static struct cnm_state m83uart_cnm_state;
 
-u_int imxuart_freq = IMXUART_FREQ;
-u_int imxuart_freqdiv = IMXUART_FREQDIV;
+u_int m83uart_freq = M83UART_FREQ;
+u_int m83uart_freqdiv = M83UART_FREQDIV;
 
 #ifdef KGDB
 #include <sys/kgdb.h>
 
-static struct imxuart_regs imxu_kgdb_regs;
-static int imxu_kgdb_attached;
+static struct m83uart_regs m83u_kgdb_regs;
+static int m83u_kgdb_attached;
 
-int	imxuart_kgdb_getc(void *);
-void	imxuart_kgdb_putc(void *, int);
+int	m83uart_kgdb_getc(void *);
+void	m83uart_kgdb_putc(void *, int);
 #endif /* KGDB */
 
-#define	IMXUART_DIALOUT_MASK	TTDIALOUT_MASK
+#define	M83UART_DIALOUT_MASK	TTDIALOUT_MASK
 
-#define	IMXUART_UNIT(x)		TTUNIT(x)
-#define	IMXUART_DIALOUT(x)	TTDIALOUT(x)
+#define	M83UART_UNIT(x)		TTUNIT(x)
+#define	M83UART_DIALOUT(x)	TTDIALOUT(x)
 
-#define	IMXUART_ISALIVE(sc)	((sc)->enabled != 0 && \
+#define	M83UART_ISALIVE(sc)	((sc)->enabled != 0 && \
 			 device_is_active((sc)->sc_dev))
 
 #define	BR	BUS_SPACE_BARRIER_READ
 #define	BW	BUS_SPACE_BARRIER_WRITE
-#define	IMXUART_BARRIER(r, f) \
+#define	M83UART_BARRIER(r, f) \
 	bus_space_barrier((r)->ur_iot, (r)->ur_ioh, 0, IMX_UART_SIZE, (f))
 
 
 void
-imxuart_attach_common(device_t parent, device_t self,
+m83uart_attach_common(device_t parent, device_t self,
     bus_space_tag_t iot, paddr_t iobase, size_t size, int intr, int flags)
 {
-	struct imxuart_softc *sc = device_private(self);
-	struct imxuart_regs *regsp = &sc->sc_regs;
+	struct m83uart_softc *sc = device_private(self);
+	struct m83uart_regs *regsp = &sc->sc_regs;
 	bus_space_handle_t ioh;
 
 	aprint_naive("\n");
@@ -311,19 +311,19 @@ imxuart_attach_common(device_t parent, device_t self,
 	regsp->ur_ioh = ioh;
 
 	sc->sc_ih = intr_establish(sc->sc_intr, IPL_SERIAL, IST_LEVEL,
-	    imxuintr, sc);
+	    m83uintr, sc);
 	if (sc->sc_ih == NULL) {
 		aprint_error_dev(sc->sc_dev, "intr_establish failed\n");
 		return;
 	}
 
-	imxuart_attach_subr(sc);
+	m83uart_attach_subr(sc);
 }
 
 void
-imxuart_attach_subr(struct imxuart_softc *sc)
+m83uart_attach_subr(struct m83uart_softc *sc)
 {
-	struct imxuart_regs *regsp = &sc->sc_regs;
+	struct m83uart_regs *regsp = &sc->sc_regs;
 	bus_space_tag_t iot = regsp->ur_iot;
 	bus_space_handle_t ioh = regsp->ur_ioh;
 	struct tty *tp;
@@ -331,36 +331,36 @@ imxuart_attach_subr(struct imxuart_softc *sc)
 	callout_init(&sc->sc_diag_callout, 0);
 	mutex_init(&sc->sc_lock, MUTEX_DEFAULT, IPL_HIGH);
 
-	if (regsp->ur_iobase != imxuconsregs.ur_iobase)
-		imxuart_init(&sc->sc_regs, TTYDEF_SPEED, TTYDEF_CFLAG, false);
+	if (regsp->ur_iobase != m83uconsregs.ur_iobase)
+		m83uart_init(&sc->sc_regs, TTYDEF_SPEED, TTYDEF_CFLAG, false);
 
 	bus_space_read_region_4(iot, ioh, IMX_UCR1, sc->sc_ucr, 4);
 	sc->sc_ucr2_d = sc->sc_ucr2;
 
 	/* Disable interrupts before configuring the device. */
-	imxuart_disable_all_interrupts(sc);
+	m83uart_disable_all_interrupts(sc);
 
-	if (regsp->ur_iobase == imxuconsregs.ur_iobase) {
-		imxuconsattached = 1;
+	if (regsp->ur_iobase == m83uconsregs.ur_iobase) {
+		m83uconsattached = 1;
 
 		/* Make sure the console is always "hardwired". */
 #if 0
 		delay(10000);			/* wait for output to finish */
 #endif
-		SET(sc->sc_hwflags, IMXUART_HW_CONSOLE);
+		SET(sc->sc_hwflags, M83UART_HW_CONSOLE);
 		SET(sc->sc_swflags, TIOCFLAG_SOFTCAR);
 	}
 
 
 	tp = tty_alloc();
-	tp->t_oproc = imxustart;
-	tp->t_param = imxuparam;
-	tp->t_hwiflow = imxuhwiflow;
+	tp->t_oproc = m83ustart;
+	tp->t_param = m83uparam;
+	tp->t_hwiflow = m83uhwiflow;
 
 	sc->sc_tty = tp;
-	sc->sc_rbuf = kmem_alloc(sizeof (*sc->sc_rbuf) * imxuart_rbuf_size,
+	sc->sc_rbuf = kmem_alloc(sizeof (*sc->sc_rbuf) * m83uart_rbuf_size,
 	    KM_SLEEP);
-	sc->sc_rbuf_size = imxuart_rbuf_size;
+	sc->sc_rbuf_size = m83uart_rbuf_size;
 	sc->sc_rbuf_in = sc->sc_rbuf_out = 0;
 	sc->sc_txfifo_len = 32;
 	sc->sc_txfifo_thresh = 16;	/* when USR1.TRDY, fifo has space
@@ -368,11 +368,11 @@ imxuart_attach_subr(struct imxuart_softc *sc)
 
 	tty_attach(tp);
 
-	if (ISSET(sc->sc_hwflags, IMXUART_HW_CONSOLE)) {
+	if (ISSET(sc->sc_hwflags, M83UART_HW_CONSOLE)) {
 		int maj;
 
 		/* locate the major number */
-		maj = cdevsw_lookup_major(&imxcom_cdevsw);
+		maj = cdevsw_lookup_major(&m83com_cdevsw);
 
 		if (maj != NODEVMAJOR) {
 			tp->t_dev = cn_tab->cn_dev = makedev(maj,
@@ -389,17 +389,17 @@ imxuart_attach_subr(struct imxuart_softc *sc)
 	 * exclusive use.  If it's the console _and_ the
 	 * kgdb device, it doesn't.
 	 */
-	if (regsp->ur_iobase == imxu_kgdb_regs.ur_iobase) {
-		if (!ISSET(sc->sc_hwflags, IMXUART_HW_CONSOLE)) {
-			imxu_kgdb_attached = 1;
+	if (regsp->ur_iobase == m83u_kgdb_regs.ur_iobase) {
+		if (!ISSET(sc->sc_hwflags, M83UART_HW_CONSOLE)) {
+			m83u_kgdb_attached = 1;
 
-			SET(sc->sc_hwflags, IMXUART_HW_KGDB);
+			SET(sc->sc_hwflags, M83UART_HW_KGDB);
 		}
 		aprint_normal_dev(sc->sc_dev, "kgdb\n");
 	}
 #endif
 
-	sc->sc_si = softint_establish(SOFTINT_SERIAL, imxusoft, sc);
+	sc->sc_si = softint_establish(SOFTINT_SERIAL, m83usoft, sc);
 
 #ifdef RND_COM
 	rnd_attach_source(&sc->rnd_source, device_xname(sc->sc_dev),
@@ -412,11 +412,11 @@ imxuart_attach_subr(struct imxuart_softc *sc)
 	if (!sc->enable)
 		sc->enabled = 1;
 
-	imxuart_enable_debugport(sc);
+	m83uart_enable_debugport(sc);
 
-	SET(sc->sc_hwflags, IMXUART_HW_DEV_OK);
+	SET(sc->sc_hwflags, M83UART_HW_DEV_OK);
 
-	//shutdownhook_establish(imxuart_shutdownhook, sc);
+	//shutdownhook_establish(m83uart_shutdownhook, sc);
 
 
 #if 0
@@ -448,11 +448,11 @@ gcd(long m, long n)
 }
 
 int
-imxuspeed(long speed, struct imxuart_baudrate_ratio *ratio)
+m83uspeed(long speed, struct m83uart_baudrate_ratio *ratio)
 {
 #define	divrnd(n, q)	(((n)*2/(q)+1)/2)	/* divide and round off */
 	long b = 16 * speed;
-	long f = imxuart_freq / imxuart_freqdiv;
+	long f = m83uart_freq / m83uart_freqdiv;
 	long d;
 	int err = 0;
 
@@ -471,7 +471,7 @@ imxuspeed(long speed, struct imxuart_baudrate_ratio *ratio)
 		return -1;
 
 #ifdef	DIAGNOSTIC
-	err = divrnd(((uint64_t)imxuart_freq) * 1000 / imxuart_freqdiv,
+	err = divrnd(((uint64_t)m83uart_freq) * 1000 / m83uart_freqdiv,
 		     (uint64_t)speed * 16 * f / b) - 1000;
 	if (err < 0)
 		err = -err;
@@ -480,19 +480,19 @@ imxuspeed(long speed, struct imxuart_baudrate_ratio *ratio)
 	ratio->numerator = b-1;
 	ratio->modulator = f-1;
 
-	if (err > IMXUART_TOLERANCE)
+	if (err > M83UART_TOLERANCE)
 		return -1;
 
 	return 0;
 #undef	divrnd
 }
 
-#ifdef IMXUART_DEBUG
-int	imxuart_debug = 0;
+#ifdef M83UART_DEBUG
+int	m83uart_debug = 0;
 
-void imxustatus(struct imxuart_softc *, const char *);
+void m83ustatus(struct m83uart_softc *, const char *);
 void
-imxustatus(struct imxuart_softc *sc, const char *str)
+m83ustatus(struct m83uart_softc *sc, const char *str)
 {
 	struct tty *tp = sc->sc_tty;
 
@@ -518,27 +518,27 @@ imxustatus(struct imxuart_softc *sc, const char *str)
 
 #if 0
 int
-imxuart_detach(device_t self, int flags)
+m83uart_detach(device_t self, int flags)
 {
-	struct imxuart_softc *sc = device_private(self);
+	struct m83uart_softc *sc = device_private(self);
 	int maj, mn;
 
-        if (ISSET(sc->sc_hwflags, IMXUART_HW_CONSOLE))
+        if (ISSET(sc->sc_hwflags, M83UART_HW_CONSOLE))
 		return EBUSY;
 
 	/* locate the major number */
-	maj = cdevsw_lookup_major(&imxcom_cdevsw);
+	maj = cdevsw_lookup_major(&m83com_cdevsw);
 
 	/* Nuke the vnodes for any open instances. */
 	mn = device_unit(self);
 	vdevgone(maj, mn, mn, VCHR);
 
-	mn |= IMXUART_DIALOUT_MASK;
+	mn |= M83UART_DIALOUT_MASK;
 	vdevgone(maj, mn, mn, VCHR);
 
 	if (sc->sc_rbuf == NULL) {
 		/*
-		 * Ring buffer allocation failed in the imxuart_attach_subr,
+		 * Ring buffer allocation failed in the m83uart_attach_subr,
 		 * only the tty is allocated, and nothing else.
 		 */
 		tty_free(sc->sc_tty);
@@ -570,9 +570,9 @@ imxuart_detach(device_t self, int flags)
 
 #ifdef notyet
 int
-imxuart_activate(device_t self, enum devact act)
+m83uart_activate(device_t self, enum devact act)
 {
-	struct imxuart_softc *sc = device_private(self);
+	struct m83uart_softc *sc = device_private(self);
 	int rv = 0;
 
 	switch (act) {
@@ -581,7 +581,7 @@ imxuart_activate(device_t self, enum devact act)
 		break;
 
 	case DVACT_DEACTIVATE:
-		if (sc->sc_hwflags & (IMXUART_HW_CONSOLE|IMXUART_HW_KGDB)) {
+		if (sc->sc_hwflags & (M83UART_HW_CONSOLE|M83UART_HW_KGDB)) {
 			rv = EBUSY;
 			break;
 		}
@@ -598,18 +598,18 @@ imxuart_activate(device_t self, enum devact act)
 #endif
 
 void
-imxuart_shutdown(struct imxuart_softc *sc)
+m83uart_shutdown(struct m83uart_softc *sc)
 {
 	struct tty *tp = sc->sc_tty;
 
 	mutex_spin_enter(&sc->sc_lock);
 
 	/* If we were asserting flow control, then deassert it. */
-	SET(sc->sc_rx_flags, IMXUART_RX_IBUF_BLOCKED);
-	imxuart_hwiflow(sc);
+	SET(sc->sc_rx_flags, M83UART_RX_IBUF_BLOCKED);
+	m83uart_hwiflow(sc);
 
 	/* Clear any break condition set with TIOCSBRK. */
-	imxuart_break(sc, false);
+	m83uart_break(sc, false);
 
 	/*
 	 * Hang up if necessary.  Wait a bit, so the other side has time to
@@ -617,7 +617,7 @@ imxuart_shutdown(struct imxuart_softc *sc)
 	 * Avoid tsleeping above splhigh().
 	 */
 	if (ISSET(tp->t_cflag, HUPCL)) {
-		imxuart_modem(sc, 0);
+		m83uart_modem(sc, 0);
 		mutex_spin_exit(&sc->sc_lock);
 		/* XXX will only timeout */
 		(void) kpause(ttclos, false, hz, NULL);
@@ -625,9 +625,9 @@ imxuart_shutdown(struct imxuart_softc *sc)
 	}
 
 	/* Turn off interrupts. */
-	imxuart_disable_all_interrupts(sc);
+	m83uart_disable_all_interrupts(sc);
 	/* re-enable recv interrupt for console or kgdb port */
-	imxuart_enable_debugport(sc);
+	m83uart_enable_debugport(sc);
 
 	mutex_spin_exit(&sc->sc_lock);
 
@@ -635,7 +635,7 @@ imxuart_shutdown(struct imxuart_softc *sc)
 	if (sc->disable) {
 #ifdef DIAGNOSTIC
 		if (!sc->enabled)
-			panic("imxuart_shutdown: not enabled?");
+			panic("m83uart_shutdown: not enabled?");
 #endif
 		(*sc->disable)(sc);
 		sc->enabled = 0;
@@ -644,15 +644,15 @@ imxuart_shutdown(struct imxuart_softc *sc)
 }
 
 int
-imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
+m83uopen(dev_t dev, int flag, int mode, struct lwp *l)
 {
-	struct imxuart_softc *sc;
+	struct m83uart_softc *sc;
 	struct tty *tp;
 	int s;
 	int error;
 
-	sc = device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
-	if (sc == NULL || !ISSET(sc->sc_hwflags, IMXUART_HW_DEV_OK) ||
+	sc = device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
+	if (sc == NULL || !ISSET(sc->sc_hwflags, M83UART_HW_DEV_OK) ||
 		sc->sc_rbuf == NULL)
 		return (ENXIO);
 
@@ -663,7 +663,7 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 	/*
 	 * If this is the kgdb port, no other use is permitted.
 	 */
-	if (ISSET(sc->sc_hwflags, IMXUART_HW_KGDB))
+	if (ISSET(sc->sc_hwflags, M83UART_HW_KGDB))
 		return (EBUSY);
 #endif
 
@@ -697,11 +697,11 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 
 		mutex_spin_enter(&sc->sc_lock);
 
-		imxuart_disable_all_interrupts(sc);
+		m83uart_disable_all_interrupts(sc);
 
 		/* Fetch the current modem control status, needed later. */
 
-#ifdef	IMXUART_PPS
+#ifdef	M83UART_PPS
 		/* Clear PPS capture state on first open. */
 		mutex_spin_enter(&timecounter_lock);
 		memset(&sc->sc_pps_state, 0, sizeof(sc->sc_pps_state));
@@ -716,9 +716,9 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 		 * Initialize the termios status to the defaults.  Add in the
 		 * sticky bits from TIOCSFLAGS.
 		 */
-		if (ISSET(sc->sc_hwflags, IMXUART_HW_CONSOLE)) {
-			t.c_ospeed = imxuconsrate;
-			t.c_cflag = imxuconscflag;
+		if (ISSET(sc->sc_hwflags, M83UART_HW_CONSOLE)) {
+			t.c_ospeed = m83uconsrate;
+			t.c_cflag = m83uconscflag;
 		} else {
 			t.c_ospeed = TTYDEF_SPEED;
 			t.c_cflag = TTYDEF_CFLAG;
@@ -730,9 +730,9 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 			SET(t.c_cflag, CRTSCTS);
 		if (ISSET(sc->sc_swflags, TIOCFLAG_MDMBUF))
 			SET(t.c_cflag, MDMBUF);
-		/* Make sure imxuparam() will do something. */
+		/* Make sure m83uparam() will do something. */
 		tp->t_ospeed = 0;
-		(void) imxuparam(tp, &t);
+		(void) m83uparam(tp, &t);
 		tp->t_iflag = TTYDEF_IFLAG;
 		tp->t_oflag = TTYDEF_OFLAG;
 		tp->t_lflag = TTYDEF_LFLAG;
@@ -748,20 +748,20 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 		 * expect.  We always assert DTR while the device is open
 		 * unless explicitly requested to deassert it.
 		 */
-		imxuart_modem(sc, 1);
+		m83uart_modem(sc, 1);
 
 		/* Clear the input ring, and unblock. */
 		sc->sc_rbuf_in = sc->sc_rbuf_out = 0;
-		imxuart_iflush(sc);
-		CLR(sc->sc_rx_flags, IMXUART_RX_ANY_BLOCK);
-		imxuart_hwiflow(sc);
+		m83uart_iflush(sc);
+		CLR(sc->sc_rx_flags, M83UART_RX_ANY_BLOCK);
+		m83uart_hwiflow(sc);
 
 		/* Turn on interrupts. */
-		imxuart_control_rxint(sc, true);
+		m83uart_control_rxint(sc, true);
 
-#ifdef IMXUART_DEBUG
-		if (imxuart_debug)
-			imxustatus(sc, "imxuopen  ");
+#ifdef M83UART_DEBUG
+		if (m83uart_debug)
+			m83ustatus(sc, "m83uopen  ");
 #endif
 
 		mutex_spin_exit(&sc->sc_lock);
@@ -770,7 +770,7 @@ imxuopen(dev_t dev, int flag, int mode, struct lwp *l)
 	splx(s);
 
 #if 0
-	error = ttyopen(tp, IMXUART_DIALOUT(dev), ISSET(flag, O_NONBLOCK));
+	error = ttyopen(tp, M83UART_DIALOUT(dev), ISSET(flag, O_NONBLOCK));
 #else
 	error = ttyopen(tp, 1, ISSET(flag, O_NONBLOCK));
 #endif
@@ -789,17 +789,17 @@ bad:
 		 * We failed to open the device, and nobody else had it opened.
 		 * Clean up the state as appropriate.
 		 */
-		imxuart_shutdown(sc);
+		m83uart_shutdown(sc);
 	}
 
 	return (error);
 }
 
 int
-imxuclose(dev_t dev, int flag, int mode, struct lwp *l)
+m83uclose(dev_t dev, int flag, int mode, struct lwp *l)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	struct tty *tp = sc->sc_tty;
 
 	/* XXX This is for cons.c. */
@@ -809,7 +809,7 @@ imxuclose(dev_t dev, int flag, int mode, struct lwp *l)
 	(*tp->t_linesw->l_close)(tp, flag);
 	ttyclose(tp);
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (0);
 
 	if (!ISSET(tp->t_state, TS_ISOPEN) && tp->t_wopen == 0) {
@@ -818,72 +818,72 @@ imxuclose(dev_t dev, int flag, int mode, struct lwp *l)
 		 * use; e.g. if this was the dialout node, and there are still
 		 * processes waiting for carrier on the non-dialout node.
 		 */
-		imxuart_shutdown(sc);
+		m83uart_shutdown(sc);
 	}
 
 	return (0);
 }
 
 int
-imxuread(dev_t dev, struct uio *uio, int flag)
+m83uread(dev_t dev, struct uio *uio, int flag)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	struct tty *tp = sc->sc_tty;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (EIO);
 
 	return ((*tp->t_linesw->l_read)(tp, uio, flag));
 }
 
 int
-imxuwrite(dev_t dev, struct uio *uio, int flag)
+m83uwrite(dev_t dev, struct uio *uio, int flag)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	struct tty *tp = sc->sc_tty;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (EIO);
 
 	return ((*tp->t_linesw->l_write)(tp, uio, flag));
 }
 
 int
-imxupoll(dev_t dev, int events, struct lwp *l)
+m83upoll(dev_t dev, int events, struct lwp *l)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	struct tty *tp = sc->sc_tty;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (POLLHUP);
 
 	return ((*tp->t_linesw->l_poll)(tp, events, l));
 }
 
 struct tty *
-imxutty(dev_t dev)
+m83utty(dev_t dev)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	struct tty *tp = sc->sc_tty;
 
 	return (tp);
 }
 
 int
-imxuioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
+m83uioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 {
-	struct imxuart_softc *sc;
+	struct m83uart_softc *sc;
 	struct tty *tp;
 	int error;
 
-	sc = device_lookup_private(&imxuart_cd, IMXUART_UNIT(dev));
+	sc = device_lookup_private(&m83uart_cd, M83UART_UNIT(dev));
 	if (sc == NULL)
 		return ENXIO;
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (EIO);
 
 	tp = sc->sc_tty;
@@ -914,19 +914,19 @@ imxuioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 
 	switch (cmd) {
 	case TIOCSBRK:
-		imxuart_break(sc, true);
+		m83uart_break(sc, true);
 		break;
 
 	case TIOCCBRK:
-		imxuart_break(sc, false);
+		m83uart_break(sc, false);
 		break;
 
 	case TIOCSDTR:
-		imxuart_modem(sc, 1);
+		m83uart_modem(sc, 1);
 		break;
 
 	case TIOCCDTR:
-		imxuart_modem(sc, 0);
+		m83uart_modem(sc, 0);
 		break;
 
 	case TIOCGFLAGS:
@@ -940,11 +940,11 @@ imxuioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 	case TIOCMSET:
 	case TIOCMBIS:
 	case TIOCMBIC:
-		tiocm_to_imxu(sc, cmd, *(int *)data);
+		tiocm_to_m83u(sc, cmd, *(int *)data);
 		break;
 
 	case TIOCMGET:
-		*(int *)data = imxuart_to_tiocm(sc);
+		*(int *)data = m83uart_to_tiocm(sc);
 		break;
 
 #ifdef notyet
@@ -982,16 +982,16 @@ imxuioctl(dev_t dev, u_long cmd, void *data, int flag, struct lwp *l)
 
 	mutex_spin_exit(&sc->sc_lock);
 
-#ifdef IMXUART_DEBUG
-	if (imxuart_debug)
-		imxustatus(sc, "imxuioctl ");
+#ifdef M83UART_DEBUG
+	if (m83uart_debug)
+		m83ustatus(sc, "m83uioctl ");
 #endif
 
 	return (error);
 }
 
 integrate void
-imxuart_schedrx(struct imxuart_softc *sc)
+m83uart_schedrx(struct m83uart_softc *sc)
 {
 	sc->sc_rx_ready = 1;
 
@@ -1000,7 +1000,7 @@ imxuart_schedrx(struct imxuart_softc *sc)
 }
 
 void
-imxuart_break(struct imxuart_softc *sc, bool onoff)
+m83uart_break(struct m83uart_softc *sc, bool onoff)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -1014,7 +1014,7 @@ imxuart_break(struct imxuart_softc *sc, bool onoff)
 }
 
 void
-imxuart_modem(struct imxuart_softc *sc, int onoff)
+m83uart_modem(struct m83uart_softc *sc, int onoff)
 {
 #ifdef notyet
 	if (sc->sc_mcr_dtr == 0)
@@ -1031,7 +1031,7 @@ imxuart_modem(struct imxuart_softc *sc, int onoff)
 			sc->sc_tbc = 0;
 			sc->sc_heldchange = 1;
 		} else
-			imxuart_loadchannelregs(sc);
+			m83uart_loadchannelregs(sc);
 	}
 #endif
 }
@@ -1044,7 +1044,7 @@ imxuart_modem(struct imxuart_softc *sc, int onoff)
  * note: if UCR2.CTSC == 1 for automatic HW flow control, UCR2.CTS is ignored.
  */
 void
-tiocm_to_imxu(struct imxuart_softc *sc, u_long how, int ttybits)
+tiocm_to_m83u(struct m83uart_softc *sc, u_long how, int ttybits)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -1098,7 +1098,7 @@ tiocm_to_imxu(struct imxuart_softc *sc, u_long how, int ttybits)
 }
 
 int
-imxuart_to_tiocm(struct imxuart_softc *sc)
+m83uart_to_tiocm(struct m83uart_softc *sc)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -1122,7 +1122,7 @@ imxuart_to_tiocm(struct imxuart_softc *sc)
 	/* XXXbsh: I couldn't find the way to read ipp_uart_dsr_dte_i signal,
 	   although there are bits in UART registers to detect delta of DSR.
 	*/
-	if (ISSET(imxubits, MSR_DSR))
+	if (ISSET(m83ubits, MSR_DSR))
 		SET(ttybits, TIOCM_DSR);
 #endif
 
@@ -1174,15 +1174,15 @@ cflag_to_ucr2(tcflag_t cflag, uint32_t oldval)
 }
 
 int
-imxuparam(struct tty *tp, struct termios *t)
+m83uparam(struct tty *tp, struct termios *t)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(tp->t_dev));
-	struct imxuart_baudrate_ratio ratio;
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(tp->t_dev));
+	struct m83uart_baudrate_ratio ratio;
 	uint32_t ucr2;
 	bool change_speed = tp->t_ospeed != t->c_ospeed;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (EIO);
 
 	/* Check requested parameters. */
@@ -1194,7 +1194,7 @@ imxuparam(struct tty *tp, struct termios *t)
 	 * is always active.
 	 */
 	if (ISSET(sc->sc_swflags, TIOCFLAG_SOFTCAR) ||
-	    ISSET(sc->sc_hwflags, IMXUART_HW_CONSOLE)) {
+	    ISSET(sc->sc_hwflags, M83UART_HW_CONSOLE)) {
 		SET(t->c_cflag, CLOCAL);
 		CLR(t->c_cflag, HUPCL);
 	}
@@ -1209,7 +1209,7 @@ imxuparam(struct tty *tp, struct termios *t)
 
 	if (change_speed) {
 		/* calculate baudrate modulator value */
-		if (imxuspeed(t->c_ospeed, &ratio) < 0)
+		if (m83uspeed(t->c_ospeed, &ratio) < 0)
 			return (EINVAL);
 		sc->sc_ratio = ratio;
 	}
@@ -1274,10 +1274,10 @@ imxuparam(struct tty *tp, struct termios *t)
 	else if (!sc->sc_pending && !sc->sc_tx_busy) {
 		if (ucr2 != sc->sc_ucr2_d) {
 			sc->sc_ucr2_d = ucr2;
-			imxuart_load_params(sc);
+			m83uart_load_params(sc);
 		}
 		if (change_speed)
-			imxuart_load_speed(sc);
+			m83uart_load_speed(sc);
 	}
 	else {
 		if (!sc->sc_pending) {
@@ -1285,8 +1285,8 @@ imxuparam(struct tty *tp, struct termios *t)
 			sc->sc_tbc = 0;
 		}
 		sc->sc_pending |=
-		    (ucr2 == sc->sc_ucr2_d ? 0 : IMXUART_PEND_PARAM) |
-		    (change_speed ? 0 : IMXUART_PEND_SPEED);
+		    (ucr2 == sc->sc_ucr2_d ? 0 : M83UART_PEND_PARAM) |
+		    (change_speed ? 0 : M83UART_PEND_SPEED);
 		sc->sc_ucr2_d = ucr2;
 	}
 
@@ -1294,19 +1294,19 @@ imxuparam(struct tty *tp, struct termios *t)
 		/* Disable the high water mark. */
 		sc->sc_r_hiwat = 0;
 		sc->sc_r_lowat = 0;
-		if (ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED)) {
-			CLR(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED);
-			imxuart_schedrx(sc);
+		if (ISSET(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED)) {
+			CLR(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED);
+			m83uart_schedrx(sc);
 		}
 		if (ISSET(sc->sc_rx_flags,
-			IMXUART_RX_TTY_BLOCKED|IMXUART_RX_IBUF_BLOCKED)) {
+			M83UART_RX_TTY_BLOCKED|M83UART_RX_IBUF_BLOCKED)) {
 			CLR(sc->sc_rx_flags,
-			    IMXUART_RX_TTY_BLOCKED|IMXUART_RX_IBUF_BLOCKED);
-			imxuart_hwiflow(sc);
+			    M83UART_RX_TTY_BLOCKED|M83UART_RX_IBUF_BLOCKED);
+			m83uart_hwiflow(sc);
 		}
 	} else {
-		sc->sc_r_hiwat = imxuart_rbuf_hiwat;
-		sc->sc_r_lowat = imxuart_rbuf_lowat;
+		sc->sc_r_hiwat = m83uart_rbuf_hiwat;
+		sc->sc_r_lowat = m83uart_rbuf_lowat;
 	}
 
 	mutex_spin_exit(&sc->sc_lock);
@@ -1323,15 +1323,15 @@ imxuparam(struct tty *tp, struct termios *t)
 	(void) (*tp->t_linesw->l_modem)(tp, 1);
 #endif
 
-#ifdef IMXUART_DEBUG
-	if (imxuart_debug)
-		imxustatus(sc, "imxuparam ");
+#ifdef M83UART_DEBUG
+	if (m83uart_debug)
+		m83ustatus(sc, "m83uparam ");
 #endif
 
 	if (!ISSET(t->c_cflag, CHWFLOW)) {
 		if (sc->sc_tx_stopped) {
 			sc->sc_tx_stopped = 0;
-			imxustart(tp);
+			m83ustart(tp);
 		}
 	}
 
@@ -1339,7 +1339,7 @@ imxuparam(struct tty *tp, struct termios *t)
 }
 
 void
-imxuart_iflush(struct imxuart_softc *sc)
+m83uart_iflush(struct m83uart_softc *sc)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -1360,17 +1360,17 @@ imxuart_iflush(struct imxuart_softc *sc)
 		    bus_space_read_4(iot, ioh, IMX_URXD);
 #ifdef DIAGNOSTIC
 	if (!timo)
-		aprint_error_dev(sc->sc_dev, "imxuart_iflush timeout %02x\n", reg);
+		aprint_error_dev(sc->sc_dev, "m83uart_iflush timeout %02x\n", reg);
 #endif
 }
 
 int
-imxuhwiflow(struct tty *tp, int block)
+m83uhwiflow(struct tty *tp, int block)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(tp->t_dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(tp->t_dev));
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (0);
 
 #ifdef notyet
@@ -1381,18 +1381,18 @@ imxuhwiflow(struct tty *tp, int block)
 	mutex_spin_enter(&sc->sc_lock);
 
 	if (block) {
-		if (!ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_BLOCKED)) {
-			SET(sc->sc_rx_flags, IMXUART_RX_TTY_BLOCKED);
-			imxuart_hwiflow(sc);
+		if (!ISSET(sc->sc_rx_flags, M83UART_RX_TTY_BLOCKED)) {
+			SET(sc->sc_rx_flags, M83UART_RX_TTY_BLOCKED);
+			m83uart_hwiflow(sc);
 		}
 	} else {
-		if (ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED)) {
-			CLR(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED);
-			imxuart_schedrx(sc);
+		if (ISSET(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED)) {
+			CLR(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED);
+			m83uart_schedrx(sc);
 		}
-		if (ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_BLOCKED)) {
-			CLR(sc->sc_rx_flags, IMXUART_RX_TTY_BLOCKED);
-			imxuart_hwiflow(sc);
+		if (ISSET(sc->sc_rx_flags, M83UART_RX_TTY_BLOCKED)) {
+			CLR(sc->sc_rx_flags, M83UART_RX_TTY_BLOCKED);
+			m83uart_hwiflow(sc);
 		}
 	}
 
@@ -1404,10 +1404,10 @@ imxuhwiflow(struct tty *tp, int block)
  * (un)block input via hw flowcontrol
  */
 void
-imxuart_hwiflow(struct imxuart_softc *sc)
+m83uart_hwiflow(struct m83uart_softc *sc)
 {
 #ifdef notyet
-	struct imxuart_regs *regsp= &sc->sc_regs;
+	struct m83uart_regs *regsp= &sc->sc_regs;
 
 	if (sc->sc_mcr_rts == 0)
 		return;
@@ -1419,16 +1419,16 @@ imxuart_hwiflow(struct imxuart_softc *sc)
 		SET(sc->sc_mcr, sc->sc_mcr_rts);
 		SET(sc->sc_mcr_active, sc->sc_mcr_rts);
 	}
-	UR_WRITE_1(regsp, IMXUART_REG_MCR, sc->sc_mcr_active);
+	UR_WRITE_1(regsp, M83UART_REG_MCR, sc->sc_mcr_active);
 #endif
 }
 
 
 void
-imxustart(struct tty *tp)
+m83ustart(struct tty *tp)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(tp->t_dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(tp->t_dev));
 	int s;
 	u_char *tba;
 	int tbc;
@@ -1437,7 +1437,7 @@ imxustart(struct tty *tp)
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return;
 
 	s = spltty();
@@ -1460,7 +1460,7 @@ imxustart(struct tty *tp)
 	SET(tp->t_state, TS_BUSY);
 	sc->sc_tx_busy = 1;
 
-	space = imxuart_txfifo_space(sc);
+	space = m83uart_txfifo_space(sc);
 	n = MIN(sc->sc_tbc, space);
 
 	if (n > 0) {
@@ -1470,7 +1470,7 @@ imxustart(struct tty *tp)
 	}
 
 	/* Enable transmit completion interrupts */
-	imxuart_control_txint(sc, true);
+	m83uart_control_txint(sc, true);
 
 	mutex_spin_exit(&sc->sc_lock);
 out:
@@ -1482,10 +1482,10 @@ out:
  * Stop output on a line.
  */
 void
-imxustop(struct tty *tp, int flag)
+m83ustop(struct tty *tp, int flag)
 {
-	struct imxuart_softc *sc =
-	    device_lookup_private(&imxuart_cd, IMXUART_UNIT(tp->t_dev));
+	struct m83uart_softc *sc =
+	    device_lookup_private(&m83uart_cd, M83UART_UNIT(tp->t_dev));
 
 	mutex_spin_enter(&sc->sc_lock);
 	if (ISSET(tp->t_state, TS_BUSY)) {
@@ -1499,10 +1499,10 @@ imxustop(struct tty *tp, int flag)
 }
 
 void
-imxudiag(void *arg)
+m83udiag(void *arg)
 {
 #ifdef notyet
-	struct imxuart_softc *sc = arg;
+	struct m83uart_softc *sc = arg;
 	int overflows, floods;
 
 	mutex_spin_enter(&sc->sc_lock);
@@ -1521,21 +1521,21 @@ imxudiag(void *arg)
 }
 
 integrate void
-imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
+m83uart_rxsoft(struct m83uart_softc *sc, struct tty *tp)
 {
 	int (*rint)(int, struct tty *) = tp->t_linesw->l_rint;
 	u_int cc, scc, outp;
 	uint16_t data;
 	u_int code;
 
-	scc = cc = IMXUART_RBUF_AVAIL(sc);
+	scc = cc = M83UART_RBUF_AVAIL(sc);
 
 #if 0
-	if (cc == imxuart_rbuf_size-1) {
+	if (cc == m83uart_rbuf_size-1) {
 		sc->sc_floods++;
 		if (sc->sc_errors++ == 0)
 			callout_reset(&sc->sc_diag_callout, 60 * hz,
-			    imxudiag, sc);
+			    m83udiag, sc);
 	}
 #endif
 
@@ -1555,7 +1555,7 @@ imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
 		if (ISSET(data, ERRBITS)) {
 			if (sc->sc_errors.err == 0)
 				callout_reset(&sc->sc_diag_callout,
-				    60 * hz, imxudiag, sc);
+				    60 * hz, m83udiag, sc);
 			if (ISSET(data, IMX_URXD_OVRRUN))
 				sc->sc_errors.ovrrun++;
 			if (ISSET(data, IMX_URXD_BRK)) {
@@ -1575,7 +1575,7 @@ imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
 			/*
 			 * The line discipline's buffer is out of space.
 			 */
-			if (!ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_BLOCKED)) {
+			if (!ISSET(sc->sc_rx_flags, M83UART_RX_TTY_BLOCKED)) {
 				/*
 				 * We're either not using flow control, or the
 				 * line discipline didn't tell us to block for
@@ -1589,15 +1589,15 @@ imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
 				/*
 				 * Don't schedule any more receive processing
 				 * until the line discipline tells us there's
-				 * space available (through imxuhwiflow()).
+				 * space available (through m83uhwiflow()).
 				 * Leave the rest of the data in the input
 				 * buffer.
 				 */
-				SET(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED);
+				SET(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED);
 			}
 			break;
 		}
-		outp = IMXUART_RBUF_INC(sc, outp, 1);
+		outp = M83UART_RBUF_INC(sc, outp, 1);
 		cc--;
 	}
 
@@ -1605,17 +1605,17 @@ imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
 		sc->sc_rbuf_out = outp;
 		mutex_spin_enter(&sc->sc_lock);
 
-		cc = IMXUART_RBUF_SPACE(sc);
+		cc = M83UART_RBUF_SPACE(sc);
 
 		/* Buffers should be ok again, release possible block. */
 		if (cc >= sc->sc_r_lowat) {
-			if (ISSET(sc->sc_rx_flags, IMXUART_RX_IBUF_OVERFLOWED)) {
-				CLR(sc->sc_rx_flags, IMXUART_RX_IBUF_OVERFLOWED);
-				imxuart_control_rxint(sc, true);
+			if (ISSET(sc->sc_rx_flags, M83UART_RX_IBUF_OVERFLOWED)) {
+				CLR(sc->sc_rx_flags, M83UART_RX_IBUF_OVERFLOWED);
+				m83uart_control_rxint(sc, true);
 			}
-			if (ISSET(sc->sc_rx_flags, IMXUART_RX_IBUF_BLOCKED)) {
-				CLR(sc->sc_rx_flags, IMXUART_RX_IBUF_BLOCKED);
-				imxuart_hwiflow(sc);
+			if (ISSET(sc->sc_rx_flags, M83UART_RX_IBUF_BLOCKED)) {
+				CLR(sc->sc_rx_flags, M83UART_RX_IBUF_BLOCKED);
+				m83uart_hwiflow(sc);
 			}
 		}
 		mutex_spin_exit(&sc->sc_lock);
@@ -1623,7 +1623,7 @@ imxuart_rxsoft(struct imxuart_softc *sc, struct tty *tp)
 }
 
 integrate void
-imxuart_txsoft(struct imxuart_softc *sc, struct tty *tp)
+m83uart_txsoft(struct m83uart_softc *sc, struct tty *tp)
 {
 
 	CLR(tp->t_state, TS_BUSY);
@@ -1635,7 +1635,7 @@ imxuart_txsoft(struct imxuart_softc *sc, struct tty *tp)
 }
 
 integrate void
-imxuart_stsoft(struct imxuart_softc *sc, struct tty *tp)
+m83uart_stsoft(struct m83uart_softc *sc, struct tty *tp)
 {
 #ifdef notyet
 	u_char msr, delta;
@@ -1664,49 +1664,49 @@ imxuart_stsoft(struct imxuart_softc *sc, struct tty *tp)
 	}
 
 #endif
-#ifdef IMXUART_DEBUG
-	if (imxuart_debug)
-		imxustatus(sc, "imxuart_stsoft");
+#ifdef M83UART_DEBUG
+	if (m83uart_debug)
+		m83ustatus(sc, "m83uart_stsoft");
 #endif
 }
 
 void
-imxusoft(void *arg)
+m83usoft(void *arg)
 {
-	struct imxuart_softc *sc = arg;
+	struct m83uart_softc *sc = arg;
 	struct tty *tp;
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return;
 
 	tp = sc->sc_tty;
 
 	if (sc->sc_rx_ready) {
 		sc->sc_rx_ready = 0;
-		imxuart_rxsoft(sc, tp);
+		m83uart_rxsoft(sc, tp);
 	}
 
 	if (sc->sc_st_check) {
 		sc->sc_st_check = 0;
-		imxuart_stsoft(sc, tp);
+		m83uart_stsoft(sc, tp);
 	}
 
 	if (sc->sc_tx_done) {
 		sc->sc_tx_done = 0;
-		imxuart_txsoft(sc, tp);
+		m83uart_txsoft(sc, tp);
 	}
 }
 
 int
-imxuintr(void *arg)
+m83uintr(void *arg)
 {
-	struct imxuart_softc *sc = arg;
+	struct m83uart_softc *sc = arg;
 	uint32_t usr1, usr2;
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
 
 
-	if (IMXUART_ISALIVE(sc) == 0)
+	if (M83UART_ISALIVE(sc) == 0)
 		return (0);
 
 	mutex_spin_enter(&sc->sc_lock);
@@ -1722,11 +1722,11 @@ imxuintr(void *arg)
 			int cn_trapped = 0;
 
 			cn_check_magic(sc->sc_tty->t_dev,
-				       CNC_BREAK, imxuart_cnm_state);
+				       CNC_BREAK, m83uart_cnm_state);
 			if (cn_trapped)
 				goto next;
 #if defined(KGDB) && !defined(DDB)
-			if (ISSET(sc->sc_hwflags, IMXUART_HW_KGDB)) {
+			if (ISSET(sc->sc_hwflags, M83UART_HW_KGDB)) {
 				kgdb_connect(1);
 				goto next;
 			}
@@ -1734,13 +1734,13 @@ imxuintr(void *arg)
 		}
 
 		if (usr2 & IMX_USR2_RDR)
-			imxuintr_read(sc);
+			m83uintr_read(sc);
 
-#ifdef	IMXUART_PPS
+#ifdef	M83UART_PPS
 		{
 			u_char	msr, delta;
 
-			msr = CSR_READ_1(regsp, IMXUART_REG_MSR);
+			msr = CSR_READ_1(regsp, M83UART_REG_MSR);
 			delta = msr ^ sc->sc_msr;
 			sc->sc_msr = msr;
 			if ((sc->sc_pps_state.ppsparam.mode & PPS_CAPTUREBOTH) &&
@@ -1770,9 +1770,9 @@ imxuintr(void *arg)
 			if (ISSET(~msr, sc->sc_msr_mask)) {
 				sc->sc_tbc = 0;
 				sc->sc_heldtbc = 0;
-#ifdef IMXUART_DEBUG
-				if (imxuart_debug)
-					imxustatus(sc, "imxuintr  ");
+#ifdef M83UART_DEBUG
+				if (m83uart_debug)
+					m83ustatus(sc, "m83uintr  ");
 #endif
 			}
 
@@ -1786,7 +1786,7 @@ next:
 
 	usr1 = bus_space_read_4(iot, ioh, IMX_USR1);
 	if (usr1 & IMX_USR1_TRDY)
-		imxuintr_send(sc);
+		m83uintr_send(sc);
 
 	mutex_spin_exit(&sc->sc_lock);
 
@@ -1807,7 +1807,7 @@ next:
  */
 
 static void
-imxuintr_read(struct imxuart_softc *sc)
+m83uintr_read(struct m83uart_softc *sc)
 {
 	int cc;
 	uint16_t rd;
@@ -1815,7 +1815,7 @@ imxuintr_read(struct imxuart_softc *sc)
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
 
-	cc = IMXUART_RBUF_SPACE(sc);
+	cc = M83UART_RBUF_SPACE(sc);
 
 	/* clear aging timer interrupt */
 	bus_space_write_4(iot, ioh, IMX_USR1, IMX_USR1_AGTIM);
@@ -1827,7 +1827,7 @@ imxuintr_read(struct imxuart_softc *sc)
 		    bus_space_read_4(iot, ioh, IMX_URXD);
 
 		cn_check_magic(sc->sc_tty->t_dev,
-		    rd & 0xff, imxuart_cnm_state);
+		    rd & 0xff, m83uart_cnm_state);
 
 		if (!cn_trapped) {
 #if defined(DDB) && defined(DDB_KEYCODE)
@@ -1838,7 +1838,7 @@ imxuintr_read(struct imxuart_softc *sc)
 			if ((rd & 0xff) == DDB_KEYCODE)
 				Debugger();
 #endif
-			sc->sc_rbuf_in = IMXUART_RBUF_INC(sc, sc->sc_rbuf_in, 1);
+			sc->sc_rbuf_in = M83UART_RBUF_INC(sc, sc->sc_rbuf_in, 1);
 			cc--;
 		}
 
@@ -1853,16 +1853,16 @@ imxuintr_read(struct imxuart_softc *sc)
 	 * Schedule a receive event if any data was received.
 	 * If we're out of space, turn off receive interrupts.
 	 */
-	if (!ISSET(sc->sc_rx_flags, IMXUART_RX_TTY_OVERFLOWED))
+	if (!ISSET(sc->sc_rx_flags, M83UART_RX_TTY_OVERFLOWED))
 		sc->sc_rx_ready = 1;
 	/*
 	 * See if we are in danger of overflowing a buffer. If
 	 * so, use hardware flow control to ease the pressure.
 	 */
-	if (!ISSET(sc->sc_rx_flags, IMXUART_RX_IBUF_BLOCKED) &&
+	if (!ISSET(sc->sc_rx_flags, M83UART_RX_IBUF_BLOCKED) &&
 	    cc < sc->sc_r_hiwat) {
-		sc->sc_rx_flags |= IMXUART_RX_IBUF_BLOCKED;
-		imxuart_hwiflow(sc);
+		sc->sc_rx_flags |= M83UART_RX_IBUF_BLOCKED;
+		m83uart_hwiflow(sc);
 	}
 
 	/*
@@ -1870,8 +1870,8 @@ imxuintr_read(struct imxuart_softc *sc)
 	 * until the queue has drained a bit.
 	 */
 	if (!cc) {
-		sc->sc_rx_flags |= IMXUART_RX_IBUF_OVERFLOWED;
-		imxuart_control_rxint(sc, false);
+		sc->sc_rx_flags |= M83UART_RX_IBUF_OVERFLOWED;
+		m83uart_control_rxint(sc, false);
 	}
 }
 
@@ -1881,7 +1881,7 @@ imxuintr_read(struct imxuart_softc *sc)
  * find how many chars we can put into tx-fifo
  */
 static u_int
-imxuart_txfifo_space(struct imxuart_softc *sc)
+m83uart_txfifo_space(struct m83uart_softc *sc)
 {
 	uint32_t usr1, usr2;
 	u_int cc;
@@ -1903,7 +1903,7 @@ imxuart_txfifo_space(struct imxuart_softc *sc)
 }
 
 void
-imxuintr_send(struct imxuart_softc *sc)
+m83uintr_send(struct m83uart_softc *sc)
 {
 	uint32_t usr2;
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
@@ -1914,18 +1914,18 @@ imxuintr_send(struct imxuart_softc *sc)
 
 	if (sc->sc_pending) {
 		if (usr2 & IMX_USR2_TXFE) {
-			imxuart_load_pendings(sc);
+			m83uart_load_pendings(sc);
 			sc->sc_tbc = sc->sc_heldtbc;
 			sc->sc_heldtbc = 0;
 		}
 		else {
 			/* wait for TX fifo empty */
-			imxuart_control_txint(sc, true);
+			m83uart_control_txint(sc, true);
 			return;
 		}
 	}
 
-	cc = imxuart_txfifo_space(sc);
+	cc = m83uart_txfifo_space(sc);
 	cc = MIN(cc, sc->sc_tbc);
 
 	if (cc > 0) {
@@ -1935,11 +1935,11 @@ imxuintr_send(struct imxuart_softc *sc)
 	}
 
 	if (sc->sc_tbc > 0)
-		imxuart_control_txint(sc, true);
+		m83uart_control_txint(sc, true);
 	else {
 		/* no more chars to send.
 		   we don't need tx interrupt any more. */
-		imxuart_control_txint(sc, false);
+		m83uart_control_txint(sc, false);
 		if (sc->sc_tx_busy) {
 			sc->sc_tx_busy = 0;
 			sc->sc_tx_done = 1;
@@ -1948,22 +1948,22 @@ imxuintr_send(struct imxuart_softc *sc)
 }
 
 static void
-imxuart_disable_all_interrupts(struct imxuart_softc *sc)
+m83uart_disable_all_interrupts(struct m83uart_softc *sc)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
 
-	sc->sc_ucr1 &= ~IMXUART_INTRS_UCR1;
-	sc->sc_ucr2 &= ~IMXUART_INTRS_UCR2;
-	sc->sc_ucr3 &= ~IMXUART_INTRS_UCR3;
-	sc->sc_ucr4 &= ~IMXUART_INTRS_UCR4;
+	sc->sc_ucr1 &= ~M83UART_INTRS_UCR1;
+	sc->sc_ucr2 &= ~M83UART_INTRS_UCR2;
+	sc->sc_ucr3 &= ~M83UART_INTRS_UCR3;
+	sc->sc_ucr4 &= ~M83UART_INTRS_UCR4;
 
 
 	bus_space_write_region_4(iot, ioh, IMX_UCR1, sc->sc_ucr, 4);
 }
 
 static void
-imxuart_control_rxint(struct imxuart_softc *sc, bool enable)
+m83uart_control_rxint(struct m83uart_softc *sc, bool enable)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -1989,7 +1989,7 @@ imxuart_control_rxint(struct imxuart_softc *sc, bool enable)
 }
 
 static void
-imxuart_control_txint(struct imxuart_softc *sc, bool enable)
+m83uart_control_txint(struct m83uart_softc *sc, bool enable)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -2015,7 +2015,7 @@ imxuart_control_txint(struct imxuart_softc *sc, bool enable)
 
 
 static void
-imxuart_load_params(struct imxuart_softc *sc)
+m83uart_load_params(struct m83uart_softc *sc)
 {
 	uint32_t ucr2;
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
@@ -2029,7 +2029,7 @@ imxuart_load_params(struct imxuart_softc *sc)
 }
 
 static void
-imxuart_load_speed(struct imxuart_softc *sc)
+m83uart_load_speed(struct m83uart_softc *sc)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
@@ -2056,7 +2056,7 @@ imxuart_load_speed(struct imxuart_softc *sc)
 	n = 32 - sc->sc_txfifo_thresh;
 	n = MAX(2, n);
 
-	rfdiv = IMX_UFCR_DIVIDER_TO_RFDIV(imxuart_freqdiv);
+	rfdiv = IMX_UFCR_DIVIDER_TO_RFDIV(m83uart_freqdiv);
 
 	ufcr = (n << IMX_UFCR_TXTL_SHIFT) |
 		(rfdiv << IMX_UFCR_RFDIV_SHIFT) |
@@ -2078,12 +2078,12 @@ imxuart_load_speed(struct imxuart_softc *sc)
 
 
 static void
-imxuart_load_pendings(struct imxuart_softc *sc)
+m83uart_load_pendings(struct m83uart_softc *sc)
 {
-	if (sc->sc_pending & IMXUART_PEND_PARAM)
-		imxuart_load_params(sc);
-	if (sc->sc_pending & IMXUART_PEND_SPEED)
-		imxuart_load_speed(sc);
+	if (sc->sc_pending & M83UART_PEND_PARAM)
+		m83uart_load_params(sc);
+	if (sc->sc_pending & M83UART_PEND_SPEED)
+		m83uart_load_speed(sc);
 	sc->sc_pending = 0;
 }
 
@@ -2097,15 +2097,15 @@ imxuart_load_pendings(struct imxuart_softc *sc)
  */
 
 #define	READAHEAD_RING_LEN	16
-static int imxuart_readahead[READAHEAD_RING_LEN];
-static int imxuart_readahead_in = 0;
-static int imxuart_readahead_out = 0;
-#define	READAHEAD_IS_EMPTY()	(imxuart_readahead_in==imxuart_readahead_out)
+static int m83uart_readahead[READAHEAD_RING_LEN];
+static int m83uart_readahead_in = 0;
+static int m83uart_readahead_out = 0;
+#define	READAHEAD_IS_EMPTY()	(m83uart_readahead_in==m83uart_readahead_out)
 #define	READAHEAD_IS_FULL()	\
-	(((imxuart_readahead_in+1) & (READAHEAD_RING_LEN-1)) ==imxuart_readahead_out)
+	(((m83uart_readahead_in+1) & (READAHEAD_RING_LEN-1)) ==m83uart_readahead_out)
 
 int
-imxuart_common_getc(dev_t dev, struct imxuart_regs *regsp)
+m83uart_common_getc(dev_t dev, struct m83uart_regs *regsp)
 {
 	int s = splserial();
 	u_char c;
@@ -2115,8 +2115,8 @@ imxuart_common_getc(dev_t dev, struct imxuart_regs *regsp)
 
 	/* got a character from reading things earlier */
 	if (!READAHEAD_IS_EMPTY()) {
-		c = imxuart_readahead[imxuart_readahead_out];
-		imxuart_readahead_out = (imxuart_readahead_out + 1) &
+		c = m83uart_readahead[m83uart_readahead_out];
+		m83uart_readahead_out = (m83uart_readahead_out + 1) &
 		    (READAHEAD_RING_LEN-1);
 		splx(s);
 		return (c);
@@ -2131,14 +2131,14 @@ imxuart_common_getc(dev_t dev, struct imxuart_regs *regsp)
 	{
 		int cn_trapped __unused = 0;
 		if (!db_active)
-			cn_check_magic(dev, c, imxuart_cnm_state);
+			cn_check_magic(dev, c, m83uart_cnm_state);
 	}
 	splx(s);
 	return (c);
 }
 
 void
-imxuart_common_putc(dev_t dev, struct imxuart_regs *regsp, int c)
+m83uart_common_putc(dev_t dev, struct m83uart_regs *regsp, int c)
 {
 	int s = splserial();
 	int timo;
@@ -2155,9 +2155,9 @@ imxuart_common_putc(dev_t dev, struct imxuart_regs *regsp, int c)
 
 		int __attribute__((__unused__))cn_trapped = 0;
 		cin = bus_space_read_4(iot, ioh, IMX_URXD);
-		cn_check_magic(dev, cin & 0xff, imxuart_cnm_state);
-		imxuart_readahead[imxuart_readahead_in] = cin & 0xff;
-		imxuart_readahead_in = (imxuart_readahead_in + 1) &
+		cn_check_magic(dev, cin & 0xff, m83uart_cnm_state);
+		m83uart_readahead[m83uart_readahead_in] = cin & 0xff;
+		m83uart_readahead_in = (m83uart_readahead_in + 1) &
 		    (READAHEAD_RING_LEN-1);
 	}
 
@@ -2179,7 +2179,7 @@ imxuart_common_putc(dev_t dev, struct imxuart_regs *regsp, int c)
 		}
 	} while(--timo > 0);
 
-	IMXUART_BARRIER(regsp, BR | BW);
+	M83UART_BARRIER(regsp, BR | BW);
 
 	splx(s);
 }
@@ -2187,11 +2187,11 @@ imxuart_common_putc(dev_t dev, struct imxuart_regs *regsp, int c)
  * Initialize UART
  */
 int
-imxuart_init(struct imxuart_regs *regsp, int rate, tcflag_t cflag, int domap)
+m83uart_init(struct m83uart_regs *regsp, int rate, tcflag_t cflag, int domap)
 {
 /*
-	struct imxuart_baudrate_ratio ratio;
-	int rfdiv = IMX_UFCR_DIVIDER_TO_RFDIV(imxuart_freqdiv);
+	struct m83uart_baudrate_ratio ratio;
+	int rfdiv = IMX_UFCR_DIVIDER_TO_RFDIV(m83uart_freqdiv);
 	uint32_t ufcr;
 */
 	int error;
@@ -2200,8 +2200,8 @@ imxuart_init(struct imxuart_regs *regsp, int rate, tcflag_t cflag, int domap)
 	     IMX_UART_SIZE, 0, &regsp->ur_ioh)) != 0)
 		return error;
 #if 0
-	if (imxuart_freq != 0) {
-		if (imxuspeed(rate, &ratio) < 0)
+	if (m83uart_freq != 0) {
+		if (m83uspeed(rate, &ratio) < 0)
 			return EINVAL;
 
 		/* UBIR must updated before UBMR */
@@ -2220,15 +2220,15 @@ imxuart_init(struct imxuart_regs *regsp, int rate, tcflag_t cflag, int domap)
 	ufcr |= (8 << IMX_UFCR_TXTL_SHIFT);
 	ufcr &= ~IMX_UFCR_RXTL;
 	ufcr |= (1 << IMX_UFCR_RXTL_SHIFT);
-	if (imxuart_freq != 0) {
+	if (m83uart_freq != 0) {
 		ufcr &= ~IMX_UFCR_RFDIV;
 		ufcr |= (rfdiv << IMX_UFCR_RFDIV_SHIFT);
 	}
 	bus_space_write_4(regsp->ur_iot, regsp->ur_ioh, IMX_UFCR, ufcr);
 
-	if (imxuart_freq != 0) {
+	if (m83uart_freq != 0) {
 		bus_space_write_4(regsp->ur_iot, regsp->ur_ioh, IMX_ONEMS,
-		    imxuart_freq / imxuart_freqdiv / 1000);
+		    m83uart_freq / m83uart_freqdiv / 1000);
 	}
 
 	bus_space_write_4(regsp->ur_iot, regsp->ur_ioh, IMX_UCR2,
@@ -2252,82 +2252,82 @@ imxuart_init(struct imxuart_regs *regsp, int rate, tcflag_t cflag, int domap)
 /*
  * Following are all routines needed for UART to act as console
  */
-struct consdev imxucons = {
-	NULL, NULL, imxucngetc, imxucnputc, imxucnpollc, NULL, NULL, NULL,
+struct consdev m83ucons = {
+	NULL, NULL, m83ucngetc, m83ucnputc, m83ucnpollc, NULL, NULL, NULL,
 	NODEV, CN_NORMAL
 };
 
 
 int
-imxuart_cnattach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
+m83uart_cnattach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
     tcflag_t cflag)
 {
-	struct imxuart_regs regs;
+	struct m83uart_regs regs;
 	int res;
 
 	regs.ur_iot = iot;
 	regs.ur_iobase = iobase;
 
-	res = imxuart_init(&regs, rate, cflag, true);
+	res = m83uart_init(&regs, rate, cflag, true);
 	if (res)
 		return (res);
 
-	cn_tab = &imxucons;
-	cn_init_magic(&imxuart_cnm_state);
+	cn_tab = &m83ucons;
+	cn_init_magic(&m83uart_cnm_state);
 	cn_set_magic("\047\001"); /* default magic is BREAK */
 
-	imxuconsrate = rate;
-	imxuconscflag = cflag;
+	m83uconsrate = rate;
+	m83uconscflag = cflag;
 
-	imxuconsregs = regs;
+	m83uconsregs = regs;
 
 	return 0;
 }
 
 int
-imxucngetc(dev_t dev)
+m83ucngetc(dev_t dev)
 {
-	return (imxuart_common_getc(dev, &imxuconsregs));
+	return (m83uart_common_getc(dev, &m83uconsregs));
 }
 
 /*
  * Console kernel output character routine.
  */
 void
-imxucnputc(dev_t dev, int c)
+m83ucnputc(dev_t dev, int c)
 {
-	imxuart_common_putc(dev, &imxuconsregs, c);
+	m83uart_common_putc(dev, &m83uconsregs, c);
 }
 
 void
-imxucnpollc(dev_t dev, int on)
+m83ucnpollc(dev_t dev, int on)
 {
 
-	imxuart_readahead_in = 0;
-	imxuart_readahead_out = 0;
+	m83uart_readahead_in = 0;
+	m83uart_readahead_out = 0;
 }
 
 #ifdef KGDB
 int
-imxuart_kgdb_attach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
+m83uart_kgdb_attach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
     tcflag_t cflag)
 {
 	int res;
 
-	if (iot == imxuconsregs.ur_iot &&
-	    iobase == imxuconsregs.ur_iobase) {
+	if (iot == m83uconsregs.ur_iot &&
+	    iobase == m83uconsregs.ur_iobase) {
 #if !defined(DDB)
 		return (EBUSY); /* cannot share with console */
 #else
-		imxu_kgdb_regs.ur_iot = iot;
-		imxu_kgdb_regs.ur_ioh = imxuconsregs.ur_ioh;
-		imxu_kgdb_regs.ur_iobase = iobase;
+		m83u_kgdb_regs.ur_iot = iot;
+		m83u_kgdb_regs.ur_ioh = m83uconsregs.ur_ioh;
+		m83u_kgdb_regs.ur_iobase = iobase;
 #endif
 	} else {
-		imxu_kgdb_regs.ur_iot = iot;
-		imxu_kgdb_regs.ur_iobase = iobase;
+		m83u_kgdb_regs.ur_iot = iot;
+		m83u_kgdb_regs.ur_iobase = iobase;
 
-		res = imxuart_init(&imxu_kgdb_regs, rate, cflag, true);
+		res = m83uart_init(&m83u_kgdb_regs, rate, cflag, true);
 		if (res)
 			return (res);
 
@@ -2335,11 +2335,11 @@ imxuart_kgdb_attach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
 		 * XXXfvdl this shouldn't be needed, but the cn_magic goo
 		 * expects this to be initialized
 		 */
-		cn_init_magic(&imxuart_cnm_state);
+		cn_init_magic(&m83uart_cnm_state);
 		cn_set_magic("\047\001");
 	}
 
-	kgdb_attach(imxuart_kgdb_getc, imxuart_kgdb_putc, &imxu_kgdb_regs);
+	kgdb_attach(m83uart_kgdb_getc, m83uart_kgdb_putc, &m83u_kgdb_regs);
 	kgdb_dev = 123; /* unneeded, only to satisfy some tests */
 
 	return (0);
@@ -2347,37 +2347,37 @@ imxuart_kgdb_attach(bus_space_tag_t iot, paddr_t iobase, u_int rate,
 
 /* ARGSUSED */
 int
-imxuart_kgdb_getc(void *arg)
+m83uart_kgdb_getc(void *arg)
 {
-	struct imxuart_regs *regs = arg;
+	struct m83uart_regs *regs = arg;
 
-	return (imxuart_common_getc(NODEV, regs));
+	return (m83uart_common_getc(NODEV, regs));
 }
 
 /* ARGSUSED */
 void
-imxuart_kgdb_putc(void *arg, int c)
+m83uart_kgdb_putc(void *arg, int c)
 {
-	struct imxuart_regs *regs = arg;
+	struct m83uart_regs *regs = arg;
 
-	imxuart_common_putc(NODEV, regs, c);
+	m83uart_common_putc(NODEV, regs, c);
 }
 #endif /* KGDB */
 
-/* helper function to identify the imxu ports used by
+/* helper function to identify the m83u ports used by
  console or KGDB (and not yet autoconf attached) */
 int
-imxuart_is_console(bus_space_tag_t iot, bus_addr_t iobase, bus_space_handle_t *ioh)
+m83uart_is_console(bus_space_tag_t iot, bus_addr_t iobase, bus_space_handle_t *ioh)
 {
 	bus_space_handle_t help;
 
-	if (!imxuconsattached &&
-	    iot == imxuconsregs.ur_iot && iobase == imxuconsregs.ur_iobase)
-		help = imxuconsregs.ur_ioh;
+	if (!m83uconsattached &&
+	    iot == m83uconsregs.ur_iot && iobase == m83uconsregs.ur_iobase)
+		help = m83uconsregs.ur_ioh;
 #ifdef KGDB
-	else if (!imxu_kgdb_attached &&
-	    iot == imxu_kgdb_regs.ur_iot && iobase == imxu_kgdb_regs.ur_iobase)
-		help = imxu_kgdb_regs.ur_ioh;
+	else if (!m83u_kgdb_attached &&
+	    iot == m83u_kgdb_regs.ur_iot && iobase == m83u_kgdb_regs.ur_iobase)
+		help = m83u_kgdb_regs.ur_ioh;
 #endif
 	else
 		return (0);
@@ -2390,30 +2390,17 @@ imxuart_is_console(bus_space_tag_t iot, bus_addr_t iobase, bus_space_handle_t *i
 #ifdef notyet
 
 bool
-imxuart_cleanup(device_t self, int how)
+m83uart_cleanup(device_t self, int how)
 {
 /*
  * this routine exists to serve as a shutdown hook for systems that
- * have firmware which doesn't interact properly with a imxuart device in
+ * have firmware which doesn't interact properly with a m83uart device in
  * FIFO mode.
  */
-	struct imxuart_softc *sc = device_private(self);
+	struct m83uart_softc *sc = device_private(self);
 
-	if (ISSET(sc->sc_hwflags, IMXUART_HW_FIFO))
-		UR_WRITE_1(&sc->sc_regs, IMXUART_REG_FIFO, 0);
-
-	return true;
-}
-#endif
-
-#ifdef notyet
-bool
-imxuart_suspend(device_t self PMF_FN_ARGS)
-{
-	struct imxuart_softc *sc = device_private(self);
-
-	UR_WRITE_1(&sc->sc_regs, IMXUART_REG_IER, 0);
-	(void)CSR_READ_1(&sc->sc_regs, IMXUART_REG_IIR);
+	if (ISSET(sc->sc_hwflags, M83UART_HW_FIFO))
+		UR_WRITE_1(&sc->sc_regs, M83UART_REG_FIFO, 0);
 
 	return true;
 }
@@ -2421,12 +2408,25 @@ imxuart_suspend(device_t self PMF_FN_ARGS)
 
 #ifdef notyet
 bool
-imxuart_resume(device_t self PMF_FN_ARGS)
+m83uart_suspend(device_t self PMF_FN_ARGS)
 {
-	struct imxuart_softc *sc = device_private(self);
+	struct m83uart_softc *sc = device_private(self);
+
+	UR_WRITE_1(&sc->sc_regs, M83UART_REG_IER, 0);
+	(void)CSR_READ_1(&sc->sc_regs, M83UART_REG_IIR);
+
+	return true;
+}
+#endif
+
+#ifdef notyet
+bool
+m83uart_resume(device_t self PMF_FN_ARGS)
+{
+	struct m83uart_softc *sc = device_private(self);
 
 	mutex_spin_enter(&sc->sc_lock);
-	imxuart_loadchannelregs(sc);
+	m83uart_loadchannelregs(sc);
 	mutex_spin_exit(&sc->sc_lock);
 
 	return true;
@@ -2434,12 +2434,12 @@ imxuart_resume(device_t self PMF_FN_ARGS)
 #endif
 
 static void
-imxuart_enable_debugport(struct imxuart_softc *sc)
+m83uart_enable_debugport(struct m83uart_softc *sc)
 {
 	bus_space_tag_t iot = sc->sc_regs.ur_iot;
 	bus_space_handle_t ioh = sc->sc_regs.ur_ioh;
 
-	if (sc->sc_hwflags & (IMXUART_HW_CONSOLE|IMXUART_HW_KGDB)) {
+	if (sc->sc_hwflags & (M83UART_HW_CONSOLE|M83UART_HW_KGDB)) {
 
 		/* Turn on line break interrupt, set carrier. */
 
@@ -2460,8 +2460,8 @@ imxuart_enable_debugport(struct imxuart_softc *sc)
 
 
 void
-imxuart_set_frequency(u_int freq, u_int div)
+m83uart_set_frequency(u_int freq, u_int div)
 {
-	imxuart_freq = freq;
-	imxuart_freqdiv = div;
+	m83uart_freq = freq;
+	m83uart_freqdiv = div;
 }
