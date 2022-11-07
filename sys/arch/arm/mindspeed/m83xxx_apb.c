@@ -102,7 +102,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$Id: m8331_apb.c,v 1.7 2021/08/07 16:18:44 thorpej Exp $");
+__KERNEL_RCSID(0, "$Id$");
 
 #include "locators.h"
 
@@ -154,7 +154,7 @@ m83apb_attach(device_t parent, device_t self, void *aux)
 
 	sc->sc_bust = ahba->ahba_memt;
 
-	aprint_normal(": m8331 AHB-Lite 2.v6 to IP bus interface\n");
+	aprint_normal(": APB\n");
 
 	/*
 	 * Attach all other devices
