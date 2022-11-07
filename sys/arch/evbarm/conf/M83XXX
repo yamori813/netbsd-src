@@ -20,6 +20,7 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 
 # For StrongARM systems
 options 	CPU_ARM1136	# Support the SA110 core
+options 	CPU_ARM11
 
 # Architecture options
 options        IMX31_IPGCLK_FREQ=66000000	# Fixme. bogus value
@@ -107,14 +108,14 @@ options 	USERCONF	# userconf(4) support
 
 # Development and Debugging options
 
-options 	DIAGNOSTIC	# internal consistency checks
+#options 	DIAGNOSTIC	# internal consistency checks
 options 	DEBUG
 #options 	LOCKDEBUG
 #options 	UVMHIST		# kernhist for uvm/pmap subsystems
 options 	VERBOSE_INIT_ARM # verbose bootstraping messages
 options 	DDB		# in-kernel debugger
 options 	DDB_HISTORY_SIZE=100	# Enable history editing in DDB
-options		EARLYCONS=m83xxx,CONSADDR=0x10090000
+#options		EARLYCONS=m83xxx,CONSADDR=0x10090000
 #makeoptions	DEBUG="-g"	# compile full symbol table
 makeoptions	COPY_SYMTAB=1
 
