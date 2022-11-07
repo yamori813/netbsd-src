@@ -50,8 +50,9 @@ __KERNEL_RCSID(0, "$NetBSD: imx31_icu.c,v 1.8 2022/02/12 03:24:34 riastradh Exp 
 #include <machine/autoconf.h>
 #include <sys/bus.h>
 
-#include <arm/imx/imx31reg.h>
-#include <arm/imx/imx31var.h>
+#include <arm/mindspeed/m83xxxreg.h>
+#include <arm/mindspeed/m83xxxvar.h>
+#include <arm/mindspeed/m83_intrreg.h>
 
 static void intc_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static void intc_block_irqs(struct pic_softc *, size_t, uint32_t);
@@ -209,9 +210,9 @@ CFATTACH_DECL_NEW(intc, sizeof(struct intc_softc),
 int
 intc_match(device_t parent, cfdata_t self, void *aux)
 {
-	struct ahb_attach_args * const ahba = aux;
+	struct apb_attach_args * const apba = aux;
 
-	if (ahba->ahba_addr != INTC_BASE)
+	if (apba->apba_addr != INTC_BASE)
 		return 0;
 
 	return 1;
@@ -221,21 +222,21 @@ void
 intc_attach(device_t parent, device_t self, void *aux)
 {
 	struct intc_softc * const intc = device_private(self);
-	struct ahb_attach_args * const ahba = aux;
+	struct apb_attach_args * const apba = aux;
 	int error;
 
-	KASSERT(ahba->ahba_irqbase != AHBCF_IRQBASE_DEFAULT);
+	KASSERT(apba->apba_irqbase != AHBCF_IRQBASE_DEFAULT);
 	KASSERT(device_unit(self) == 0);
 
-	if (ahba->ahba_size == AHBCF_SIZE_DEFAULT)
-		ahba->ahba_size = INTC_SIZE;
+	if (apba->apba_size == AHBCF_SIZE_DEFAULT)
+		apba->apba_size = INTC_SIZE;
 
-	intc->intc_memt = ahba->ahba_memt;
-	error = bus_space_map(intc->intc_memt, ahba->ahba_addr, ahba->ahba_size,
+	intc->intc_memt = apba->apba_memt;
+	error = bus_space_map(intc->intc_memt, apba->apba_addr, apba->apba_size,
 	    0, &intc->intc_memh);
 	if (error)
 		panic("intc_attach: failed to map register %#lx-%#lx: %d",
-		    ahba->ahba_addr, ahba->ahba_addr + ahba->ahba_size - 1,
+		    apba->apba_addr, apba->apba_addr + apba->apba_size - 1,
 		    error);
 
 	intc->intc_pic.pic_ops = &intc_pic_ops;
@@ -243,9 +244,9 @@ intc_attach(device_t parent, device_t self, void *aux)
 	strlcpy(intc->intc_pic.pic_name, device_xname(self),
 	    sizeof(intc->intc_pic.pic_name));
 
-	pic_add(&intc->intc_pic, ahba->ahba_irqbase);
+	pic_add(&intc->intc_pic, apba->apba_irqbase);
 	aprint_normal(": interrupts %d..%d\n",
-	    ahba->ahba_irqbase, ahba->ahba_irqbase + 63);
+	    apba->apba_irqbase, apba->apba_irqbase + 63);
 #if 0
 	softintr_init();
 #endif

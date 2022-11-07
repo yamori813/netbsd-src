@@ -76,4 +76,7 @@
 #define APB_MDMA_BASE			0x101E0000
 /*	0x001F0000 Reserved*/
 
+#define INTC_BASE               0x68000000
+#define INTC_SIZE               0x0400
+
 #endif /* _ARM_MINDSPEED_M83REG_H_ */
