@@ -134,14 +134,14 @@ options 	MEMSIZE=0x8000000
 # Devices
 
 ahb0		at mainbus?
-avic0		at ahb? addr 0x68000000 irqbase 0
+intc0		at ahb? addr 0x100a0000 irqbase 0
 aips*		at ahb0
 #imxuart*	at aips? addr 0x43f90000 intr 45
 m83uart*	at aips? addr 0x10090000 intr 45
-imxgpio0	at ahb? addr 0x53fcc000 irqbase 64 intr 52
-imxgpio1	at ahb? addr 0x53fd0000 irqbase 96 intr 51
-imxgpio2	at ahb? addr 0x53fa4000 irqbase 128 intr 56
-gpio*		at imxgpio?
+#imxgpio0	at ahb? addr 0x53fcc000 irqbase 64 intr 52
+#imxgpio1	at ahb? addr 0x53fd0000 irqbase 96 intr 51
+#imxgpio2	at ahb? addr 0x53fa4000 irqbase 128 intr 56
+#gpio*		at imxgpio?
 
 # Pseudo-Devices
 
