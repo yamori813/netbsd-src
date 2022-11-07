@@ -1,4 +1,4 @@
-/*	$NetBSD: m83xxx_ahb.c,v 1.9 2021/08/07 16:18:44 thorpej Exp $	*/
+/*	$NetBSD$	*/
 
 /*
  * Copyright (c) 2002, 2005  Genetec Corporation.  All rights reserved.
@@ -99,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$Id: m83xxx_ahb.c,v 1.9 2021/08/07 16:18:44 thorpej Exp $");
+__KERNEL_RCSID(0, "$Id$");
 
 #include "locators.h"
 #include "avic.h"
@@ -141,12 +141,9 @@ CFATTACH_DECL_NEW(ahb, sizeof(struct ahb_softc),
 
 static struct ahb_softc *ahb_sc;
 
-void m83xxx_platform_early_putchar(char c);
-
 static int
 ahb_match(device_t parent, cfdata_t match, void *aux)
 {
-	m83xxx_platform_early_putchar('A');
 	return 1;
 }
 
@@ -165,7 +162,7 @@ ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dmat = 0;
 #endif
 
-	aprint_normal(": AHB-Lite 2.v6 bus interface\n");
+	aprint_normal(": AMBA Advanced High Performance Bus\n");
 
 	/*
 	 * Attach critical devices
