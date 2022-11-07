@@ -5,12 +5,12 @@
 
 extern struct bus_space m83_bs_tag;
 
-struct aips_attach_args {
-	const char	*aipsa_name;
-	bus_space_tag_t	aipsa_memt;
-	bus_addr_t	aipsa_addr;
-	bus_size_t	aipsa_size;
-	int		aipsa_intr;
+struct apb_attach_args {
+	const char	*apba_name;
+	bus_space_tag_t	apba_memt;
+	bus_addr_t	apba_addr;
+	bus_size_t	apba_size;
+	int		apba_intr;
 };
 
 struct ahb_attach_args {

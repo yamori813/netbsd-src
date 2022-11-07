@@ -28,10 +28,10 @@ attach	intc at ahb
 file	arch/arm/mindspeed/m83xxx_intc.c	intc		needs-flag
 file	arch/arm/arm32/irq_dispatch.S
 
-# iMX IP bus
-device	aips { [addr=-1], [size=0], [intr=-1]} : bus_space_generic
-attach	aips at ahb
-file	arch/arm/imx/imx31_aips.c		aips
+# APB
+device	apb { [addr=-1], [size=0], [intr=-1]} : bus_space_generic
+attach	apb at ahb
+file	arch/arm/mindspeed/m83xxx_apb.c		apb
 
 # iMX EMI (external memory interface)
 #device	emi { [offset=-1], [size=0], [intr=-1] } : bus_space_generic
@@ -55,14 +55,14 @@ file	arch/arm/imx/imx31_clock.c
 
 # Clock Control Module
 device	imxccm
-attach	imxccm	at aips
+attach	imxccm	at apb
 file	arch/arm/imx/imx31_ccm.c	imxccm		needs-flag
 
 defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 
 # iMX UART
 device	m83uart
-attach	m83uart at aips with m83xxx_uart
+attach	m83uart at apb with m83xxx_uart
 file	arch/arm/mindspeed/m83uart.c		m83uart	needs-flag
 file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
 defflag	opt_m83uart.h				IMXUARTCONSOLE
