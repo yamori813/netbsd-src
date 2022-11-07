@@ -147,7 +147,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/arm32/pte.h>
 #include <arm/arm32/machdep.h>
 
-//#include <arm/imx/imx31reg.h>
+#include <arm/mindspeed/m83xxxreg.h>
 #include <arm/mindspeed/m83uartreg.h>
 #include <arm/mindspeed/m83uartvar.h>
 #include <evbarm/mindspeed/m83xxx_reg.h>
@@ -243,8 +243,7 @@ int consrate = CONSPEED;
 static const struct pmap_devmap m83xxx_devmap[] = {
     {
 	M83XXX_UART1_VBASE,
-//	_A(UART1_BASE),
-	_A(0x10090000),
+	_A(APB_UART0_BASE),
 	_S(L1_S_SIZE),
 	VM_PROT_READ|VM_PROT_WRITE,
 	PTE_NOCACHE,

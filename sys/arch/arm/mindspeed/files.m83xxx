@@ -16,16 +16,16 @@ file	arch/arm/mindsoeed/m83_dma.c		bus_dma_generic
 #attach	l2cc at mainbus
 #file	arch/arm/imx/imx31_l2cc.c		l2cc
 
-# iMX AHB
+# AHB
 device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	ahb at mainbus
 file	arch/arm/mindspeed/m83xxx_ahb.c		ahb
 
-# iMX AdVanced Interrupt Controller
+# Interrupt Controller
 include "arch/arm/pic/files.pic"
-device	avic: pic, pic_splfuncs
-attach	avic at ahb
-file	arch/arm/imx/imx31_icu.c		avic		needs-flag
+device	intc: pic, pic_splfuncs
+attach	intc at ahb
+file	arch/arm/mindspeed/m83xxx_intc.c	intc		needs-flag
 file	arch/arm/arm32/irq_dispatch.S
 
 # iMX IP bus
