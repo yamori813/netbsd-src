@@ -49,9 +49,8 @@ file	arch/arm/arm32/irq_dispatch.S
 # iMX NANDFC - NAND Flash memory controller
 # iMX WEIM - Wireless External Interface Module
 
-# iMX clock
-file	arch/arm/imx/imxclock.c
-file	arch/arm/imx/imx31_clock.c
+# clock
+file	arch/arm/mindspeed/m83xxx_clk.c
 
 # Clock Control Module
 device	imxccm

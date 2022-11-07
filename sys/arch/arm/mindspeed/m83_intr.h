@@ -1,4 +1,4 @@
-/*	$NetBSD: imx31_intr.h,v 1.6 2022/06/25 13:24:35 jmcneill Exp $	*/
+/*	$NetBSD$	*/
 /*-
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,70 +30,68 @@
 #ifndef _ARM_IMX_IMX31_INTR_H_
 #define _ARM_IMX_IMX31_INTR_H_
 
-#define	IRQ__RSVD0	0
-#define	IRQ__RSVD1	1
-#define	IRQ__RSVD2	2
-#define	IRQ_I2C3	3	/* I2C 3 */
-#define	IRQ_I2C2	4	/* I2C 2 */
-#define	IRQ_MPEG4_ENC	5	/* MPEG-4 Encoder */
-#define	IRQ_RTIC	6	/* RTIC */
-#define	IRQ_FIR		7	/* Fast Infrared */
-#define	IRQ_MMSD_HC2	8	/* MultiMedia/Secure Data Host Controller 2 */
-#define	IRQ_MMSD_HC1	9	/* MultiMedia/Secure Data Host Controller 1 */
-#define	IRQ_I2C1	10	/* i2c 1 */
-#define	IRQ_SSI2	11	/* Synchronous Serial Interface 1 */
-#define	IRQ_SSI1	12	/* Synchronous Serial Interface 2 */
-#define	IRQ_CSPI2	13	/* Configurable Serial Peripheral Intf 2 */
-#define	IRQ_CSPI1	14	/* Configurable Serial Peripheral Intf 1 */
-#define	IRQ_ATA		15	/* Hard Drive (ATA) Controller */
-#define	IRQ_MBX_RS	16	/* Graphics Accelerator */
-#define	IRQ_CSPI3	17	/* Configurable Serial Peripheral Intf 3 */
-#define	IRQ_UART3	18	/* UART3 (rx,tx,mint) */
-#define	IRQ_I2C_ID	19	/* IC identification */
-#define	IRQ_SIM1	20	/* Subscriber Identification Module */
-#define	IRQ_SIM2	21	/* Subscriber Identification Module */
-#define	IRQ_RNGA	22	/* Random Number Generator Accelerator */
-#define	IRQ_EVTMON	23	/* event monitor + pmu */
-#define	IRQ_KPP		24	/* Keyboard Port Port */
-#define	IRQ_RTC		25	/* Real Time Clock */
-#define	IRQ_PWM		26	/* Pulse Width Modulator */
-#define	IRQ_EPIT2	27	/* Enhanced Periodic Timer 2 */
-#define	IRQ_EPIT1	28	/* Enhanced Periodic Timer 1 */
-#define	IRQ_GPT		29	/* General Purpose Timer */
-#define	IRQ_PWRFAIL	30	/* Power Fail */
-#define	IRQ_CCM_DVFS	31	/* Configurable Serial Peripheral Intf 3 */
-#define	IRQ_UART2	32	/* UART2 (rx,tx,mint) */
-#define	IRQ_NANDFC	33	/* NAND Flash Controller */
-#define	IRQ_SDMA	34	/* Smart Direct Memory Access */
-#define	IRQ_USB_H1	35	/* USB Host 1 */
-#define	IRQ_USB_H2	36	/* USB Host 2 */
-#define	IRQ_USB_OTG	37	/* USB OTG */
-#define	IRQ__RSVD38	38	/* */
-#define	IRQ_MS_HC1	39	/* Memory Stick Host Controller 1 */
-#define	IRQ_MS_HC2	40	/* Memory Stick Host Controller 2 */
-#define	IRQ_IPU_ERR	41	/* */
-#define	IRQ_IPU		42	/* */
-#define	IRQ__RSVD43	43	/* */
-#define	IRQ__RSVD44	44	/* */
-#define	IRQ_UART1	45	/* UART1 (rx,tx,mint) */
-#define	IRQ_UART4	46	/* UART4 (rx,tx,mint) */
-#define	IRQ_UART5	47	/* UART5 (rx,tx,mint) */
-#define	IRQ_ECT		48	/*  */
-#define	IRQ_SCC_SCM	49	/* SCM interrupt */
-#define	IRQ_SCC_SMN	50	/* SMN interrupt */
-#define	IRQ_GPIO2	51	/* General Purpose I/O 2 */
-#define	IRQ_GPIO1	52	/* General Purpose I/O 1 */
-#define	IRQ_CCM		53	/* Clock Controller */
-#define	IRQ_PCMCIA	54	/* PCMCIA Controller 3 */
-#define	IRQ_WDOG	55	/* Watchdog Timer */
-#define	IRQ_GPIO3	56	/* General Purpose I/O 3 */
-#define	IRQ__RSVD57	57
-#define	IRQ_EXT_PWRMGT	58	/* External (power management) */
-#define	IRQ_EXT_TEMP	59	/* External (Temperature) */
-#define	IRQ_EXT_SENS2	60	/* External (sensor) */
-#define	IRQ_EXT_SENS1	61	/* External (sensor) */
-#define	IRQ_EXT_WDOG	62	/* External (WDOG) */
-#define	IRQ_EXT_TV	63	/* External (TV) 3 */
+#define IRQ_PTP0				1
+#define IRQ_PTP1				2
+#define IRQ_PTP2				3
+#define IRQ_EMAC0				4
+#define IRQ_PUI					5
+#define IRQ_PUDMARX				6
+#define IRQ_PUDMATX				7
+#define IRQ_TDMA1				8
+#define IRQ_IPSEC				9
+#define IRQ_I2C					10
+#define IRQ_USB0				11
+#define IRQ_EMAC1				12
+#define IRQ_USB1				13
+#define IRQ_SPI					14
+#define IRQ_TDM_TIMER				15
+#define IRQ_HIF					16
+#define IRQ_HIF_RXEMT				17
+#define IRQ_HITXFUL				18
+#define IRQ_EDMA0RX				19
+#define IRQ_EDMA0TX				20
+#define IRQ_APBB				21
+#define IRQ_DDRC				22
+#define IRQ_IPSEC_WRAP				23
+/*	#define IRQ_Reserved			24 */
+#define IRQ_EDMA1RX				25
+#define IRQ_EDMA1TX				26
+#define IRQ_MDMA_DONE				27
+#define IRQ_28					28 /* Used by fpp Diagnostics */
+/*	#define IRQ_Reserved			29 */
+#define IRQ_TIMERB				30				/* This IRQ is used only by the CSP */
+#define IRQ_TIMERA				31				/* This IRQ is used only by the MSP */
+#define IRQ_G0					(1 + 32)
+#define IRQ_G1					(2 + 32)
+#define IRQ_G2					(3 + 32)
+#define IRQ_G3					(4 + 32)
+#define IRQ_G4					(5 + 32)
+#define IRQ_G5					(6 + 32)
+#define IRQ_G6					(7 + 32)
+#define IRQ_G7					(8 + 32)
+#define IRQ_UART0				(9 + 32)
+#define IRQ_TDMA0				(10 + 32)
+#define IRQ_TOFPP_DMA				(11 + 32)
+#define IRQ_SPDRV_ACP_WORK_DONE			(12 + 32)
+#define IRQ_SPDRV_ACP_REQ			(13 + 32)
+#define IRQ_L2_BWABT				(14 + 32)
+#define IRQ_L2_PARRD				(15 + 32)
+#define IRQ_L2_PARRT				(16 + 32)
+#define IRQ_CSP_PMU				(17 + 32)
+#define IRQ_MSP_PMU				(18 + 32)
+#define IRQ_FROMHOST				(19 + 32)
+#define IRQ_TOHOST				(20 + 32)
+#define IRQ_VDMA0_RX				(21 + 32)
+#define IRQ_VDMA0_TX				(22 + 32)
+#define IRQ_VDMA1_RX				(23 + 32)
+#define IRQ_VDMA1_TX				(24 + 32)
+#define IRQ_FPP					(25 + 32)
+#define IRQ_UART1				(26 + 32)
+#define IRQ_TDMA_RX_AHB_ERR			(27 + 32)
+#define IRQ_TDMA_TX_AHB_ERR			(28 + 32)
+#define IRQ_IDMA_RX_AHB_ERR			(29 + 32)
+#define IRQ_IDMA_TX_AHB_ERR			(30 + 32)
+#define IRQ_MDMA_AHB_ERR			(31 + 32) 
 
 #ifdef _LOCORE
 
