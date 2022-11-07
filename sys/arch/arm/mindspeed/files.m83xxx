@@ -3,8 +3,8 @@
 # Configuration info for the Mindspeed Comcerto 1000
 #
 
-defparam opt_imx.h				MEMSIZE
-defflag opt_imx.h				IMX51
+defparam opt_m83.h				MEMSIZE
+defflag opt_m83.h				M83
 
 define	bus_dma_generic
 
@@ -34,14 +34,14 @@ attach	aips at ahb
 file	arch/arm/imx/imx31_aips.c		aips
 
 # iMX EMI (external memory interface)
-device	emi { [offset=-1], [size=0], [intr=-1] } : bus_space_generic
-attach	emi at ahb
-file	arch/arm/imx/imx31_emi.c		emi
+#device	emi { [offset=-1], [size=0], [intr=-1] } : bus_space_generic
+#attach	emi at ahb
+#file	arch/arm/imx/imx31_emi.c		emi
 
 # iMX GPIO
-device	imxgpio: gpiobus
-attach	imxgpio at ahb
-file	arch/arm/imx/imx31_gpio.c		imxgpio		needs-flag
+#device	imxgpio: gpiobus
+#attach	imxgpio at ahb
+#file	arch/arm/imx/imx31_gpio.c		imxgpio		needs-flag
 
 # iMX M3IF - Multi Master Memory Interface
 # iMX ESDCTL/MDDRC - Enhanced SDRAM/LPDDR memory controller
