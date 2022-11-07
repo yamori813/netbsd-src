@@ -45,11 +45,11 @@ void m83xxx_platform_early_putchar(char c);
 int
 m83xxx_uart_match(device_t parent, struct cfdata *cf, void *aux)
 {
-	struct aips_attach_args * const aipsa = aux;
+	struct apb_attach_args * const apba = aux;
 
 m83xxx_platform_early_putchar('U');
 
-	switch (aipsa->aipsa_addr) {
+	switch (apba->apba_addr) {
 //	case UART1_BASE:
 	case 0x10090000:
 		return 1;
@@ -61,9 +61,9 @@ m83xxx_platform_early_putchar('U');
 void
 m83xxx_uart_attach(device_t parent, device_t self, void *aux)
 {
-	struct aips_attach_args * aa = aux;
+	struct apb_attach_args * aa = aux;
 
 	m83uart_attach_common(parent, self,
-	    aa->aipsa_memt, aa->aipsa_addr, aa->aipsa_size, aa->aipsa_intr, 0);
+	    aa->apba_memt, aa->apba_addr, aa->apba_size, aa->apba_intr, 0);
 }
 
