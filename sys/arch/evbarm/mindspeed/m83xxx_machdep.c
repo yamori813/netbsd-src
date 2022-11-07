@@ -291,8 +291,9 @@ initarm(void *arg)
 
 	/* Register devmap for devices we mapped in start */
 //	pmap_devmap_register(m83xxx_devmap);
-	extern char ARM_BOOTSTRAP_LxPT[];
-	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m83xxx_devmap);
+//	extern char ARM_BOOTSTRAP_LxPT[];
+//	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m83xxx_devmap);
+	pmap_devmap_bootstrap((vaddr_t)armreg_ttbr_read() & -L1_TABLE_SIZE, m83xxx_devmap);
 
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
 
@@ -327,6 +328,8 @@ initarm(void *arg)
 	arm32_bootmem_init(bootconfig.dram[0].address, MEMSIZE,
 	     (uintptr_t) KERNEL_BASE_phys);
 	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_HIGH, 0, m83xxx_devmap, true);
+//	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_HIGH, 0, m83xxx_devmap, false);
+//	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_LOW, 0, m83xxx_devmap, true);
 	int rt =  initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE, NULL, 0);
 	return rt;
 }
