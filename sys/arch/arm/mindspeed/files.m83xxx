@@ -21,17 +21,17 @@ device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	ahb at mainbus
 file	arch/arm/mindspeed/m83xxx_ahb.c		ahb
 
+# APB
+device	apb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
+attach	apb at ahb
+file	arch/arm/mindspeed/m83xxx_apb.c		apb
+
 # Interrupt Controller
 include "arch/arm/pic/files.pic"
 device	intc: pic, pic_splfuncs
-attach	intc at ahb
+attach	intc at apb
 file	arch/arm/mindspeed/m83xxx_intc.c	intc		needs-flag
 file	arch/arm/arm32/irq_dispatch.S
-
-# APB
-device	apb { [addr=-1], [size=0], [intr=-1]} : bus_space_generic
-attach	apb at ahb
-file	arch/arm/mindspeed/m83xxx_apb.c		apb
 
 # iMX EMI (external memory interface)
 #device	emi { [offset=-1], [size=0], [intr=-1] } : bus_space_generic
