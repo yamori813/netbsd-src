@@ -25,5 +25,5 @@ makeoptions 	LOADADDRESS="0x80100000"
 makeoptions 	BOARDTYPE="m83xxx"
 makeoptions 	BOARDMKFRAG="${THISARM}/conf/mk.m83xxx"
 
-options 	ARM_INTR_IMPL="<arch/arm/mindspeed/m83xxx_intr.h>"
+options 	ARM_INTR_IMPL="<arch/arm/mindspeed/m83xxx_intc.h>"
 options 	ARM_GENERIC_TODR

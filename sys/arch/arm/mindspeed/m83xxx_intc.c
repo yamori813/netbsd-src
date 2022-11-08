@@ -52,7 +52,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/mindspeed/m83xxx_reg.h>
 #include <arm/mindspeed/m83xxx_var.h>
-#include <arm/mindspeed/m83xxx_intrreg.h>
 
 static void intc_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static void intc_block_irqs(struct pic_softc *, size_t, uint32_t);
@@ -252,7 +251,7 @@ intc_attach(device_t parent, device_t self, void *aux)
 	KASSERT(device_unit(self) == 0);
 
 	if (apba->apba_size == AHBCF_SIZE_DEFAULT)
-		apba->apba_size = INTC_SIZE;
+		apba->apba_size = APB_INTC_SIZE;
 
 	intc->intc_memt = apba->apba_memt;
 	error = bus_space_map(intc->intc_memt, apba->apba_addr, apba->apba_size,
