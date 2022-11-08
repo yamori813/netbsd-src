@@ -1,4 +1,4 @@
-/*	$NetBSD: m83_bus_space.c,v 1.5 2018/03/16 17:56:31 ryo Exp $ */
+/*	$NetBSD$ */
 
 /*
  * Based on ep93xx_space.c
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: m83_bus_space.c,v 1.5 2018/03/16 17:56:31 ryo Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 /*
  * bus_space I/O functions for ep93xx
