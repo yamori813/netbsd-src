@@ -158,8 +158,8 @@ __KERNEL_RCSID(0, "$NetBSD: m83uart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $
 
 #include <ddb/db_active.h>
 
-#include <arm/mindspeed/m83uartreg.h>
-#include <arm/mindspeed/m83uartvar.h>
+#include <arm/mindspeed/m83xxx_uartreg.h>
+#include <arm/mindspeed/m83xxx_uartvar.h>
 #include <dev/cons.h>
 
 #ifndef	M83UART_RING_SIZE
@@ -2496,29 +2496,24 @@ m83uart_set_frequency(u_int freq, u_int div)
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/device.h>
-#include <arm/mindspeed/m83xxxreg.h>
-#include <arm/mindspeed/m83xxxvar.h>
-#include <arm/mindspeed/m83uartreg.h>
-#include <arm/mindspeed/m83uartvar.h>
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_var.h>
+#include <arm/mindspeed/m83xxx_uartreg.h>
+#include <arm/mindspeed/m83xxx_uartvar.h>
 
-static int m83xxx_uart_match(device_t, struct cfdata *, void *);
-static void m83xxx_uart_attach(device_t, device_t, void *);
+static int m83_uart_match(device_t, struct cfdata *, void *);
+static void m83_uart_attach(device_t, device_t, void *);
 
-CFATTACH_DECL_NEW(m83xxx_uart, sizeof(struct m83uart_softc),
-    m83xxx_uart_match, m83xxx_uart_attach, NULL, NULL);
-
-void m83xxx_platform_early_putchar(char c);
+CFATTACH_DECL_NEW(m83_uart, sizeof(struct m83uart_softc),
+    m83_uart_match, m83_uart_attach, NULL, NULL);
 
 int
-m83xxx_uart_match(device_t parent, struct cfdata *cf, void *aux)
+m83_uart_match(device_t parent, struct cfdata *cf, void *aux)
 {
 	struct apb_attach_args * const apba = aux;
 
-m83xxx_platform_early_putchar('U');
-
 	switch (apba->apba_addr) {
-//	case UART1_BASE:
-	case 0x10090000:
+	case APB_UART0_BASE:
 		return 1;
 	}
 
@@ -2526,7 +2521,7 @@ m83xxx_platform_early_putchar('U');
 }
 
 void
-m83xxx_uart_attach(device_t parent, device_t self, void *aux)
+m83_uart_attach(device_t parent, device_t self, void *aux)
 {
 	struct apb_attach_args * aa = aux;
 

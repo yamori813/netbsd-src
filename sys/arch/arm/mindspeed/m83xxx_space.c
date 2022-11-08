@@ -45,9 +45,7 @@ __KERNEL_RCSID(0, "$NetBSD: m83_bus_space.c,v 1.5 2018/03/16 17:56:31 ryo Exp $"
 
 #include <sys/bus.h>
 
-#include <arm/mindspeed/m83xxxvar.h>
-//#include <arm/ep93xx/ep93xxreg.h>
-//#include <arm/ep93xx/ep93xxvar.h>
+#include <arm/mindspeed/m83xxx_var.h>
 
 /* Proto types for all the bus_space structure functions */
 bs_protos(m83);
