@@ -154,7 +154,7 @@ m83apb_attach(device_t parent, device_t self, void *aux)
 
 	sc->sc_bust = ahba->ahba_memt;
 
-	aprint_normal(": APB\n");
+	aprint_normal(": AHB to APB Bus Bridge\n");
 
 	/*
 	 * Attach all other devices

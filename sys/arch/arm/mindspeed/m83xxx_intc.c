@@ -212,7 +212,7 @@ intc_match(device_t parent, cfdata_t self, void *aux)
 {
 	struct apb_attach_args * const apba = aux;
 
-	if (apba->apba_addr != INTC_BASE)
+	if (apba->apba_addr != APB_INTC_BASE)
 		return 0;
 
 	return 1;
