@@ -62,7 +62,7 @@ defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 # iMX UART
 device	m83uart
 attach	m83uart at apb with m83xxx_uart
-file	arch/arm/mindspeed/m83uart.c		m83uart	needs-flag
+#file	arch/arm/mindspeed/m83uart.c		m83uart	needs-flag
 file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
 defflag	opt_m83uart.h				IMXUARTCONSOLE
 
