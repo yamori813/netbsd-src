@@ -8,8 +8,8 @@ defflag opt_m83.h				M83
 
 define	bus_dma_generic
 
-file	arch/arm/mindspeed/m83_space.c
-file	arch/arm/mindsoeed/m83_dma.c		bus_dma_generic
+file	arch/arm/mindspeed/m83xxx_space.c
+file	arch/arm/mindsoeed/m83xxx_dma.c		bus_dma_generic
 
 # iMX L2 Cache Controller
 #device	l2cc
@@ -61,9 +61,8 @@ defparam opt_imx31clk.h IMX31_IPGCLK_FREQ
 
 # iMX UART
 device	m83uart
-attach	m83uart at apb with m83xxx_uart
-#file	arch/arm/mindspeed/m83uart.c		m83uart	needs-flag
-file	arch/arm/mindspeed/m83xxx_uart.c	m83xxx_uart
+attach	m83uart at apb with m83_uart
+file	arch/arm/mindspeed/m83xxx_uart.c	m83_uart
 defflag	opt_m83uart.h				IMXUARTCONSOLE
 
 attach	ehci at ahb with ehci_ahb : bus_dma_generic

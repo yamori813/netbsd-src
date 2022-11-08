@@ -147,9 +147,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/arm32/pte.h>
 #include <arm/arm32/machdep.h>
 
-#include <arm/mindspeed/m83xxxreg.h>
-#include <arm/mindspeed/m83uartreg.h>
-#include <arm/mindspeed/m83uartvar.h>
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_uartreg.h>
+#include <arm/mindspeed/m83xxx_uartvar.h>
 #include <evbarm/mindspeed/m83xxx_reg.h>
 
 /* Kernel text starts 1MB in from the bottom of the kernel address space. */

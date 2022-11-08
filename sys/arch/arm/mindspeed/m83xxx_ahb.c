@@ -118,8 +118,8 @@ __KERNEL_RCSID(0, "$Id$");
 
 #include <machine/intr.h>
 
-#include <arm/mindspeed/m83xxxreg.h>
-#include <arm/mindspeed/m83xxxvar.h>
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_var.h>
 
 struct ahb_softc {
 	device_t sc_dev;

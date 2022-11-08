@@ -50,9 +50,9 @@ __KERNEL_RCSID(0, "$NetBSD: imx31_icu.c,v 1.8 2022/02/12 03:24:34 riastradh Exp 
 #include <machine/autoconf.h>
 #include <sys/bus.h>
 
-#include <arm/mindspeed/m83xxxreg.h>
-#include <arm/mindspeed/m83xxxvar.h>
-#include <arm/mindspeed/m83_intrreg.h>
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_var.h>
+#include <arm/mindspeed/m83xxx_intrreg.h>
 
 static void intc_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static void intc_block_irqs(struct pic_softc *, size_t, uint32_t);

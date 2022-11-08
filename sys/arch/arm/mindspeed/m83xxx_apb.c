@@ -120,11 +120,7 @@ __KERNEL_RCSID(0, "$Id$");
 
 #include <machine/intr.h>
 
-#include <arm/mindspeed/m83xxxvar.h>
-/*
-#include <arm/m83/m83uartreg.h>
-#include <arm/m83/m83uartvar.h>
-*/
+#include <arm/mindspeed/m83xxx_var.h>
 
 struct m83apb_softc {
 	bus_space_tag_t sc_bust;
