@@ -170,6 +170,7 @@ m83apb_search(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
 	apba.apba_addr = cf->cf_loc[APBCF_ADDR];
 	apba.apba_size = cf->cf_loc[APBCF_SIZE];
 	apba.apba_intr = cf->cf_loc[APBCF_INTR];
+	apba.apba_irqbase = cf->cf_loc[APBCF_IRQBASE];
 
 	if (config_probe(parent, cf, &apba))
 		config_attach(parent, cf, &apba, m83apb_print, CFARGS_NONE);

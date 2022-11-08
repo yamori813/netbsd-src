@@ -50,7 +50,9 @@ file	arch/arm/arm32/irq_dispatch.S
 # iMX WEIM - Wireless External Interface Module
 
 # clock
-file	arch/arm/mindspeed/m83xxx_clk.c
+device	timer
+attach	timer	at apb
+file	arch/arm/mindspeed/m83xxx_timer.c	timer		needs-flag
 
 # Clock Control Module
 device	imxccm

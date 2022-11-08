@@ -323,6 +323,7 @@ m83uart_attach_common(device_t parent, device_t self,
 void
 m83uart_attach_subr(struct m83uart_softc *sc)
 {
+#if 0
 	struct m83uart_regs *regsp = &sc->sc_regs;
 	bus_space_tag_t iot = regsp->ur_iot;
 	bus_space_handle_t ioh = regsp->ur_ioh;
@@ -426,6 +427,7 @@ m83uart_attach_subr(struct m83uart_softc *sc)
 		reg |= IMX_UCR1_TXDMAEN | IMX_UCR1_RXDMAEN;
 		bus_space_write_4(iot, ioh, IMX_UCR1, reg);
 	}
+#endif
 #endif
 }
 
