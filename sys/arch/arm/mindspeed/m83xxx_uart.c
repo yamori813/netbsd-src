@@ -1,4 +1,4 @@
-/* $NetBSD: m83uart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $ */
+/* $NetBSD$ */
 
 /*
  * Copyright (c) 2009, 2010  Genetec Corporation.  All rights reserved.
@@ -96,7 +96,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: m83uart.c,v 1.30 2022/10/26 23:38:06 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_m83uart.h"
 #include "opt_ddb.h"
