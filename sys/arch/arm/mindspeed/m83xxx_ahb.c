@@ -102,7 +102,7 @@
 __KERNEL_RCSID(0, "$Id$");
 
 #include "locators.h"
-#include "avic.h"
+#include "intc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
