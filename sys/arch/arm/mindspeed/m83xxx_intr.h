@@ -27,8 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _ARM_IMX_IMX31_INTR_H_
-#define _ARM_IMX_IMX31_INTR_H_
+#ifndef _ARM_MINDSPEED_M83_INTR_H_
+#define _ARM_MINDSPEED_M83_INTR_H_
 
 #define IRQ_PTP0				1
 #define IRQ_PTP1				2
@@ -95,7 +95,7 @@
 
 #ifdef _LOCORE
 
-#define	ARM_IRQ_HANDLER	_C_LABEL(imx31_irq_handler)
+#define	ARM_IRQ_HANDLER	_C_LABEL(m83_irq_handler)
 
 #else
 
@@ -124,8 +124,8 @@
 const char *
 	intr_typename(int);
 
-void imx31_irq_handler(void *);
+void m83_irq_handler(void *);
 
 #endif /* !_LOCORE */
 
-#endif /* _ARM_IMX_IMX31_INTR_H_ */
+#endif /* _ARM_MINDSPEED_M83_INTR_H_ */

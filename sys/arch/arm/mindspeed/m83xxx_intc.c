@@ -1,4 +1,4 @@
-/*	$NetBSD: imx31_icu.c,v 1.8 2022/02/12 03:24:34 riastradh Exp $	*/
+/*	$NetBSD$	*/
 /*-
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: imx31_icu.c,v 1.8 2022/02/12 03:24:34 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #define _INTR_PRIVATE
  
@@ -84,7 +84,15 @@ extern struct cfdriver intc_cd;
 void
 intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
-	struct intc_softc * const intc = (void *) pic;
+//	struct intc_softc * const intc = (void *) pic;
+//printf("MORIMORI unblock %d %x", (int)irq_base, (int)irq_mask);
+/*
+	if (irq_base == 0)
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, irq_mask);
+	else
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, irq_mask);
+*/
+#if 0
 #if 0
 	if (irq_base == 0)
 		INTC_WRITE(intc, IMX31_INTENABLEL, irq_mask);
@@ -99,12 +107,22 @@ intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 		INTC_WRITE(intc, IMX31_INTENNUM, irq_base);
 	}
 #endif
+#endif
 }
 
 void
 intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
+printf("MORIMORI block %d %x", (int)irq_base, (int)irq_mask);
+/*
 	struct intc_softc * const intc = (void *) pic;
+
+	if (irq_base == 0)
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, irq_mask);
+	else
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, irq_mask);
+*/
+#if 0
 #if 0
 	if (irq_base == 0)
 		INTC_WRITE(intc, IMX31_INTDISABLEL, irq_mask);
@@ -119,11 +137,13 @@ intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 		INTC_WRITE(intc, IMX31_INTDISNUM, irq_base);
 	}
 #endif
+#endif
 }
 
 void
 intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 {
+#if 0
 	struct intc_softc * const intc = (void *) pic;
 	bus_addr_t priority_reg;
 	int priority_shift;
@@ -131,7 +151,6 @@ intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 
 	KASSERT(is->is_irq < 64);
 	KASSERT(is->is_ipl < 16);
-
 	priority_reg = IMX31_NIPRIORITY0 - (is->is_irq >> 3);
 	priority_shift = (is->is_irq & 7) * 4; 
 	v = INTC_READ(intc, priority_reg);
@@ -140,6 +159,7 @@ intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 	INTC_WRITE(intc, priority_reg, v);
 
 	KASSERT(is->is_type == IST_LEVEL);
+#endif
 }
 
 static const char * const intc_intr_source_names[] = AVIC_INTR_SOURCE_NAMES;
@@ -151,8 +171,10 @@ intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
 }
 
 void
-imx31_irq_handler(void *frame)
+m83_irq_handler(void *frame)
 {
+printf("MORIMORI irq");
+#if 0
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
 	int32_t saved_nimask;
@@ -199,6 +221,7 @@ imx31_irq_handler(void *frame)
 		splx(oldipl);
 		INTC_WRITE(intc, IMX31_NIMASK, saved_nimask);
 	}
+#endif
 }
 
 static int intc_match(device_t, cfdata_t, void *);
@@ -247,6 +270,11 @@ intc_attach(device_t parent, device_t self, void *aux)
 	pic_add(&intc->intc_pic, apba->apba_irqbase);
 	aprint_normal(": interrupts %d..%d\n",
 	    apba->apba_irqbase, apba->apba_irqbase + 63);
+
+	INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, 0);
+	INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, 0);
+	INTC_WRITE(intc, INTC_ARM1_IRQMASK_0, 0);
+	INTC_WRITE(intc, INTC_ARM1_IRQMASK_1, 0);
 #if 0
 	softintr_init();
 #endif

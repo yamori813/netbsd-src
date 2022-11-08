@@ -36,19 +36,20 @@
 #include <sys/systm.h>
 
 #include <arm/pic/picvar.h>
-
+/*
 #include <arm/imx/imx23_icollreg.h>
-#include <arm/imx/imx23_timrotreg.h>
+#include <arm/imx/imx23_timerreg.h>
 #include <arm/imx/imx23var.h>
+*/
 
 extern int hz;
 extern int stathz;
 
-static int	timrot_match(device_t, cfdata_t, void *);
-static void	timrot_attach(device_t, device_t, void *);
-static int	timrot_activate(device_t, enum devact);
+static int	timer_match(device_t, cfdata_t, void *);
+static void	timer_attach(device_t, device_t, void *);
+static int	timer_activate(device_t, enum devact);
 
-//static void	timrot_reset(void);
+//static void	timer_reset(void);
 
 /*
  * Timer IRQ handler definitions.
@@ -62,7 +63,7 @@ void	cpu_initclocks(void);
 void 	setstatclockrate(int);
 
 /* Allocated for each timer instance. */
-struct timrot_softc {
+struct timer_softc {
 	device_t sc_dev;
 	bus_space_tag_t sc_iot;
 	bus_space_handle_t sc_hdl;
@@ -71,16 +72,16 @@ struct timrot_softc {
 	int freq;
 };
 /*
-static bus_space_tag_t timrot_iot;
-static bus_space_handle_t timrot_hdl;
+static bus_space_tag_t timer_iot;
+static bus_space_handle_t timer_hdl;
 */
 
-CFATTACH_DECL3_NEW(timrot,
-	sizeof(struct timrot_softc),
-	timrot_match,
-	timrot_attach,
+CFATTACH_DECL3_NEW(timer,
+	sizeof(struct timer_softc),
+	timer_match,
+	timer_attach,
 	NULL,
-	timrot_activate,
+	timer_activate,
 	NULL,
 	NULL,
 	0);
@@ -90,15 +91,15 @@ CFATTACH_DECL3_NEW(timrot,
 #define STAT_TIMER	1	
 #define SCHED_TIMER	2
 
-struct timrot_softc *timer_sc[MAX_TIMERS];
+struct timer_softc *timer_sc[MAX_TIMERS];
 
-//static void	timer_init(struct timrot_softc *);
+//static void	timer_init(struct timer_softc *);
 
 #define TIMROT_SOFT_RST_LOOP 455 /* At least 1 us ... */
 #define TIMROT_READ(reg)						\
-	bus_space_read_4(timrot_iot, timrot_hdl, (reg))
+	bus_space_read_4(timer_iot, timer_hdl, (reg))
 #define TIMROT_WRITE(reg, val)						\
-	bus_space_write_4(timrot_iot, timrot_hdl, (reg), (val))
+	bus_space_write_4(timer_iot, timer_hdl, (reg), (val))
 
 #define TIMER_REGS_SIZE 0x20
 
@@ -124,7 +125,7 @@ struct timrot_softc *timer_sc[MAX_TIMERS];
 #define RELOAD HW_TIMROT_TIMCTRL0_RELOAD
 
 static int
-timrot_match(device_t parent, cfdata_t match, void *aux)
+timer_match(device_t parent, cfdata_t match, void *aux)
 {
 #if 0
 	struct apb_attach_args *aa = aux;
@@ -146,34 +147,35 @@ timrot_match(device_t parent, cfdata_t match, void *aux)
 	    && aa->aa_size == TIMER_REGS_SIZE))
 		return 1;
 #endif
-#endif
 	return 0;
+#endif
+	return 1;
 }
 
 static void
-timrot_attach(device_t parent, device_t self, void *aux)
+timer_attach(device_t parent, device_t self, void *aux)
 {
 #if 0
 	struct apb_attach_args *aa = aux;
-	struct timrot_softc *sc = device_private(self);
-	static int timrot_attached = 0;
+	struct timer_softc *sc = device_private(self);
+	static int timer_attached = 0;
 
-	if (!timrot_attached) {
-		timrot_iot = aa->aa_iot;
-		if (bus_space_map(timrot_iot, HW_TIMROT_BASE, HW_TIMROT_SIZE,
-		    0, &timrot_hdl)) {
+	if (!timer_attached) {
+		timer_iot = aa->aa_iot;
+		if (bus_space_map(timer_iot, HW_TIMROT_BASE, HW_TIMROT_SIZE,
+		    0, &timer_hdl)) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to map bus space\n");
 			return;
 		}
-		timrot_reset();
-		timrot_attached = 1;
+		timer_reset();
+		timer_attached = 1;
 	}
 
 	if (aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL0
 	    && aa->aa_size == TIMER_REGS_SIZE
 	    && timer_sc[SYS_TIMER] == NULL) {
-		if (bus_space_subregion(timrot_iot, timrot_hdl, 
+		if (bus_space_subregion(timer_iot, timer_hdl, 
 		    HW_TIMROT_TIMCTRL0, TIMER_REGS_SIZE,
 		    &sc->sc_hdl)) {
 			aprint_error_dev(sc->sc_dev,
@@ -193,7 +195,7 @@ timrot_attach(device_t parent, device_t self, void *aux)
 	} else if (aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL1
 	    && aa->aa_size == TIMER_REGS_SIZE
 	    && timer_sc[STAT_TIMER] == NULL) {
-		if (bus_space_subregion(timrot_iot, timrot_hdl, 
+		if (bus_space_subregion(timer_iot, timer_hdl, 
 		    HW_TIMROT_TIMCTRL1, TIMER_REGS_SIZE, &sc->sc_hdl)) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to map subregion\n");
@@ -210,12 +212,14 @@ timrot_attach(device_t parent, device_t self, void *aux)
 
 		aprint_normal("\n");
 	}
+#else
+	aprint_normal("\n");
 #endif
 	return;
 }
 
 static int
-timrot_activate(device_t self, enum devact act)
+timer_activate(device_t self, enum devact act)
 {
 	return EOPNOTSUPP;
 }
@@ -242,7 +246,7 @@ cpu_initclocks(void)
 void
 setstatclockrate(int newhz)
 {
-	struct timrot_softc *sc = timer_sc[STAT_TIMER];
+	struct timer_softc *sc = timer_sc[STAT_TIMER];
 	sc->freq = newhz;
 #if 0
 
@@ -259,7 +263,7 @@ setstatclockrate(int newhz)
  */
 #if 0
 static void
-timer_init(struct timrot_softc *sc)
+timer_init(struct timer_softc *sc)
 {
 	uint32_t ctrl;
 
@@ -308,7 +312,7 @@ stattimer_irq(void *frame)
  */
 #if 0
 static void
-timrot_reset(void)
+timer_reset(void)
 {
 	unsigned int loop;
 	

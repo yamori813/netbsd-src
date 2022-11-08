@@ -137,6 +137,7 @@ ahb0		at mainbus?
 apb*		at ahb0
 intc0		at apb? addr 0x100a0000 irqbase 0
 m83uart*	at apb? addr 0x10090000 intr 41
+timer0		at apb? addr 0x10050000 intr 31
 
 # Pseudo-Devices
 
