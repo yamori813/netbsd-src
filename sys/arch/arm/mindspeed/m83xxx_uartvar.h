@@ -1,4 +1,4 @@
-/* $NetBSD: m83uartvar.h,v 1.6 2017/09/08 05:29:12 hkenken Exp $ */
+/* $NetBSD$ */
 /*
  * driver include for Freescale i.MX31 and i.MX31L UARTs
  */

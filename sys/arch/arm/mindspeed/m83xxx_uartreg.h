@@ -1,4 +1,4 @@
-/* $NetBSD: m83uartreg.h,v 1.5 2012/09/01 14:46:25 matt Exp $ */
+/* $NetBSD$ */
 /*
  * register definitions for Freescale i.MX31 and i.MX31L UARTs
  *
