@@ -36,11 +36,9 @@
 #include <sys/systm.h>
 
 #include <arm/pic/picvar.h>
-/*
-#include <arm/imx/imx23_icollreg.h>
-#include <arm/imx/imx23_timerreg.h>
-#include <arm/imx/imx23var.h>
-*/
+
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_var.h>
 
 extern int hz;
 extern int stathz;
@@ -49,13 +47,13 @@ static int	timer_match(device_t, cfdata_t, void *);
 static void	timer_attach(device_t, device_t, void *);
 static int	timer_activate(device_t, enum devact);
 
-//static void	timer_reset(void);
+static void	timer_reset(void);
 
 /*
  * Timer IRQ handler definitions.
  */
-/*
 static int	systimer_irq(void *);
+/*
 static int	stattimer_irq(void *);
 */
 
@@ -71,10 +69,9 @@ struct timer_softc {
 	int (*irq_handler)(void *);
 	int freq;
 };
-/*
+
 static bus_space_tag_t timer_iot;
 static bus_space_handle_t timer_hdl;
-*/
 
 CFATTACH_DECL3_NEW(timer,
 	sizeof(struct timer_softc),
@@ -93,7 +90,7 @@ CFATTACH_DECL3_NEW(timer,
 
 struct timer_softc *timer_sc[MAX_TIMERS];
 
-//static void	timer_init(struct timer_softc *);
+static void	timer_init(struct timer_softc *);
 
 #define TIMROT_SOFT_RST_LOOP 455 /* At least 1 us ... */
 #define TIMROT_READ(reg)						\
@@ -155,14 +152,13 @@ timer_match(device_t parent, cfdata_t match, void *aux)
 static void
 timer_attach(device_t parent, device_t self, void *aux)
 {
-#if 0
 	struct apb_attach_args *aa = aux;
 	struct timer_softc *sc = device_private(self);
 	static int timer_attached = 0;
 
 	if (!timer_attached) {
-		timer_iot = aa->aa_iot;
-		if (bus_space_map(timer_iot, HW_TIMROT_BASE, HW_TIMROT_SIZE,
+		timer_iot = aa->apba_memt;
+		if (bus_space_map(timer_iot, APB_TIMER_BASE, 0x100,
 		    0, &timer_hdl)) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to map bus space\n");
@@ -171,20 +167,21 @@ timer_attach(device_t parent, device_t self, void *aux)
 		timer_reset();
 		timer_attached = 1;
 	}
-
+/*
 	if (aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL0
 	    && aa->aa_size == TIMER_REGS_SIZE
 	    && timer_sc[SYS_TIMER] == NULL) {
+*/
 		if (bus_space_subregion(timer_iot, timer_hdl, 
-		    HW_TIMROT_TIMCTRL0, TIMER_REGS_SIZE,
+		    APB_TIMER_BASE, 0x100,
 		    &sc->sc_hdl)) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to map subregion\n");
 			return;
 		}
 
-		sc->sc_iot = aa->aa_iot;
-		sc->sc_irq = aa->aa_irq;
+		sc->sc_iot = aa->apba_memt;
+		sc->sc_irq = aa->apba_intr;
 		sc->irq_handler = &systimer_irq;
 		sc->freq = hz;
 
@@ -192,6 +189,7 @@ timer_attach(device_t parent, device_t self, void *aux)
 
 		aprint_normal("\n");
 
+#if 0
 	} else if (aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL1
 	    && aa->aa_size == TIMER_REGS_SIZE
 	    && timer_sc[STAT_TIMER] == NULL) {
@@ -212,9 +210,8 @@ timer_attach(device_t parent, device_t self, void *aux)
 
 		aprint_normal("\n");
 	}
-#else
-	aprint_normal("\n");
 #endif
+
 	return;
 }
 
@@ -230,13 +227,15 @@ timer_activate(device_t self, enum devact act)
 void
 cpu_initclocks(void)
 {
-#if 0
+printf("MORIMORI cpu_initclocks");
 	if (timer_sc[SYS_TIMER] != NULL)
 		timer_init(timer_sc[SYS_TIMER]);
 
+#if 0
 	if (timer_sc[STAT_TIMER] != NULL)
 		timer_init(timer_sc[STAT_TIMER]);
 #endif
+
 	return;
 }
 
@@ -246,9 +245,9 @@ cpu_initclocks(void)
 void
 setstatclockrate(int newhz)
 {
+#if 0
 	struct timer_softc *sc = timer_sc[STAT_TIMER];
 	sc->freq = newhz;
-#if 0
 
 	TIMER_WRITE_2(sc, TIMER_COUNT,
 	    __SHIFTIN(SOURCE_32KHZ_HZ / sc->freq - 1,
@@ -261,10 +260,10 @@ setstatclockrate(int newhz)
 /*
  * Generic timer initialization function.
  */
-#if 0
 static void
 timer_init(struct timer_softc *sc)
 {
+#if 0
 	uint32_t ctrl;
 
 	TIMER_WRITE_2(sc, TIMER_COUNT,
@@ -272,27 +271,29 @@ timer_init(struct timer_softc *sc)
 	    HW_TIMROT_TIMCOUNT0_FIXED_COUNT));
 	ctrl = IRQ_EN | UPDATE | RELOAD | SELECT_32KHZ;
 	TIMER_WRITE(sc, TIMER_CTRL, ctrl);
-
+#endif
 	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, sc->irq_handler, NULL);
+
+	TIMROT_WRITE(TIMER0_HIGH_BOUND, 0x20000000);
+	TIMROT_WRITE(TIMER0_CURRENT_COUNT, 0);
+	TIMROT_WRITE(TIMER_IRQ_MASK, 1);
 
 	return;
 }
-#endif
 
 /*
  * Timer IRQ handlers.
  */
-#if 0
 static int
 systimer_irq(void *frame)
 {
+printf("+");
 	hardclock(frame);
 
-	TIMER_WRITE(timer_sc[SYS_TIMER], TIMER_CTRL_CLR, IRQ);
+//	TIMER_WRITE(timer_sc[SYS_TIMER], TIMER_CTRL_CLR, IRQ);
 
 	return 1;
 }
-#endif
 
 #if 0
 static int
@@ -310,10 +311,10 @@ stattimer_irq(void *frame)
  *
  * Inspired by i.MX23 RM "39.3.10 Correct Way to Soft Reset a Block"
  */
-#if 0
 static void
 timer_reset(void)
 {
+#if 0
 	unsigned int loop;
 	
 	/* Prepare for soft-reset by making sure that SFTRST is not currently
@@ -348,6 +349,6 @@ timer_reset(void)
 	/* Wait until clock is in the NON-gated state. */
 	while (TIMROT_READ(HW_TIMROT_ROTCTRL) & HW_TIMROT_ROTCTRL_CLKGATE);
 
+#endif
 	return;
 }
-#endif
