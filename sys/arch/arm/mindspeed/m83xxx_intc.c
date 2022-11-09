@@ -84,75 +84,37 @@ void
 intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
 	struct intc_softc * const intc = (void *) pic;
+	uint32_t reg;
+
 	if (irq_base == 0) {
 		INTC_WRITE(intc, INTC_STATUS_REG_0, irq_mask);
-		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, irq_mask);
+		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, reg | irq_mask);
+	} else {
+		INTC_WRITE(intc, INTC_STATUS_REG_1, irq_mask);
+		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, reg | irq_mask);
 	}
-printf("MORIMORI unblock %d %x", (int)irq_base, (int)irq_mask);
-/*
-	if (irq_base == 0)
-		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, irq_mask);
-	else
-		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, irq_mask);
-*/
-#if 0
-#if 0
-	if (irq_base == 0)
-		INTC_WRITE(intc, IMX31_INTENABLEL, irq_mask);
-	else
-		INTC_WRITE(intc, IMX31_INTENABLEH, irq_mask);
-#else
-	uint32_t irq;
-	while ((irq = ffs(irq_mask)) != 0) {
-		irq--;
-		irq_base += irq;
-		irq_mask >>= irq;
-		INTC_WRITE(intc, IMX31_INTENNUM, irq_base);
-	}
-#endif
-#endif
 }
 
 void
 intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
-/*
 	struct intc_softc * const intc = (void *) pic;
 	uint32_t reg;
-	reg = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
-	INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, reg & ~irq_mask);
-*/
-printf("MORIMORI block %d %x", (int)irq_base, (int)irq_mask);
-/*
-	struct intc_softc * const intc = (void *) pic;
 
-	if (irq_base == 0)
-		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, irq_mask);
-	else
-		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, irq_mask);
-*/
-#if 0
-#if 0
-	if (irq_base == 0)
-		INTC_WRITE(intc, IMX31_INTDISABLEL, irq_mask);
-	else
-		INTC_WRITE(intc, IMX31_INTDISABLEH, irq_mask);
-#else
-	uint32_t irq;
-	while ((irq = ffs(irq_mask)) != 0) {
-		irq--;
-		irq_base += irq;
-		irq_mask >>= irq;
-		INTC_WRITE(intc, IMX31_INTDISNUM, irq_base);
+	if (irq_base == 0) {
+		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, reg & ~irq_mask);
+	} else {
+		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
+		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, reg & ~irq_mask);
 	}
-#endif
-#endif
 }
 
 void
 intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 {
-printf("MORI MORI intr est %d\n", is->is_irq);
 #if 0
 	struct intc_softc * const intc = (void *) pic;
 	bus_addr_t priority_reg;
@@ -180,65 +142,31 @@ intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
 	strlcpy(buf, intc_intr_source_names[irq], len);
 }
 
-#if 0
-/*
- * Called with interrupts disabled
- */
-static int
-find_pending_irqs(struct intc_softc *sc)
-{
-//	uint32_t pending = INTC_READ(sc, GEMINI_ICU_IRQ_STATUS);
-	uint32_t pending = 31;
-
-//	KASSERT((sc->sc_enabled_mask & pending) == pending);
-
-	if (pending == 0)
-		return 0;
-
-	return pic_mark_pending_sources(&sc->intc_pic, 0, pending);
-}
-
-void
-m83_irq_handler(void *frame)
-{
-	struct cpu_info * const ci = curcpu();
-//	struct geminiicu_softc * const sc = &geminiicu_softc;
-	struct intc_softc * const sc = device_lookup_private(&intc_cd, 0);
-	const int oldipl = ci->ci_cpl;
-	const uint32_t oldipl_mask = __BIT(oldipl);
-	int ipl_mask = 0;
-printf("###");
-
-	INTC_WRITE(sc, INTC_STATUS_REG_0, 1 << 31);
-
-	ci->ci_data.cpu_nintr++;
-
-//	KASSERT(sc->sc_enabled_mask != 0);
-	ipl_mask = find_pending_irqs(sc);
-
-	/*
-	 * Record the pending_ipls and deliver them if we can.
-	 */
-	if ((ipl_mask & ~oldipl_mask) > oldipl_mask)
-		pic_do_pending_ints(I32_bit, oldipl, frame);
-}
-#else
 void
 m83_irq_handler(void *frame)
 {
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
 	int saved_spl;
+	int32_t reg;
+	int32_t irq;
 
-	INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << 31);
+	reg = INTC_READ(intc, INTC_STATUS_REG_0);
+
+	if (reg & (1 << 31))
+		irq = 31;
+	else
+		irq = 30;
+
+	INTC_WRITE(intc, INTC_STATUS_REG_0, reg);
 
 	saved_spl = curcpl();
 
-//	cpsie(I32_bit);
+	cpsie(I32_bit);
 
-	pic_dispatch(pic->pic_sources[31], frame);
+	pic_dispatch(pic->pic_sources[irq], frame);
 
-//	cpsid(I32_bit);
+	cpsid(I32_bit);
 
 	splx(saved_spl);
 #if 0
@@ -294,7 +222,6 @@ m83_irq_handler(void *frame)
 	}
 #endif
 }
-#endif
 
 static int intc_match(device_t, cfdata_t, void *);
 static void intc_attach(device_t, device_t, void *);
