@@ -284,8 +284,8 @@ timer_init(struct timer_softc *sc)
 static int
 systimer_irq(void *frame)
 {
-printf("+");
-	hardclock(frame);
+//printf("+");
+//	hardclock(frame);
 
 //	TIMER_WRITE(timer_sc[SYS_TIMER], TIMER_CTRL_CLR, IRQ);
 
@@ -295,8 +295,8 @@ printf("+");
 static int
 stattimer_irq(void *frame)
 {
-printf(".");
-	statclock(frame);
+//printf(".");
+//	statclock(frame);
 //	TIMER_WRITE(timer_sc[STAT_TIMER], TIMER_CTRL_CLR, IRQ);
 
 	return 1;
