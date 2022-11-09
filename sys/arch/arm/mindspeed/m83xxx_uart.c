@@ -2115,6 +2115,7 @@ m83uart_common_getc(dev_t dev, struct m83uart_regs *regsp)
 	bus_space_handle_t ioh = regsp->ur_ioh;
 	uint32_t usr2;
 
+#if 0
 	/* got a character from reading things earlier */
 	if (!READAHEAD_IS_EMPTY()) {
 		c = m83uart_readahead[m83uart_readahead_out];
@@ -2135,6 +2136,12 @@ m83uart_common_getc(dev_t dev, struct m83uart_regs *regsp)
 		if (!db_active)
 			cn_check_magic(dev, c, m83uart_cnm_state);
 	}
+#endif
+	while (!((usr2 = bus_space_read_4(iot, ioh, 4 * 5)) & (1 << 0)))
+		continue;
+
+	c = 0xff & bus_space_read_4(iot, ioh, 0);
+	m83uart_readahead[0] = c;
 	splx(s);
 	return (c);
 }
