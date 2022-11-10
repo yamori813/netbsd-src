@@ -29,9 +29,9 @@ file	arch/arm/mindspeed/m83xxx_intc.c	intc		needs-flag
 file	arch/arm/arm32/irq_dispatch.S
 
 # GPIO
-#device	imxgpio: gpiobus
-#attach	imxgpio at ahb
-#file	arch/arm/imx/imx31_gpio.c		imxgpio		needs-flag
+device	m83gpio: gpiobus
+attach	m83gpio at apb
+file	arch/arm/mindspeed/m83xxx_gpio.c	m83gpio		needs-flag
 
 # Timer
 device	timer
