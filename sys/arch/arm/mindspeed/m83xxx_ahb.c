@@ -223,26 +223,13 @@ ahb_find(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
 	return config_match(parent, cf, &ahba0);
 }
 
-/*
-#if NAVIC == 0
-#error no avic present in config file
-#endif
-*/
-
 static const struct {
 	const char *name;
 	bus_addr_t addr;
 	bool required;
 } critical_devs[] = {
-/*
-	{ .name = "avic", .addr = INTC_BASE, .required = true },
-	{ .name = "gpio1", .addr = GPIO1_BASE, .required = false },
-	{ .name = "gpio2", .addr = GPIO2_BASE, .required = false },
-	{ .name = "gpio3", .addr = GPIO3_BASE, .required = false },
-*/
-#if 0
-	{ .name = "dmac", .addr = DMAC_BASE, .required = true },
-#endif
+	/* intc is on apb */
+	{ .name = "apb", .addr = 0x10000000, .required = true }
 };
 
 static void

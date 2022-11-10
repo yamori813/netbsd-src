@@ -134,11 +134,12 @@ options 	MEMSIZE=0x8000000
 # Devices
 
 ahb0		at mainbus?
-apb*		at ahb0
+apb0		at ahb0 addr 0x10000000
 intc0		at apb? addr 0x100a0000 irqbase 0
 m83uart*	at apb? addr 0x10090000 intr 41
 timer0		at apb? addr 0x10050000 intr 31
 timer1		at apb? addr 0x10050000 intr 30
+m83gpio*	at apb? addr 0x10070000 intr 33
 
 ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
 
