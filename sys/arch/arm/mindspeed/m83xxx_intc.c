@@ -155,8 +155,10 @@ m83_irq_handler(void *frame)
 
 	if (reg & (1 << 31))
 		irq = 31;
-	else
+	else if (reg & (1 << 30))
 		irq = 30;
+	else
+		irq = 5;
 
 	INTC_WRITE(intc, INTC_STATUS_REG_0, reg);
 

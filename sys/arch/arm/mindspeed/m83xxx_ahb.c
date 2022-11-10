@@ -121,6 +121,8 @@ __KERNEL_RCSID(0, "$Id$");
 #include <arm/mindspeed/m83xxx_reg.h>
 #include <arm/mindspeed/m83xxx_var.h>
 
+extern struct arm32_bus_dma_tag m83_bus_dma_tag;
+
 struct ahb_softc {
 	device_t sc_dev;
 	bus_dma_tag_t sc_dmat;
@@ -156,11 +158,7 @@ ahb_attach(device_t parent, device_t self, void *aux)
 	ahb_sc = sc;
 	sc->sc_dev = self;
 	sc->sc_memt = &m83_bs_tag;
-#if NBUS_DMA_GENERIC > 0
-	sc->sc_dmat = &imx_bus_dma_tag;
-#else
-	sc->sc_dmat = 0;
-#endif
+	sc->sc_dmat = &m83_bus_dma_tag;
 
 	aprint_normal(": AMBA Advanced High Performance Bus\n");
 
