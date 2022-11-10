@@ -140,6 +140,15 @@ m83uart*	at apb? addr 0x10090000 intr 41
 timer0		at apb? addr 0x10050000 intr 31
 timer1		at apb? addr 0x10050000 intr 30
 
+ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
+
+# USB bus support
+usb*    at ehci?
+
+# USB Hubs
+uhub*   at usb?
+uhub*   at uhub? port ?
+
 # Pseudo-Devices
 
 # disk/mass storage pseudo-devices

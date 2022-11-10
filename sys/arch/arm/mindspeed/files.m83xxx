@@ -9,7 +9,7 @@ defflag opt_m83.h				M83
 define	bus_dma_generic
 
 file	arch/arm/mindspeed/m83xxx_space.c
-file	arch/arm/mindsoeed/m83xxx_dma.c		bus_dma_generic
+file	arch/arm/mindspeed/m83xxx_dma.c
 
 # AHB
 device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
@@ -43,3 +43,8 @@ device	m83uart
 attach	m83uart at apb with m83_uart
 file	arch/arm/mindspeed/m83xxx_uart.c	m83_uart
 defflag	opt_m83uart.h				IMXUARTCONSOLE
+
+# USB controller
+attach ehci at ahb with ehci_ahb
+file	arch/arm/mindspeed/m83xxx_ehci.c	ehci_ahb
+
