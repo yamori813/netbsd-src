@@ -170,11 +170,13 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	aprint_naive(": USB Interfacer\n");
 	aprint_normal(": USB Interface\n");
 
+/*
 	bus_space_handle_t bsh;
 	bus_space_map(sc->iot, APB_GPIO_BASE, 0x20000, 0, &bsh);
 	bus_space_write_4(sc->iot, bsh,
 	    GPIO_USB_PHY_CONF_REG, 0);
 	bus_space_unmap(sc->iot, bsh, 0x20000);
+*/
 
 	/* Map I/O registers */
 	if (bus_space_map(sc->iot, ahb->ahba_addr+0x100, ahb->ahba_size-0x100, 0,
