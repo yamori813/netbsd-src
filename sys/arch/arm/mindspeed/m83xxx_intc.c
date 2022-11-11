@@ -159,6 +159,8 @@ m83_irq_handler(void *frame)
 		irq = 30;
 	else
 		irq = 5;
+if(reg & (1 << 5))
+printf("MORIMORI intr %x,", reg);
 
 	INTC_WRITE(intc, INTC_STATUS_REG_0, reg);
 
