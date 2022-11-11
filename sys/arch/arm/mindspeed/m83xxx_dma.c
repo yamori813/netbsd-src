@@ -27,8 +27,7 @@
  */
 
 /*
- * bus dma tag for i.MX31 processor.
- * (Currently used only for LCD frame buffer)
+ * bus dma tag for Mindspeed Comcerto 1000
  */
 
 #include <sys/cdefs.h>
