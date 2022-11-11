@@ -258,6 +258,16 @@ static const struct pmap_devmap m83xxx_devmap[] = {
 #define MEMSIZE		0x8000000		/* 128MB */
 #endif
 
+static void
+m83xxx_system_reset(void)
+{
+	bus_space_handle_t bsh;
+	bus_space_map(&m83_bs_tag, APB_GPIO_BASE, 0x20000, 0, &bsh);
+	bus_space_write_4(&m83_bs_tag, bsh, GPIO_OUTPUT_REG, 0);
+	/* not reach here */
+	bus_space_unmap(&m83_bs_tag, bsh, 0x20000);
+}
+
 /*
  * vaddr_t initarm(...)
  *
@@ -299,6 +309,8 @@ initarm(void *arg)
 #if 0
 	/* Calibrate the delay loop. */
 #endif
+
+	cpu_reset_address = m83xxx_system_reset;
 
 	consinit();
 
