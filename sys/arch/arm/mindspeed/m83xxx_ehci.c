@@ -82,8 +82,8 @@ ehci_ahb_intr(void *arg)
 }
 */
 
-void usb_reset(bus_space_tag_t iot);
-void usb_reset(bus_space_tag_t iot)
+void start_ehci(bus_space_tag_t iot);
+void start_ehci(bus_space_tag_t iot)
 {
 
 	bus_space_handle_t bsh;
@@ -139,8 +139,10 @@ void usb_reset(bus_space_tag_t iot)
 	    GPIO_GENERAL_CONTROL_REG);
 	bus_space_write_4(iot, bsh,
 	    GPIO_GENERAL_CONTROL_REG, reg & ~USB_FORCE_SUSPEND);
+/*
 	bus_space_write_4(iot, bsh,
 	    GPIO_USB_PHY_CONF_REG, 0x002D64C2);
+*/
 
 	bus_space_unmap(iot, bsh, 0x20000);
 }
@@ -200,7 +202,7 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 		    ehci_intr, sc);
 //	}
 
-	usb_reset(sc->iot);
+	start_ehci(sc->iot);
 
 	sc->sc_bus.ub_revision = USBREV_2_0;
 
