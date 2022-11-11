@@ -433,7 +433,7 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	struct gpio_softc * const gpio = device_private(self);
 	int error;
 	int oen, i;
-	int oepins[] = {18, 19, 20, 21, 22, 23, 28};
+	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
 
 /*
 	if (aa->apba_intr == OBIOCF_INTR_DEFAULT)
@@ -470,6 +470,9 @@ gpio_attach(device_t parent, device_t self, void *aux)
         GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
 	    GPIO_READ(gpio, GPIO_OUTPUT_REG) & ~GPIN(RESET_BIT));
 */
+	/* USB Power ON */
+        GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
+	    GPIO_READ(gpio, GPIO_OUTPUT_REG) | GPIN(16));
 #if 0
 	if (oa->obio_intrbase != OBIOCF_INTRBASE_DEFAULT) {
 		gpio->gpio_pic.pic_ops = &gpio_pic_ops;
