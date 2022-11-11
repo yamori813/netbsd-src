@@ -122,29 +122,12 @@ static void	timer_init(struct timer_softc *);
 static int
 timer_match(device_t parent, cfdata_t match, void *aux)
 {
-#if 0
 	struct apb_attach_args *aa = aux;
 
-	if ((aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL0
-	    && aa->aa_size == TIMER_REGS_SIZE))
+	if (aa->apba_addr == APB_TIMER_BASE)
 		return 1;
 
-	if ((aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL1
-	    && aa->aa_size == TIMER_REGS_SIZE))
-		return 1;
-
-#if 0
-	if ((aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL2
-	    && aa->aa_size == TIMER_REGS_SIZE))
-		return 1;
-
-	if ((aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL3
-	    && aa->aa_size == TIMER_REGS_SIZE))
-		return 1;
-#endif
 	return 0;
-#endif
-	return 1;
 }
 
 static void
@@ -254,25 +237,20 @@ setstatclockrate(int newhz)
 static void
 timer_init(struct timer_softc *sc)
 {
-#if 0
-	uint32_t ctrl;
+	uint32_t reg;
 
-	TIMER_WRITE_2(sc, TIMER_COUNT,
-	    __SHIFTIN(SOURCE_32KHZ_HZ / sc->freq - 1,
-	    HW_TIMROT_TIMCOUNT0_FIXED_COUNT));
-	ctrl = IRQ_EN | UPDATE | RELOAD | SELECT_32KHZ;
-	TIMER_WRITE(sc, TIMER_CTRL, ctrl);
-#endif
 	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, sc->irq_handler, NULL);
 
 	if (sc->sc_irq == 31) {
-		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 0x20000);
+		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 0x200000);
 		TIMER_WRITE(sc, TIMER0_CURRENT_COUNT, 0);
-		TIMER_WRITE(sc, TIMER_IRQ_MASK, 1);
+		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
+		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | 1);
 	} else {
-		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 0x10000);
+		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 0x100000);
 		TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
-		TIMER_WRITE(sc, TIMER_IRQ_MASK, 3);
+		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
+		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
 	}
 
 	return;
@@ -284,10 +262,8 @@ timer_init(struct timer_softc *sc)
 static int
 systimer_irq(void *frame)
 {
-//printf("+");
-	hardclock(frame);
 
-//	TIMER_WRITE(timer_sc[SYS_TIMER], TIMER_CTRL_CLR, IRQ);
+	hardclock(frame);
 
 	return 1;
 }
@@ -295,9 +271,8 @@ systimer_irq(void *frame)
 static int
 stattimer_irq(void *frame)
 {
-//printf(".");
+
 	statclock(frame);
-//	TIMER_WRITE(timer_sc[STAT_TIMER], TIMER_CTRL_CLR, IRQ);
 
 	return 1;
 }
