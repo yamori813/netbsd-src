@@ -286,6 +286,8 @@ initarm(void *arg)
 {
 	extern char KERNEL_BASE_phys[];
 
+//	boothowto = (AB_VERBOSE|AB_DEBUG);
+
 	/*
 	 * Heads up ... Setup the CPU / MMU / TLB functions
 	 */
