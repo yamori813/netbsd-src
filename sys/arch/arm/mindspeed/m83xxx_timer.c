@@ -266,11 +266,11 @@ timer_init(struct timer_softc *sc)
 	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, sc->irq_handler, NULL);
 
 	if (sc->sc_irq == 31) {
-		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 0x20000000);
+		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 0x20000);
 		TIMER_WRITE(sc, TIMER0_CURRENT_COUNT, 0);
 		TIMER_WRITE(sc, TIMER_IRQ_MASK, 1);
 	} else {
-		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 0x10000000);
+		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 0x10000);
 		TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
 		TIMER_WRITE(sc, TIMER_IRQ_MASK, 3);
 	}
