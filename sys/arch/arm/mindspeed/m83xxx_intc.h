@@ -36,6 +36,79 @@
 
 #else
 
+#define STATUS_REG_1			0
+#define IRQ_PTP0			1
+#define IRQ_PTP1			2
+#define IRQ_PTP2			3
+#define IRQ_TDM_TIMER			4
+#define IRQ_USB0			5
+#define IRQ_EMAC0			6
+#define IRQ_EMAC1			7
+#define IRQ_TDMA			8
+#define IRQ_IPSEC_WRAP			9
+#define IRQ_IPSEC_CORE			10
+#define IRQ_SPI				11
+#define IRQ_MDMA0			12
+#define IRQ_MDMA1			13
+#define IRQ_PCIe0_EXT			14
+#define IRQ_PCIe0_INT			15
+#define IRQ_PCIe1_EXT			16
+#define IRQ_PCIe1_INT 			17
+#define IRQ_DDRC			18
+#define IRQ_HWFAULT			19
+#define IRQ_THERMAL			20
+#define IRQ_I2C			    	21
+#define IRQ_ARAM			22
+#define IRQ_EMAC0_BATCH			23
+#define IRQ_EMAC1_BATCH			24
+#define IRQ_FPP_CAP			25
+#define IRQ_TIMER5			26
+#define IRQ_TIMER4			27
+#define IRQ_TIMER3			28
+#define IRQ_TIMER2			29
+#define IRQ_TIMER1			30
+#define IRQ_TIMER0			31
+
+#define STATUS_REG_0			(0 + 32)
+#define IRQ_G0				(1 + 32)
+#define IRQ_G1				(2 + 32)
+#define IRQ_G2				(3 + 32)
+#define IRQ_G3				(4 + 32)
+#define IRQ_G4				(5 + 32)
+#define IRQ_G5				(6 + 32)
+#define IRQ_G6				(7 + 32)
+#define IRQ_G7				(8 + 32)
+#define IRQ_UART0			(9 + 32)
+#define IRQ_TDMA_IND			(10 + 32)
+#define IRQ_VED				(11 + 32)
+#define IRQ_SPDRV_ACP_WORK_DONE		(12 + 32)
+#define IRQ_SPDRV_ACP_REQ		(13 + 32)
+						  /* also marked by IRQ_FPP_DIAG (in the helper section) */
+#define IRQ_14                          (14 + 32) /* Used by fpp diagnostics. fpp diagnostics by default is always disabled */
+/*	#define IRQ_Reserved		15*/
+/*	#define IRQ_Reserved		16*/
+#define IRQ_CSP_PMU			(17 + 32)
+#define IRQ_MSP_PMU			(18 + 32)
+#define IRQ_FROMHOST			(19 + 32)
+#define IRQ_TOHOST			(20 + 32)
+#define IRQ_CSPVED0RX			(21 + 32)
+#define IRQ_CSPVED0TX			(22 + 32)
+#define IRQ_CSPVED1RX			(23 + 32)
+#define IRQ_CSPVED1TX			(24 + 32)
+#define IRQ_CSP_HIDRV			(25 + 32)
+#define IRQ_UART1			(26 + 32)
+#define IRQ_TDMA_RxAHBErr   		(27 + 32)
+#define IRQ_TDMA_TxAHBErr	 	(28 + 32)
+/*	#define IRQ_Reserved		29*/
+/*	#define IRQ_Reserved		30*/
+/*	#define IRQ_Reserved		31*/
+/* INTC1 32 next IRQs*/
+
+struct comcerto_irq_desc {
+	char num;
+	unsigned int prio;
+};
+
 #define AVIC_INTR_SOURCE_NAMES \
 {	"status1",	"ptp0",		"ptp1",		"ptp2",		\
 	"tdm timer",	"usb0",		"emac0",	"emac1",	\

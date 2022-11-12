@@ -52,6 +52,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/mindspeed/m83xxx_reg.h>
 #include <arm/mindspeed/m83xxx_var.h>
+#include <arm/mindspeed/m83xxx_intc.h>
 
 static void intc_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static void intc_block_irqs(struct pic_softc *, size_t, uint32_t);
@@ -80,6 +81,48 @@ extern struct cfdriver intc_cd;
 #define	HW_TO_SW_IPL(ipl)	((ipl) + 1)
 #define	SW_TO_HW_IPL(ipl)	((ipl) - 1)
 
+/* IRQ configuration table */
+static struct comcerto_irq_desc comcerto_irq_table[] =
+{
+	{IRQ_EMAC0_BATCH,		1},
+	{IRQ_EMAC1_BATCH,		2},
+	{IRQ_ARAM,			3},
+	{IRQ_PCIe0_EXT,			4},
+	{IRQ_PCIe1_EXT,			5},
+	{IRQ_PCIe0_INT,			6},
+	{IRQ_PCIe1_INT,			7},
+	{IRQ_USB0,			8},
+	{STATUS_REG_1,			9},
+	{IRQ_PTP0,			10},
+	{IRQ_TIMER1,			11},
+	{IRQ_TIMER3,			12},
+	{IRQ_TIMER4,			13},
+	{IRQ_TIMER5,			14},
+	{IRQ_SPI,			15},
+	{IRQ_EMAC0,			16},
+	{IRQ_EMAC1,			17},
+	{IRQ_IPSEC_WRAP,		18},
+	{IRQ_IPSEC_CORE,		19},
+	{IRQ_I2C,			20},
+	{IRQ_14,			21},
+	{IRQ_FPP_CAP,			22}
+};
+
+static void set_intc_priority(struct intc_softc *intc, uint32_t irq,
+    uint32_t prio);
+void
+set_intc_priority(struct intc_softc *intc, uint32_t irq, uint32_t prio)
+{
+	uint32_t prio_reg, prio_shift, prio_mask;
+
+	prio_reg = INTC_ARM0_PRTY_0 + 4 * (prio / 4);
+	prio_shift = ((prio % 4) << 3);
+	prio_mask = 0x1f << prio_shift;
+
+	INTC_WRITE(intc, prio_reg, (INTC_READ(intc, prio_reg) & ~prio_mask) |
+	    (irq << prio_shift));
+}
+
 void
 intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
@@ -87,11 +130,11 @@ intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 	uint32_t reg;
 
 	if (irq_base == 0) {
-		INTC_WRITE(intc, INTC_STATUS_REG_0, irq_mask);
+//		INTC_WRITE(intc, INTC_STATUS_REG_0, irq_mask);
 		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
 		INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, reg | irq_mask);
 	} else {
-		INTC_WRITE(intc, INTC_STATUS_REG_1, irq_mask);
+//		INTC_WRITE(intc, INTC_STATUS_REG_1, irq_mask);
 		reg = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
 		INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, reg | irq_mask);
 	}
@@ -153,14 +196,14 @@ m83_irq_handler(void *frame)
 
 	reg = INTC_READ(intc, INTC_STATUS_REG_0);
 
-	if (reg & (1 << 31))
-		irq = 31;
+	if (reg & (1 << 5))
+		irq = 5;
 	else if (reg & (1 << 30))
 		irq = 30;
 	else
-		irq = 5;
-if(reg & (1 << 5))
-printf("MORIMORI intr %x,", reg);
+		irq = 31;
+if(irq == 5)
+printf("+");
 
 	INTC_WRITE(intc, INTC_STATUS_REG_0, reg);
 
@@ -250,6 +293,7 @@ intc_attach(device_t parent, device_t self, void *aux)
 	struct intc_softc * const intc = device_private(self);
 	struct apb_attach_args * const apba = aux;
 	int error;
+	int i;
 
 	KASSERT(apba->apba_irqbase != AHBCF_IRQBASE_DEFAULT);
 	KASSERT(device_unit(self) == 0);
@@ -278,6 +322,17 @@ intc_attach(device_t parent, device_t self, void *aux)
 	INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, 0);
 	INTC_WRITE(intc, INTC_ARM1_IRQMASK_0, 0);
 	INTC_WRITE(intc, INTC_ARM1_IRQMASK_1, 0);
+
+	for (i = 0; i < 22; ++i)
+		set_intc_priority(intc, comcerto_irq_table[i].num,
+		    comcerto_irq_table[i].prio);
+
+/*
+	for (i = 0; i < 8; ++i)
+		printf("REG %d %x\n", i, INTC_READ(intc, i * 4));
+	for (i = 0; i < 8; ++i)
+		printf("PRTY %d %x\n", i, INTC_READ(intc, INTC_ARM0_PRTY_0 + i * 4));
+*/
 #if 0
 	softintr_init();
 #endif
