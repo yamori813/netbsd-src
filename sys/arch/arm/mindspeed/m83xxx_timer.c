@@ -34,6 +34,8 @@
 #include <sys/device.h>
 #include <sys/errno.h>
 #include <sys/systm.h>
+#include <sys/time.h>
+#include <sys/timetc.h>
 
 #include <arm/pic/picvar.h>
 
@@ -46,6 +48,8 @@ extern int stathz;
 static int	timer_match(device_t, cfdata_t, void *);
 static void	timer_attach(device_t, device_t, void *);
 static int	timer_activate(device_t, enum devact);
+
+static u_int	m83tmr_get_timecount(struct timecounter *);
 
 static void	timer_reset(void);
 
@@ -66,6 +70,13 @@ struct timer_softc {
 	int8_t sc_irq;
 	int (*irq_handler)(void *);
 	int freq;
+};
+
+static struct timecounter m83tmr_timecounter = {
+	.tc_get_timecount = m83tmr_get_timecount,
+	.tc_counter_mask = ~0u,
+	.tc_name = "m83tmr",
+	.tc_quality = 100,
 };
 
 static bus_space_tag_t timer_iot;
@@ -220,13 +231,15 @@ void
 setstatclockrate(int newhz)
 {
 	struct timer_softc *sc = timer_sc[STAT_TIMER];
+	uint32_t reg;
 	sc->freq = newhz;
 
-#if 0
-	TIMER_WRITE_2(sc, TIMER_COUNT,
-	    __SHIFTIN(SOURCE_32KHZ_HZ / sc->freq - 1,
-	    HW_TIMROT_TIMCOUNT0_FIXED_COUNT));
-#endif
+	if (sc->freq != 0) {
+		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 204800000 / sc->freq);
+		TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
+		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
+		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
+	}
 
 	return;
 }
@@ -242,18 +255,35 @@ timer_init(struct timer_softc *sc)
 	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, sc->irq_handler, NULL);
 
 	if (sc->sc_irq == 31) {
-		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 0x200000);
+		/* 100 Hz */
+		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 2048000);
 		TIMER_WRITE(sc, TIMER0_CURRENT_COUNT, 0);
 		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
 		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | 1);
+
+		TIMER_WRITE(sc, TIMER2_HIGH_BOUND, ~0u);
+		TIMER_WRITE(sc, TIMER2_CURRENT_COUNT, 0);
+		m83tmr_timecounter.tc_priv = sc;
+		m83tmr_timecounter.tc_frequency = 165 * 1000 * 1000;
+		tc_init(&m83tmr_timecounter);
 	} else {
-		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 0x100000);
-		TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
-		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
-		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
+		if (sc->freq != 0) {
+			TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 2048000);
+			TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
+			reg = TIMER_READ(sc, TIMER_IRQ_MASK);
+			TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
+		}
 	}
 
 	return;
+}
+
+static u_int
+m83tmr_get_timecount(struct timecounter *tc)
+{
+struct timer_softc *sc = tc->tc_priv;
+
+	return TIMER_READ(sc, TIMER2_CURRENT_COUNT);
 }
 
 /*
