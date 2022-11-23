@@ -1,4 +1,4 @@
-$NetBSD: UPDATING,v 1.333 2022/10/08 08:21:56 riastradh Exp $
+$NetBSD: UPDATING,v 1.335 2022/11/17 06:40:38 chs Exp $
 
 This file (UPDATING) is intended to be a brief reference to recent
 changes that might cause problems in the build process, and a guide for
@@ -18,6 +18,44 @@ See also: BUILDING, build.sh, Makefile.
 
 Recent changes:
 ^^^^^^^^^^^^^^^
+
+20221116:
+
+	The addition to NetBSD's version of UFS2 of support for extended
+	attributes broke backward compatibility with previous releases
+	of NetBSD, so UFS2 has been restored to being compatible with
+	previous NetBSD releases by disabling extended attributes.
+	(Note that ACLs are implemented as extended attributes, so
+	this changes disables ACLs as well.)
+
+	Support for UFS2 with extended attributes is now available in a new
+	UFS variant called UFS2ea.  If you have created extended attributes
+	in an original UFS2 file system then "fsck -p" will now fail due to
+	the unexpected presence of extended attributes and "fsck -y" will
+	remove all extended attributes.  If you wish to preserve extended
+	attributes rather than delete them, there is a utility to convert
+	a UFS2 file system to UFS2ea and leave extended attributes in place,
+	but this should be used with caution since it will preserve any
+	extended attributes that have been corrupted by the backward
+	incompatibility too.
+
+	If you wish to use a UFS2ea file system as your root file system,
+	then you will need to update your boot loader to a version that
+	supports UFS2ea.
+
+	For more information, see:
+	https://wiki.netbsd.org/features/UFS2ea
+
+20221111:
+	The new libdrm import worsened the conflict issues for the
+	kdump/ktruss ioctl, and i915 now conflicts with base, and has
+	been turned off.  This will cause update build issues like:
+
+		kdump-ioctl.c:12175:143: error: 'DRM_IOCTL_I915_DESTROY_HEAP'
+		   undeclared here (not in a function);
+		   did you mean 'DRM_IOCTL_MODE_DESTROY_DUMB'?
+
+	You'll need to clean usr.bin/ktruss, usr.bin/kdump, and rescue.
 
 20220921:
 	Since the kernel version was bumped to 9.99.100, the bootloader

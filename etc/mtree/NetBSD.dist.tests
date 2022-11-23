@@ -1,4 +1,4 @@
-#	$NetBSD: NetBSD.dist.tests,v 1.193 2022/07/21 09:52:48 kre Exp $
+#	$NetBSD: NetBSD.dist.tests,v 1.197 2022/11/21 22:01:33 christos Exp $
 
 ./usr/libdata/debug/usr/tests
 ./usr/libdata/debug/usr/tests/atf
@@ -132,6 +132,8 @@
 ./usr/libdata/debug/usr/tests/lib/libtre
 ./usr/libdata/debug/usr/tests/lib/libusbhid
 ./usr/libdata/debug/usr/tests/lib/libutil
+./usr/libdata/debug/usr/tests/lib/lua
+./usr/libdata/debug/usr/tests/lib/lua/libm
 ./usr/libdata/debug/usr/tests/lib/semaphore
 ./usr/libdata/debug/usr/tests/lib/semaphore/pthread
 ./usr/libdata/debug/usr/tests/libexec
@@ -153,11 +155,13 @@
 ./usr/libdata/debug/usr/tests/net/if_tap
 ./usr/libdata/debug/usr/tests/net/if_vether
 ./usr/libdata/debug/usr/tests/net/if_vlan
+./usr/libdata/debug/usr/tests/net/inpcb
 ./usr/libdata/debug/usr/tests/net/in_cksum
 ./usr/libdata/debug/usr/tests/net/ipsec
 ./usr/libdata/debug/usr/tests/net/mcast
 ./usr/libdata/debug/usr/tests/net/net
 ./usr/libdata/debug/usr/tests/net/sys
+./usr/libdata/debug/usr/tests/net/tcp
 ./usr/libdata/debug/usr/tests/rump
 ./usr/libdata/debug/usr/tests/rump/modautoload
 ./usr/libdata/debug/usr/tests/rump/rumpkern
@@ -341,6 +345,8 @@
 ./usr/tests/lib/libtre/data
 ./usr/tests/lib/libusbhid
 ./usr/tests/lib/libutil
+./usr/tests/lib/lua
+./usr/tests/lib/lua/libm
 ./usr/tests/lib/semaphore
 ./usr/tests/lib/semaphore/pthread
 ./usr/tests/libexec
@@ -373,6 +379,7 @@
 ./usr/tests/net/if_vether
 ./usr/tests/net/if_vlan
 ./usr/tests/net/if_wg
+./usr/tests/net/inpcb
 ./usr/tests/net/in_cksum
 ./usr/tests/net/ipsec
 ./usr/tests/net/mcast
@@ -382,6 +389,7 @@
 ./usr/tests/net/npf
 ./usr/tests/net/route
 ./usr/tests/net/sys
+./usr/tests/net/tcp
 ./usr/tests/rump
 ./usr/tests/rump/modautoload
 ./usr/tests/rump/rumpkern

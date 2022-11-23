@@ -1,6 +1,6 @@
 /* Private header for tzdb code.  */
 
-/*	$NetBSD: private.h,v 1.61 2022/10/29 13:55:50 christos Exp $	*/
+/*	$NetBSD: private.h,v 1.63 2022/11/17 17:35:25 jakllsch Exp $	*/
 
 #ifndef PRIVATE_H
 #define PRIVATE_H
@@ -75,6 +75,9 @@
 # define HAVE_GENERIC (201112 <= __STDC_VERSION__)
 #endif
 
+#if defined __APPLE__
+# define HAVE_GETRANDOM false
+#endif
 #if !defined HAVE_GETRANDOM && defined __has_include
 # if __has_include(<sys/random.h>)
 #  define HAVE_GETRANDOM true

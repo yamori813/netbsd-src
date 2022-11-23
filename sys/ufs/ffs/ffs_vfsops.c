@@ -1,4 +1,4 @@
-/*	$NetBSD: ffs_vfsops.c,v 1.376 2022/04/16 08:00:55 hannken Exp $	*/
+/*	$NetBSD: ffs_vfsops.c,v 1.378 2022/11/17 06:40:40 chs Exp $	*/
 
 /*-
  * Copyright (c) 2008, 2009 The NetBSD Foundation, Inc.
@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: ffs_vfsops.c,v 1.376 2022/04/16 08:00:55 hannken Exp $");
+__KERNEL_RCSID(0, "$NetBSD: ffs_vfsops.c,v 1.378 2022/11/17 06:40:40 chs Exp $");
 
 #if defined(_KERNEL_OPT)
 #include "opt_ffs.h"
@@ -683,7 +683,8 @@ ffs_mount(struct mount *mp, const char *path, void *data, size_t *data_len)
 			}
 #endif
 			fs->fs_ronly = 0;
-			fs->fs_clean <<= 1;
+			fs->fs_clean =
+			    fs->fs_clean == FS_ISCLEAN ? FS_WASCLEAN : 0;
 			fs->fs_fmod = 1;
 #ifdef WAPBL
 			if (fs->fs_flags & FS_DOWAPBL) {
@@ -743,20 +744,22 @@ ffs_mount(struct mount *mp, const char *path, void *data, size_t *data_len)
 	    DPRINTF("set_statvfs_info returned %d", error);
 	}
 	fs->fs_flags &= ~FS_DOSOFTDEP;
-	if (fs->fs_fmod != 0) {	/* XXX */
+
+	if ((fs->fs_ronly && (fs->fs_clean & FS_ISCLEAN) == 0) ||
+	    (!fs->fs_ronly && (fs->fs_clean & FS_WASCLEAN) == 0)) {
+		printf("%s: file system not clean (fs_clean=%#x); "
+		    "please fsck(8)\n", mp->mnt_stat.f_mntfromname,
+		    fs->fs_clean);
+	}
+
+	if (fs->fs_fmod != 0) {
 		int err;
 
-		fs->fs_fmod = 0;
+		KASSERT(!fs->fs_ronly);
+
 		if (fs->fs_clean & FS_WASCLEAN)
 			fs->fs_time = time_second;
-		else {
-			printf("%s: file system not clean (fs_clean=%#x); "
-			    "please fsck(8)\n", mp->mnt_stat.f_mntfromname,
-			    fs->fs_clean);
-			printf("%s: lost blocks %" PRId64 " files %d\n",
-			    mp->mnt_stat.f_mntfromname, fs->fs_pendingblocks,
-			    fs->fs_pendinginodes);
-		}
+		fs->fs_fmod = 0;
 		err = UFS_WAPBL_BEGIN(mp);
 		if (err == 0) {
 			(void) ffs_cgupdate(ump, MNT_WAIT);
@@ -841,6 +844,15 @@ ffs_reload(struct mount *mp, kauth_cred_t cred, struct lwp *l)
 		newfs->fs_flags &= ~FS_SWAPPED;
 
 	brelse(bp, 0);
+
+	/* Allow converting from UFS2 to UFS2EA but not vice versa. */
+	if (newfs->fs_magic == FS_UFS2EA_MAGIC) {
+		ump->um_flags |= UFS_EA;
+		newfs->fs_magic = FS_UFS2_MAGIC;
+	} else {
+		if ((ump->um_flags & UFS_EA) != 0)
+			return EINVAL;
+	}
 
 	if ((newfs->fs_magic != FS_UFS1_MAGIC) &&
 	    (newfs->fs_magic != FS_UFS2_MAGIC)) {
@@ -1214,6 +1226,13 @@ ffs_mountfs(struct vnode *devvp, struct mount *mp, struct lwp *l)
 		 * size to read the superblock. Once read, we swap the whole
 		 * superblock structure.
 		 */
+		if (fs->fs_magic == FS_UFS2EA_MAGIC) {
+			ump->um_flags |= UFS_EA;
+			fs->fs_magic = FS_UFS2_MAGIC;
+		} else if (fs->fs_magic == FS_UFS2EA_MAGIC_SWAPPED) {
+			ump->um_flags |= UFS_EA;
+			fs->fs_magic = FS_UFS2_MAGIC_SWAPPED;
+		}
 		if (fs->fs_magic == FS_UFS1_MAGIC) {
 			fs_sbsize = fs->fs_sbsize;
 			fstype = UFS1;
@@ -1346,6 +1365,7 @@ ffs_mountfs(struct vnode *devvp, struct mount *mp, struct lwp *l)
 		}
 	}
 
+	fs->fs_fmod = 0;
 	if (fs->fs_pendingblocks != 0 || fs->fs_pendinginodes != 0) {
 		fs->fs_pendingblocks = 0;
 		fs->fs_pendinginodes = 0;
@@ -1427,7 +1447,8 @@ ffs_mountfs(struct vnode *devvp, struct mount *mp, struct lwp *l)
 	/* Don't bump fs_clean if we're replaying journal */
 	if (!((fs->fs_flags & FS_DOWAPBL) && (fs->fs_clean & FS_WASCLEAN))) {
 		if (ronly == 0) {
-			fs->fs_clean <<= 1;
+			fs->fs_clean =
+			    fs->fs_clean == FS_ISCLEAN ? FS_WASCLEAN : 0;
 			fs->fs_fmod = 1;
 		}
 	}
@@ -2370,6 +2391,11 @@ ffs_sbupdate(struct ufsmount *mp, int waitfor)
 	memcpy(bp->b_data, fs, fs->fs_sbsize);
 
 	ffs_oldfscompat_write((struct fs *)bp->b_data, mp);
+	if (mp->um_flags & UFS_EA) {
+		struct fs *bfs = (struct fs *)bp->b_data;
+		KASSERT(bfs->fs_magic == FS_UFS2_MAGIC);
+		bfs->fs_magic = FS_UFS2EA_MAGIC;
+	}
 #ifdef FFS_EI
 	if (mp->um_flags & UFS_NEEDSWAP)
 		ffs_sb_swap((struct fs *)bp->b_data, (struct fs *)bp->b_data);

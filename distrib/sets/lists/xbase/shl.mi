@@ -1,4 +1,4 @@
-# $NetBSD: shl.mi,v 1.99 2022/07/14 07:41:49 mrg Exp $
+# $NetBSD: shl.mi,v 1.102 2022/11/12 04:00:57 mrg Exp $
 #
 # Note: don't delete entries from here - mark them as "obsolete" instead.
 #
@@ -166,7 +166,7 @@
 ./usr/X11R7/lib/libXxf86vm.so.2.0		xbase-libXxf86vm-lib		xorg,compatx11file
 ./usr/X11R7/lib/libdrm.so			xbase-libdrm-lib		xorg,compatx11file
 ./usr/X11R7/lib/libdrm.so.3			xbase-libdrm-lib		xorg,compatx11file
-./usr/X11R7/lib/libdrm.so.3.6			xbase-libdrm-lib		xorg,compatx11file
+./usr/X11R7/lib/libdrm.so.3.7			xbase-libdrm-lib		xorg,compatx11file
 ./usr/X11R7/lib/libdrm_radeon.so		xbase-libdrm_radeon-lib		xorg,compatx11file
 ./usr/X11R7/lib/libdrm_radeon.so.0		xbase-libdrm_radeon-lib		xorg,compatx11file
 ./usr/X11R7/lib/libdrm_radeon.so.0.0		xbase-libdrm_radeon-lib		xorg,compatx11file
@@ -199,10 +199,10 @@
 ./usr/X11R7/lib/liblbxutil.so.2.0		xbase-obsolete		obsolete
 ./usr/X11R7/lib/libpciaccess.so			xbase-libpciaccess-lib		xorg,compatx11file
 ./usr/X11R7/lib/libpciaccess.so.0		xbase-libpciaccess-lib		xorg,compatx11file
-./usr/X11R7/lib/libpciaccess.so.0.3		xbase-libpciaccess-lib		xorg,compatx11file
+./usr/X11R7/lib/libpciaccess.so.0.4		xbase-libpciaccess-lib		xorg,compatx11file
 ./usr/X11R7/lib/libpixman-1.so			xbase-pixman-lib		xorg,compatx11file
 ./usr/X11R7/lib/libpixman-1.so.2		xbase-pixman-lib		xorg,compatx11file
-./usr/X11R7/lib/libpixman-1.so.2.2		xbase-pixman-lib		xorg,compatx11file
+./usr/X11R7/lib/libpixman-1.so.2.3		xbase-pixman-lib		xorg,compatx11file
 ./usr/X11R7/lib/libxcb-atom.so			xbase-xcb-util-lib		xorg,compatx11file
 ./usr/X11R7/lib/libxcb-atom.so.1		xbase-xcb-util-lib		xorg,compatx11file
 ./usr/X11R7/lib/libxcb-atom.so.1.0		xbase-xcb-util-lib		xorg,compatx11file

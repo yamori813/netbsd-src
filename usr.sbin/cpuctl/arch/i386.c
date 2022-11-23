@@ -1,4 +1,4 @@
-/*	$NetBSD: i386.c,v 1.128 2022/06/15 16:28:01 msaitoh Exp $	*/
+/*	$NetBSD: i386.c,v 1.133 2022/11/17 15:21:31 msaitoh Exp $	*/
 
 /*-
  * Copyright (c) 1999, 2000, 2001, 2006, 2007, 2008 The NetBSD Foundation, Inc.
@@ -57,7 +57,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID("$NetBSD: i386.c,v 1.128 2022/06/15 16:28:01 msaitoh Exp $");
+__RCSID("$NetBSD: i386.c,v 1.133 2022/11/17 15:21:31 msaitoh Exp $");
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -2232,6 +2232,17 @@ identifycpu(int fd, const char *cpuname)
 	}
 
 	if (cpu_vendor == CPUVENDOR_AMD) {
+		if (ci->ci_max_ext_cpuid >= 0x80000021) {
+			x86_cpuid(0x80000021, descs);
+			print_bits(cpuname, "AMD Extended features2",
+			    CPUID_AMDEXT2_FLAGS, descs[0]);
+		}
+
+		if (ci->ci_max_ext_cpuid >= 0x80000007) {
+			x86_cpuid(0x80000007, descs);
+			print_bits(cpuname, "RAS features",
+			    CPUID_RAS_FLAGS, descs[1]);
+		}
 		if ((ci->ci_max_ext_cpuid >= 0x8000000a)
 		    && (ci->ci_feat_val[3] & CPUID_SVM) != 0) {
 			x86_cpuid(0x8000000a, descs);
@@ -2242,10 +2253,31 @@ identifycpu(int fd, const char *cpuname)
 			print_bits(cpuname, "SVM features",
 			    CPUID_AMD_SVM_FLAGS, descs[3]);
 		}
+		if (ci->ci_max_ext_cpuid >= 0x8000001b) {
+			x86_cpuid(0x8000001b, descs);
+			print_bits(cpuname, "IBS features",
+			    CPUID_IBS_FLAGS, descs[0]);
+		}
 		if (ci->ci_max_ext_cpuid >= 0x8000001f) {
 			x86_cpuid(0x8000001f, descs);
 			print_bits(cpuname, "Encrypted Memory features",
 			    CPUID_AMD_ENCMEM_FLAGS, descs[0]);
+		}
+		if (ci->ci_max_ext_cpuid >= 0x80000022) {
+			uint8_t ncore, nnb, nlbrs;
+
+			x86_cpuid(0x80000022, descs);
+			print_bits(cpuname, "Perfmon:",
+			    CPUID_AXPERF_FLAGS, descs[0]);
+
+			ncore = __SHIFTOUT(descs[1], CPUID_AXPERF_NCPC);
+			nnb = __SHIFTOUT(descs[1], CPUID_AXPERF_NNBPC);
+			nlbrs = __SHIFTOUT(descs[1], CPUID_AXPERF_NLBRSTACK);
+			aprint_verbose("%s: Perfmon: counters: "
+			    "Core %hhu, Northbridge %hhu\n", cpuname,
+			    ncore, nnb);
+			aprint_verbose("%s: Perfmon: LBR Stack %hhu entries\n",
+			    cpuname, nlbrs);
 		}
 	} else if (cpu_vendor == CPUVENDOR_INTEL) {
 		if (ci->ci_max_cpuid >= 0x0a) {

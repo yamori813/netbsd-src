@@ -1,4 +1,4 @@
-.\"	$NetBSD: iic.4,v 1.33 2021/12/07 17:50:27 brad Exp $
+.\"	$NetBSD: iic.4,v 1.35 2022/11/21 21:29:32 brad Exp $
 .\"	$OpenBSD: iic.4,v 1.74 2008/09/10 16:13:43 reyk Exp $
 .\"
 .\" Copyright (c) 2004, 2006 Alexander Yurchenko <grange@openbsd.org>
@@ -179,8 +179,12 @@ A wide list of slaves are supported, among them:
 Analog Devices ADM1026 complete thermal system management controller
 .It Xr admtemp 4
 Analog Devices ADM1021 temperature sensor
+.It Xr aht20temp 4
+Aosong AHT20 humidity/temperature sensors
 .It Xr am2315temp 4
 Aosong AM2315 humidity/temperature sensors
+.It Xr bmx280thp 4
+Bosch BMP280/BME280 humidity/temperature/pressure sensors
 .It Xr ddc 4
 VESA Display Data Channel V2 devices
 .It Xr dbcool 4

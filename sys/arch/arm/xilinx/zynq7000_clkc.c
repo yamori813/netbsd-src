@@ -1,4 +1,4 @@
-/* $NetBSD: zynq7000_clkc.c,v 1.3 2022/10/26 22:14:22 jmcneill Exp $ */
+/* $NetBSD: zynq7000_clkc.c,v 1.5 2022/11/11 20:29:47 jmcneill Exp $ */
 
 /*-
  * Copyright (c) 2022 Jared McNeill <jmcneill@invisible.ca>
@@ -28,7 +28,7 @@
 
 #include <sys/cdefs.h>
 
-__KERNEL_RCSID(0, "$NetBSD: zynq7000_clkc.c,v 1.3 2022/10/26 22:14:22 jmcneill Exp $");
+__KERNEL_RCSID(0, "$NetBSD: zynq7000_clkc.c,v 1.5 2022/11/11 20:29:47 jmcneill Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -56,10 +56,13 @@ __KERNEL_RCSID(0, "$NetBSD: zynq7000_clkc.c,v 1.3 2022/10/26 22:14:22 jmcneill E
 #define	APER_CLK_CTRL	0x12c
 #define	 UART1_CPU_1XCLKACT	__BIT(21)
 #define	 UART0_CPU_1XCLKACT	__BIT(20)
+#define	 I2C1_CPU_1XCLKACT	__BIT(19)
+#define	 I2C0_CPU_1XCLKACT	__BIT(18)
 #define	 SDI1_CPU_1XCLKACT	__BIT(11)
 #define	 SDI0_CPU_1XCLKACT	__BIT(10)
 #define	SDIO_CLK_CTRL	0x150
 #define	UART_CLK_CTRL	0x154
+#define	PCAP_CLK_CTRL	0x168
 #define	 CLK_CTRL_DIVISOR	__BITS(13,8)
 #define	 CLK_CTRL_SRCSEL	__BITS(5,4)
 #define	 CLK_CTRL_CLKACT1	__BIT(1)
@@ -245,8 +248,12 @@ zynq7000_clkc_clk_get_rate(void *priv, struct clk *clk)
 	} else if (clk == &sc->sc_clk[clkid_uart0] ||
 		   clk == &sc->sc_clk[clkid_uart1]) {
 		return zynq7000_clkc_get_rate_iop(sc, UART_CLK_CTRL);
+	} else if (clk == &sc->sc_clk[clkid_pcap]) {
+		return zynq7000_clkc_get_rate_iop(sc, PCAP_CLK_CTRL);
 	} else if (clk == &sc->sc_clk[clkid_uart0_aper] ||
-		   clk == &sc->sc_clk[clkid_uart1_aper]) {
+		   clk == &sc->sc_clk[clkid_uart1_aper] ||
+		   clk == &sc->sc_clk[clkid_i2c0_aper] ||
+		   clk == &sc->sc_clk[clkid_i2c1_aper]) {
 		return zynq7000_clkc_clk_get_rate(sc,
 		    &sc->sc_clk[clkid_cpu_1x]);
 	} else {
@@ -286,6 +293,9 @@ zynq7000_clkc_clk_enable(void *priv, struct clk *clk)
 	} else if (clk == &sc->sc_clk[clkid_uart1]) {
 		reg = UART_CLK_CTRL;
 		mask = CLK_CTRL_CLKACT1;
+	} else if (clk == &sc->sc_clk[clkid_pcap]) {
+		reg = PCAP_CLK_CTRL;
+		mask = CLK_CTRL_CLKACT0;
 	} else if (clk == &sc->sc_clk[clkid_sdio0_aper]) {
 		reg = APER_CLK_CTRL;
 		mask = SDI0_CPU_1XCLKACT;
@@ -298,6 +308,12 @@ zynq7000_clkc_clk_enable(void *priv, struct clk *clk)
 	} else if (clk == &sc->sc_clk[clkid_uart1_aper]) {
 		reg = APER_CLK_CTRL;
 		mask = UART1_CPU_1XCLKACT;
+	} else if (clk == &sc->sc_clk[clkid_i2c0_aper]) {
+		reg = APER_CLK_CTRL;
+		mask = I2C0_CPU_1XCLKACT;
+	} else if (clk == &sc->sc_clk[clkid_i2c1_aper]) {
+		reg = APER_CLK_CTRL;
+		mask = I2C1_CPU_1XCLKACT;
 	} else {
 		return ENXIO;
 	}

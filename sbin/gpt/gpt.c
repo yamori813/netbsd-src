@@ -35,7 +35,7 @@
 __FBSDID("$FreeBSD: src/sbin/gpt/gpt.c,v 1.16 2006/07/07 02:44:23 marcel Exp $");
 #endif
 #ifdef __RCSID
-__RCSID("$NetBSD: gpt.c,v 1.82 2020/05/24 18:42:20 jmcneill Exp $");
+__RCSID("$NetBSD: gpt.c,v 1.84 2022/11/22 00:25:52 mlelstv Exp $");
 #endif
 
 #include <sys/param.h>
@@ -574,8 +574,27 @@ gpt_open(const char *dev, int flags, int verbose, off_t mediasz, u_int secsz,
 		goto close;
 	if ((found = gpt_gpt(gpt, 1LL, 1)) == -1)
 		goto close;
-	if (gpt_gpt(gpt, devsz - 1LL, found) == -1)
-		goto close;
+
+	if (found) {
+		struct map *map;
+		struct gpt_hdr *hdr;
+		uint64_t lba;
+
+		/*
+		 * read secondary GPT from position stored in primary header
+		 * when possible
+		 */
+		map = map_find(gpt, MAP_TYPE_PRI_GPT_HDR);
+		hdr = map ? map->map_data : NULL;
+		lba = le64toh(hdr->hdr_lba_alt);
+		if (hdr && lba > 0 && lba < (uint64_t)devsz) {
+			if (gpt_gpt(gpt, (off_t)lba, found) == -1)
+				goto close;
+		}
+	} else {
+		if (gpt_gpt(gpt, devsz - 1LL, found) == -1)
+			goto close;
+	}
 
 	return gpt;
 
