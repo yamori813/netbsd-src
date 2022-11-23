@@ -1,0 +1,10 @@
+#
+#
+#
+
+include "arch/evbarm/conf/M83XXX"
+include "arch/evbarm/conf/INSTALL"
+
+options BOOTHOWTO=RB_SINGLE
+no makeoptions  DEBUG
+

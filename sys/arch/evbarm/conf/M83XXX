@@ -109,7 +109,10 @@ options 	USERCONF	# userconf(4) support
 # Development and Debugging options
 
 #options 	DIAGNOSTIC	# internal consistency checks
-options 	DEBUG
+options		DEBUG
+#options	USBHIST_PRINT
+#options	USB_DEBUG
+#options	EHCI_DEBUG
 #options 	LOCKDEBUG
 #options 	UVMHIST		# kernhist for uvm/pmap subsystems
 options 	VERBOSE_INIT_ARM # verbose bootstraping messages
