@@ -1,0 +1,21 @@
+CURRENT STATUS:
+  - STR81xx, STR91xx support
+  - multiuser mode works
+  - supported devices:
+    - TIMER works
+    - UART works
+    - ETHERNET works
+      - VLAN is not supported yet
+      - ip4csum-tx doesn't work by errata? ip4csum-rx, tcp4csum and udp4csum work fine.
+    - USB works
+    - WDT works
+    - RTC works (lack of utility on NetBSD, because no battery backup and would clear when reset)
+    - GPIO works (not tested well)
+
+TODO:
+  - PCI (code has written, but not works. why???)
+  - SPI/TWI are work in progress (bagbiter)
+  - PCM/I2S doesn't work (STR8132 has no PCM interface)
+  - IDE (STR8100)
+  - Power Management
+  - PCM/I2S

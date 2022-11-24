@@ -1,0 +1,14 @@
+#	$NetBSD$
+
+SYSTEM_FIRST_OBJ=	star_start.o
+SYSTEM_FIRST_SFILE=	${THISARM}/star/star_start.S
+
+KERNEL_BASE_PHYS=0x20008000
+KERNEL_BASE_VIRT=0xc0008000
+
+SYSTEM_LD_TAIL_EXTRA+=; \
+	echo ${OBJCOPY} -S -O binary $@ $@.bin; \
+	${OBJCOPY} -S -O binary $@ $@.bin;
+
+EXTRA_KERNELS+= ${KERNELS:@.KERNEL.@${.KERNEL.}.bin@}
+EXTRA_KERNELS+= ${KERNELS:@.KERNEL.@${.KERNEL.}.bin.gz@}
