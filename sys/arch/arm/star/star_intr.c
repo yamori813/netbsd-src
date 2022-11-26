@@ -31,11 +31,14 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/malloc.h>
-#include <uvm/uvm_extern.h>
+//#include <sys/malloc.h>
+#include <sys/kmem.h>
+//#include <uvm/uvm_extern.h>
 
-#include <machine/intr.h>
-#include <machine/lock.h>
+//#include <machine/intr.h>
+//#include <machine/lock.h>
+#include <sys/bus.h>
+#include <sys/intr.h>
 
 #include <arm/star/starreg.h>
 #include <arm/star/starvar.h>
@@ -124,8 +127,9 @@ star_disable_irq(int irq)
  * Interrupt Mask Handling
  */
 void
-star_intr_calculate_masks()
+star_intr_calculate_masks(void)
 {
+	struct intrq *iq;
 	struct intrhand *ih;
 	int irq, ipl;
 
@@ -133,7 +137,8 @@ star_intr_calculate_masks()
 	for (irq = 0; irq < STAR_NIRQ; irq++) {
 		star_disable_irq(irq);
 		irqhandler[irq].iq_levels = 0;
-		TAILQ_FOREACH(ih, &irqhandler[irq].iq_list, ih_list) {
+		iq = &irqhandler[irq];
+		TAILQ_FOREACH(ih, &iq->iq_list, ih_list) {
 			irqhandler[irq].iq_levels |= (1U << ih->ih_ipl);
 		}
 	}
@@ -159,19 +164,22 @@ star_intr_calculate_masks()
 
 	/* Now, enable needed IRQ */
 	for (irq = 0; irq < STAR_NIRQ; irq++) {
-		if (!TAILQ_EMPTY(&irqhandler[irq].iq_list)) {
+		iq = &irqhandler[irq];
+		if (!TAILQ_EMPTY(&iq->iq_list)) {
 			star_enable_irq(irq);
 		}
 	}
 }
 
 void
-star_intr_init()
+star_intr_init(void)
 {
+	struct intrq *iq;
 	int i;
 
 	for (i = 0; i < STAR_NIRQ; i++) {
-		TAILQ_INIT(&irqhandler[i].iq_list);
+		iq = &irqhandler[i];
+		TAILQ_INIT(&iq->iq_list);
 		irqhandler[i].iq_irqname = irqnames[i];
 		evcnt_attach_dynamic(&irqhandler[i].iq_evcnt,
 		    EVCNT_TYPE_INTR, NULL, "cpu", irqhandler[i].iq_irqname);
@@ -206,7 +214,7 @@ _splraise(int s)
 {
 	return star_splraise(s);
 }
-
+int star_timer1_intr(void *);
 /*
  * called from irq_entry.
  */
@@ -214,6 +222,7 @@ void
 star_intr_dispatch(void *arg)
 {
 	struct intrhand *ih;
+	struct intrq* iq;
 	uint32_t irq, ibit, pending, s;
 	int ipl;
 
@@ -249,10 +258,13 @@ star_intr_dispatch(void *arg)
 
 		/* increment counters */
 		irqhandler[irq].iq_evcnt.ev_count++;
-		uvmexp.intrs++;
+//		uvmexp.intrs++;
+		curcpu()->ci_data.cpu_nintr++;
 
 		/* dispatch handlers */
-		TAILQ_FOREACH(ih, &irqhandler[irq].iq_list, ih_list) {
+//		TAILQ_FOREACH(ih, &irqhandler[irq].iq_list, ih_list) {
+		iq = &irqhandler[irq];
+		TAILQ_FOREACH(ih, &iq->iq_list, ih_list) {
 			set_curcpl(ih->ih_ipl);
 			s = enable_interrupts(I32_bit);
 
@@ -288,25 +300,28 @@ star_intr_establish(int irq, int ipl, int scheme, int (*func)(void *), void *arg
 	if (ipl < 0 || ipl >= NIPL)
 		panic("%s: bogus ipl number %d", __func__, ipl);
 
-	ih = malloc(sizeof(*ih), M_DEVBUF, M_NOWAIT);
+//	ih = malloc(sizeof(*ih), M_DEVBUF, M_NOWAIT);
+	ih = kmem_alloc(sizeof(*ih), KM_SLEEP);
 	if (ih == NULL)
 		return NULL;
-
 	ih->ih_func = func;
 	ih->ih_arg = arg;
 	ih->ih_irq = irq;
 	ih->ih_ipl = ipl;
 
 	s = disable_interrupts(I32_bit);
-	{
+//	{
 		if (CPU_IS_STR8100())
 			star_equuleus_set_intrmode(irq, scheme);
 		else
 			star_orion_set_intrmode(irq, scheme);
 
-		TAILQ_INSERT_TAIL(&irqhandler[irq].iq_list, ih, ih_list);
+//		TAILQ_INSERT_TAIL(&irqhandler[irq].iq_list, ih, ih_list);
+		struct intrq*           iq;
+		iq = &irqhandler[irq];
+		TAILQ_INSERT_TAIL(&iq->iq_list, ih, ih_list);
 		star_intr_calculate_masks();
-	}
+//	}
 	restore_interrupts(s);
 
 	return ih;
@@ -315,6 +330,7 @@ star_intr_establish(int irq, int ipl, int scheme, int (*func)(void *), void *arg
 void
 star_intr_disestablish(void *cookie)
 {
+	struct intrq *iq;
 	struct intrhand *ih;
 	int irq, s;
 
@@ -325,7 +341,8 @@ star_intr_disestablish(void *cookie)
 
 	s = disable_interrupts(I32_bit);
 	{
-		TAILQ_REMOVE(&irqhandler[irq].iq_list, ih, ih_list);
+		iq = &irqhandler[irq];
+		TAILQ_REMOVE(&iq->iq_list, ih, ih_list);
 		star_intr_calculate_masks();
 	}
 	restore_interrupts(s);

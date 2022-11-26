@@ -29,7 +29,7 @@
 #ifndef _STARVAR_H
 #define _STARVAR_H
 
-#include <machine/bus.h>
+#include <sys/bus.h>
 
 struct star_attach_args {
 	const char *sa_cpuname;

@@ -85,7 +85,8 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 	sc->sc_iot = sa->sa_iot;
 
 	sc->sc_ehci.sc_dev = self;
-	sc->sc_ehci.sc_bus.hci_private = sc;
+//	sc->sc_ehci.sc_bus.hci_private = sc;
+	sc->sc_ehci.sc_bus.ub_hcpriv = sc;
 	sc->sc_ehci.iot = sa->sa_iot;
 
 	aprint_normal(": USB2.0 Host Controller\n");
@@ -97,7 +98,8 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 		aprint_error(": can't map operation registers\n");
 		goto attach_failure;
 	}
-	sc->sc_ehci.sc_bus.dmatag = sa->sa_dmat;
+//	sc->sc_ehci.sc_bus.ub_dmat = sa->sa_dmat;
+	sc->sc_ehci.sc_bus.ub_dmatag = sa->sa_dmat;
 
 	error = starehci_init(sc);
 	if (error)
@@ -110,9 +112,12 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 	star_intr_establish(sa->sa_irq, IPL_USB,
 	    STAR_INTR_LOWLEVEL_TRIGGER, ehci_intr, &sc->sc_ehci);
 
-	sc->sc_ehci.sc_bus.usbrev = USBREV_2_0;
-	strlcpy(sc->sc_ehci.sc_vendor, "Star", sizeof(sc->sc_ehci.sc_vendor));
+//	sc->sc_ehci.sc_bus.usbrev = USBREV_2_0;
+	sc->sc_ehci.sc_bus.ub_revision = USBREV_2_0;
+//	strlcpy(sc->sc_ehci.sc_vendor, "Star", sizeof(sc->sc_ehci.sc_vendor));
+printf("@");
 	r = ehci_init(&sc->sc_ehci);
+printf("@");
 	if (r != USBD_NORMAL_COMPLETION) {
 		aprint_error("%s: init failed, error=%d\n",
 		    device_xname(self), r);
@@ -121,7 +126,7 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 
 	/* Attach usb device. */
 	sc->sc_ehci.sc_child = config_found(self, &sc->sc_ehci.sc_bus,
-	    usbctlprint);
+	    usbctlprint, CFARGS_NONE);
 	return;
 
  attach_failure_unmap:

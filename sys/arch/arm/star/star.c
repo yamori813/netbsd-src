@@ -220,9 +220,8 @@ star_attach(device_t parent __unused, device_t self, void *aux __unused)
 	else
 		aprint_normal(", %dMHz\n", 175 + cpuclk * 25);
 	aprint_naive("\n");
-
-	config_search_ia(star_critical_search, self, "star", &sa);
-	config_search_ia(star_search, self, "star", &sa);
+	config_search(self, &sa, CFARGS(.search = star_critical_search));
+	config_search(self, &sa, CFARGS(.search = star_search));
 }
 
 /* ARGSUSED */
@@ -246,7 +245,7 @@ star_critical_search(device_t parent, struct cfdata *cf,
 	sa->sa_size = 0;
 
 	if (config_match(parent, cf, aux) > 0)
-		config_attach(parent, cf, aux, star_print);
+		config_attach(parent, cf, aux, star_print, CFARGS_NONE);
 
 	return 0;
 }
@@ -276,7 +275,7 @@ star_search(device_t parent, struct cfdata *cf, const int *ldesc __unused,
 	sa->sa_size = 0;
 
 	if (config_match(parent, cf, aux) > 0)
-		config_attach(parent, cf, aux, star_print);
+		config_attach(parent, cf, aux, star_print, CFARGS_NONE);
 
 	return 0;
 }
@@ -303,7 +302,7 @@ star_print(void *aux, const char *name __unused)
  * star_initialize() must be called before using splx() and PA=VA.
  */
 void
-star_initialize()
+star_initialize(void)
 {
 	if (STAR_REG_READ32_PHYS(EQUULEUS_MISC_PCI_ID_CAPABILITY) == 0x8131eeee) {
 		star_cpu_type = 8;
@@ -325,7 +324,7 @@ star_initialize()
 }
 
 void
-star_reset()
+star_reset(void)
 {
 	if (CPU_IS_STR8100())
 		STAR_REG_WRITE32(EQUULEUS_CLKPWR_SOFTRST_REG, 0);

@@ -103,7 +103,7 @@ star_com_attach(device_t parent __unused, device_t self, void *aux)
 		aprint_error(": can't map registers\n");
 		return;
 	}
-	COM_INIT_REGS(sc->sc_regs, sa->sa_iot, ioh, sa->sa_addr);
+	com_init_regs(&sc->sc_regs, sa->sa_iot, ioh, sa->sa_addr);
 
 	com_attach_subr(sc);
 	aprint_naive("\n");

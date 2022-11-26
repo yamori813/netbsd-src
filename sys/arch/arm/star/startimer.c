@@ -37,10 +37,10 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <sys/time.h>
 #include <sys/timetc.h>
 #include <sys/device.h>
+#include <sys/bus.h>
 
 #include <dev/clock_subr.h>
 
-#include <machine/bus.h>
 #include <machine/intr.h>
 
 #include <arm/cpufunc.h>

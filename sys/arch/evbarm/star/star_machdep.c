@@ -40,6 +40,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <sys/reboot.h>
 #include <sys/termios.h>
 #include <sys/ksyms.h>
+#include <sys/bus.h>
 
 #include <uvm/uvm_extern.h>
 
@@ -54,7 +55,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <machine/autoconf.h>
 #include <machine/bootconfig.h>
-#include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/frame.h>
 #include <arm/undefined.h>
@@ -80,7 +80,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
  * on where the ROM appears when you turn the MMU off.
  */
 
-u_int cpu_reset_address = ARM_VECTORS_HIGH;
+//u_int cpu_reset_address = ARM_VECTORS_HIGH;
 
 /* Define various stack sizes in pages */
 #define FIQ_STACK_SIZE	1
@@ -91,25 +91,28 @@ u_int cpu_reset_address = ARM_VECTORS_HIGH;
 BootConfig bootconfig;	/* Boot config storage */
 char *boot_args = NULL;
 
-vm_offset_t physical_start;
-vm_offset_t physical_freestart;
-vm_offset_t physical_freeend;
-vm_offset_t physical_end;
+//vaddr_t physical_start;
+vaddr_t physical_freestart;
+vaddr_t physical_freeend;
+//vaddr_t physical_end;
 u_int free_pages;
-int physmem = 0;
+//int physmem = 0;
 
 /* Physical and virtual addresses for some global pages */
+/*
 pv_addr_t fiqstack;
 pv_addr_t irqstack;
 pv_addr_t undstack;
 pv_addr_t abtstack;
 pv_addr_t kernelstack;
+*/
 
-paddr_t msgbufphys;
+//paddr_t msgbufphys;
+extern paddr_t msgbufphys;
 
 extern u_int data_abort_handler_address;
 extern u_int prefetch_abort_handler_address;
-extern u_int undefined_handler_address;
+//extern u_int undefined_handler_address;
 
 extern char etext[];
 extern char _end[];
@@ -131,9 +134,9 @@ struct user *proc0paddr;
  * kernel address space.  *Not* for general use.
  */
 #define KERNEL_BASE_PHYS	physical_start
-#define KERN_VTOPHYS(va) \
+#define STR_KERN_VTOPHYS(va) \
 	((paddr_t)((vaddr_t)va - KERNEL_BASE + KERNEL_BASE_PHYS))
-#define KERN_PHYSTOV(pa) \
+#define STR_KERN_PHYSTOV(pa) \
 	((vaddr_t)((paddr_t)pa - KERNEL_BASE_PHYS + KERNEL_BASE))
 
 #include "com.h"
@@ -233,7 +236,7 @@ cpu_reboot(int howto, char *bootstr __unused)
 }
 
 /*
- * u_int initarm(...)
+ * vaddr_t initarm(...)
  *
  * Initial entry point on startup. This gets called before main() is
  * entered.
@@ -246,11 +249,11 @@ cpu_reboot(int howto, char *bootstr __unused)
  *   Initialising interrupt controllers to a sane default state
  */
 /* ARGSUSED */
-u_int
+vaddr_t
 initarm(void *arg __unused)
 {
 	int i, ndevmap, pt_index;
-	u_int kerneldatasize;
+//	u_int kerneldatasize;
 	u_int l1pagetable;
 
 	star_initialize();
@@ -277,7 +280,7 @@ initarm(void *arg __unused)
 	bootconfig.dram[0].pages = star_get_memsize(1) / PAGE_SIZE;
 #endif
 
-	kerneldatasize = (uint32_t)_end - (uint32_t)KERNEL_TEXT_BASE;
+//	kerneldatasize = (uint32_t)_end - (uint32_t)KERNEL_TEXT_BASE;
 
 	physical_start = bootconfig.dram[0].address;
 	physical_end = physical_start + bootconfig.dram[0].pages * PAGE_SIZE;
@@ -285,14 +288,14 @@ initarm(void *arg __unused)
 	 * Our kernel is at the beginning of memory, so set our free space to
 	 * all the memory after the kernel.
 	 */
-	physical_freestart = KERN_VTOPHYS(round_page((vaddr_t)_end));
+	physical_freestart = STR_KERN_VTOPHYS(round_page((vaddr_t)_end));
 	physical_freeend = physical_end;
 	physmem = (physical_end - physical_start) / PAGE_SIZE;
 	free_pages = (physical_freeend - physical_freestart) / PAGE_SIZE;
 
 #ifdef VERBOSE_INIT_ARM
 	/* Tell the user about the memory */
-	printf("physmemory: %d pages at 0x%08lx -> 0x%08lx\n", physmem,
+	printf("physmemory: %d pages at 0x%08lx -> 0x%08lx\n", (int)physmem,
 	    physical_start, physical_end - 1);
 	printf("freestart = 0x%08lx, free_pages = %d (0x%08x)\n",
 	       physical_freestart, free_pages, free_pages);
@@ -315,7 +318,7 @@ initarm(void *arg __unused)
 	if (physical_freestart > (physical_freeend - L1_TABLE_SIZE))	\
 		panic("initarm: out of memory");			\
 	free_pages -= (np);						\
-	(var).pv_va = KERN_PHYSTOV((var).pv_pa);			\
+	(var).pv_va = STR_KERN_PHYSTOV((var).pv_pa);			\
 	memset((char *)(var).pv_va, 0, ((np) * PAGE_SIZE));
 
 #define valloc_pages_tail(var, np)					\
@@ -507,7 +510,8 @@ initarm(void *arg __unused)
 	printf("switching to new L1 page table  @%#lx...", kernel_l1pt.pv_pa);
 #endif
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
-	setttb(kernel_l1pt.pv_pa);
+//	setttb(kernel_l1pt.pv_pa);
+	cpu_setttb(kernel_l1pt.pv_pa, true);
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2));
 

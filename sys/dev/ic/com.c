@@ -2572,6 +2572,12 @@ cominit(struct com_regs *regsp, int rate, int frequency, int type,
 		if (type == COM_TYPE_AU1x00) {
 			/* no EFR on alchemy */
 			CSR_WRITE_2(regsp, COM_REG_DLBL, rate);
+		} else if (type == COM_TYPE_STRx100) {
+			CSR_WRITE_1(regsp, COM_REG_LCR, LCR_DLAB);
+			/* need to select 24MHz source (STAR_UART_FREQ) */
+			CSR_WRITE_1(regsp, COM_REG_IIR, 1);
+			CSR_WRITE_1(regsp, COM_REG_DLBL, rate & 0xff);
+			CSR_WRITE_1(regsp, COM_REG_DLBH, rate >> 8);
 		} else {
 			if ((type != COM_TYPE_16550_NOERS) && 
 			    (type != COM_TYPE_INGENIC)) {
