@@ -32,7 +32,8 @@
 #include <arm/star/starreg.h>
 
 #define SDRAM_START	STAR_SDRAM_MEMORY		/* 0x20000000 */
-#define SDRAM_LOAD	(STAR_SDRAM_MEMORY + 0x8000)	/* 0x20008000 */
+//#define SDRAM_LOAD	(STAR_SDRAM_MEMORY + 0x8000)	/* 0x20008000 */
+#define SDRAM_LOAD	(STAR_SDRAM_MEMORY + 0x40000)	/* 0x20040000 */
 
 /*
  * 0x20000000-0x20004000: temporary stack

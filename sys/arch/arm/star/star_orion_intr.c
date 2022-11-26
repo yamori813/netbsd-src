@@ -41,7 +41,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/star/star_orion_intr.h>
 
 void
-star_orion_set_intrmask()
+star_orion_set_intrmask(void)
 {
 	STAR_REG_WRITE32(ORION_INT_CLEAR, star_intr_enabled);
 	STAR_REG_WRITE32(ORION_INT_MASK, ~star_intr_enabled);
@@ -58,6 +58,8 @@ star_orion_set_intrmode(int irq, int scheme)
 	    (scheme == STAR_INTR_RISING_EDGE) ||
 	    (scheme == STAR_INTR_FALLING_EDGE));
 
+	mode = 0;
+	level = 0;
 	switch (scheme) {
 	case STAR_INTR_HIGHLEVEL_TRIGGER:
 		mode = 0;
@@ -85,7 +87,7 @@ star_orion_set_intrmode(int irq, int scheme)
 }
 
 void
-star_orion_init()
+star_orion_init(void)
 {
 	/* set cpu depend handler */
 	star_set_intrmask = star_orion_set_intrmask;

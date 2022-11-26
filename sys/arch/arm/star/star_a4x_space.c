@@ -43,10 +43,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/bus.h>
 
 #include <uvm/uvm_extern.h>
-
-#include <machine/bus.h>
 
 /* Prototypes for all the bus_space structure functions */
 bs_protos(star);
@@ -59,16 +58,21 @@ struct bus_space star_a4x_bs_tag = {
 	(void *) 0,
 
 	/* mapping/unmapping */
+/*
 	star_bs_map,
 	star_bs_unmap,
 	star_bs_subregion,
+*/
+	.bs_map = star_bs_map,
+	.bs_unmap = star_bs_unmap,
+	.bs_subregion = star_bs_subregion,
 
 	/* allocation/deallocation */
-	star_bs_alloc,			/* not implemented */
-	star_bs_free,			/* not implemented */
+	.bs_alloc = star_bs_alloc,			/* not implemented */
+	.bs_free = star_bs_free,			/* not implemented */
 
 	/* get kernel virtual address */
-	star_bs_vaddr,
+	.bs_vaddr = star_bs_vaddr,
 
 	/* mmap */
 	bs_notimpl_bs_mmap,

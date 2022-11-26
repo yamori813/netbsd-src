@@ -85,7 +85,8 @@ starohci_attach(device_t parent __unused, device_t self, void *aux)
 	sc->sc_iot = sa->sa_iot;
 
 	sc->sc_ohci.sc_dev = self;
-	sc->sc_ohci.sc_bus.hci_private = sc;
+//	sc->sc_ohci.sc_bus.hci_private = sc;
+	sc->sc_ohci.sc_bus.ub_hcpriv = sc;
 	sc->sc_ohci.iot = sa->sa_iot;
 
 	aprint_normal(": USB1.1 Host Controller\n");
@@ -97,7 +98,8 @@ starohci_attach(device_t parent __unused, device_t self, void *aux)
 		aprint_error(": can't map operation registers\n");
 		goto attach_failure;
 	}
-	sc->sc_ohci.sc_bus.dmatag = sa->sa_dmat;
+//	sc->sc_ohci.sc_bus.dmatag = sa->sa_dmat;
+	sc->sc_ohci.sc_bus.ub_dmatag = sa->sa_dmat;
 
 	error = starohci_init(sc);
 	if (error)
@@ -106,7 +108,7 @@ starohci_attach(device_t parent __unused, device_t self, void *aux)
 	star_intr_establish(sa->sa_irq, IPL_USB,
 	    STAR_INTR_LOWLEVEL_TRIGGER, ohci_intr, &sc->sc_ohci);
 
-	strlcpy(sc->sc_ohci.sc_vendor, "Star", sizeof(sc->sc_ohci.sc_vendor));
+//	strlcpy(sc->sc_ohci.sc_vendor, "Star", sizeof(sc->sc_ohci.sc_vendor));
 	r = ohci_init(&sc->sc_ohci);
 	if (r != USBD_NORMAL_COMPLETION) {
 		aprint_error("%s: init failed, error=%d\n",
@@ -116,7 +118,7 @@ starohci_attach(device_t parent __unused, device_t self, void *aux)
 
 	/* Attach usb device. */
 	sc->sc_ohci.sc_child = config_found(self, &sc->sc_ohci.sc_bus,
-	    usbctlprint);
+	    usbctlprint, CFARGS_NONE);
 	return;
 
  attach_failure_unmap:

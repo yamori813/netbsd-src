@@ -201,6 +201,7 @@ struct com_softc {
 #define	COM_TYPE_16650		9
 #define	COM_TYPE_16750		10
 #define	COM_TYPE_DW_APB		11	/* DesignWare APB UART */
+#define	COM_TYPE_STRx100	12	/* STR81xx/91xx processor built-in */
 
 	int sc_poll_ticks;
 

@@ -258,7 +258,8 @@ stargpio_attach(device_t parent __unused, device_t self, void *aux)
 	gba.gba_pins = sc->sc_gpio_pins;
 	gba.gba_npins = STAR_GPIO_PINS;
 
-	config_found_ia(self, "gpiobus", &gba, gpiobus_print);
+//	config_found_ia(self, "gpiobus", &gba, gpiobus_print);
+	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
 }
 
 static void

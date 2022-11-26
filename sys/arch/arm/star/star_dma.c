@@ -31,7 +31,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
-#include <machine/bus.h>
+#include <sys/bus.h>
 
 struct arm32_bus_dma_tag star_bus_dma_tag = {
 	._ranges		= NULL,

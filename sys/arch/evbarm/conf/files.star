@@ -5,6 +5,8 @@
 
 file	arch/evbarm/star/star_machdep.c
 
+file	arch/arm/arm32/arm32_kvminit.c
+
 # CPU support and integrated peripherals
 include	"arch/arm/star/files.star"
 

@@ -31,10 +31,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/bus.h>
 
 #include <uvm/uvm_extern.h>
-
-#include <machine/bus.h>
 
 /* Prototypes for all the bus_space structure functions */
 bs_protos(star_pci);
