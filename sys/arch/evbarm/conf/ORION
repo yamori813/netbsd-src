@@ -144,16 +144,16 @@ mvsoc0	at mainbus?
 #mvpex*	at mvsoc? offset ? irq ?
 
 # On-chip PCI Interface
-#gtpci*	at mvsoc? offset ? irq ?
+gtpci*	at mvsoc? offset ? irq ?
 
 # PCI bus support
-#options 	PCI_NETBSD_CONFIGURE
+options 	PCI_NETBSD_CONFIGURE
 #options 	PCI_CONFIG_DUMP		# verbosely dump PCI config space
 
 #pci*	at mvpex?
-#pci*	at gtpci?
+pci*	at gtpci?
 
-#pchb*	at pci? dev ? function ?	# PCI-Host bridges
+pchb*	at pci? dev ? function ?	# PCI-Host bridges
 
 # PCI IDE Controller
 #mvsata*	at pci? dev ? function ?	# Marvell SATA Controller
