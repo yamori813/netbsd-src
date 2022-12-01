@@ -396,6 +396,31 @@ int comkgdbmode = KGDB_DEVMODE;
 
 #endif /* KGDB */
 
+int
+m83comcnattach(bus_space_tag_t iot, bus_addr_t iobase, int rate,
+    int frequency, int type, tcflag_t cflag);
+int
+m83comcnattach(bus_space_tag_t iot, bus_addr_t iobase, int rate,
+    int frequency, int type, tcflag_t cflag)
+{
+	struct com_regs	regs;
+
+	/*XXX*/
+	bus_space_handle_t dummy_bsh;
+	memset(&dummy_bsh, 0, sizeof(dummy_bsh));
+
+	/*
+	 * dummy_bsh required because com_init_regs() wants it.  A
+	 * real bus_space_handle will be filled in by cominit() later.
+	 * XXXJRT Detangle this mess eventually, plz.
+	 */
+	com_init_regs_stride(&regs, iot, dummy_bsh/*XXX*/, iobase,
+		2);
+
+
+	return comcnattach1(&regs, rate, frequency, type, cflag);
+}
+
 void
 consinit(void)
 {
@@ -407,8 +432,7 @@ consinit(void)
 	consinit_called = 1;
 
 	/* initialize the console functions */
-//	m83uart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
-	if (comcnattach(&m83_bs_tag, 0x10090000, 115200,
+	if (m83comcnattach(&m83_bs_tag, APB_UART0_BASE, 115200,
 		GEMINI_COM_FREQ, COM_TYPE_16550_NOERS, consmode))
 			panic("Serial console can not be initialized.");
 }
