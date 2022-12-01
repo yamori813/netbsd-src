@@ -38,11 +38,9 @@ device	timer
 attach	timer	at apb
 file	arch/arm/mindspeed/m83xxx_timer.c	timer		needs-flag
 
-# UART
-device	m83uart
-attach	m83uart at apb with m83_uart
-file	arch/arm/mindspeed/m83xxx_uart.c	m83_uart
-defflag	opt_m83uart.h				IMXUARTCONSOLE
+# NS16550 compatible serial ports
+attach	com at apb with m83xxx_com
+file	arch/arm/mindspeed/m83xxx_com.c		m83xxx_com
 
 # USB controller
 attach ehci at ahb with ehci_ahb

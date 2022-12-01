@@ -20,7 +20,8 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 
 # For StrongARM systems
 options 	CPU_ARM1136	# Support the SA110 core
-options 	CPU_ARM11
+#options 	CPU_ARM11
+options 	ARM11_COMPAT_MMU
 
 # Architecture options
 options        IMX31_IPGCLK_FREQ=66000000	# Fixme. bogus value
@@ -139,7 +140,7 @@ options 	MEMSIZE=0x8000000
 ahb0		at mainbus?
 apb0		at ahb0 addr 0x10000000
 intc0		at apb? addr 0x100a0000 irqbase 0
-m83uart*	at apb? addr 0x10090000 intr 41
+com*		at apb? addr 0x10090000 intr 41
 timer0		at apb? addr 0x10050000 intr 31
 timer1		at apb? addr 0x10050000 intr 30
 m83gpio*	at apb? addr 0x10070000 intr 33
