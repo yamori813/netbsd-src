@@ -148,8 +148,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/arm32/machdep.h>
 
 #include <arm/mindspeed/m83xxx_reg.h>
-//#include <arm/mindspeed/m83xxx_uartreg.h>
-//#include <arm/mindspeed/m83xxx_uartvar.h>
 #include <arm/mindspeed/m83xxx_com.h>
 #include <evbarm/mindspeed/m83xxx_reg.h>
 
