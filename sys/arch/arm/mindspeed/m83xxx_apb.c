@@ -123,6 +123,7 @@ __KERNEL_RCSID(0, "$Id$");
 #include <arm/mindspeed/m83xxx_var.h>
 
 struct m83apb_softc {
+	device_t sc_dev;
 	bus_space_tag_t sc_bust;
 };
 
@@ -130,6 +131,7 @@ struct m83apb_softc {
 static int	m83apb_match(device_t , cfdata_t, void *);
 static void	m83apb_attach(device_t , device_t , void *);
 static int 	m83apb_search(device_t , cfdata_t, const int *, void *);
+static void	m83apb_attach_critical(struct m83apb_softc *sc);
 static int	m83apb_print(void *, const char *);
 
 /* attach structures */
@@ -148,9 +150,15 @@ m83apb_attach(device_t parent, device_t self, void *aux)
 	struct m83apb_softc * const sc = device_private(self);
 	struct ahb_attach_args * const ahba = aux;
 
+	sc->sc_dev = self;
 	sc->sc_bust = ahba->ahba_memt;
 
 	aprint_normal(": AHB to APB Bus Bridge\n");
+
+	/*
+	  * Attach critical devices
+	 */
+	m83apb_attach_critical(sc);
 
 	/*
 	 * Attach all other devices
@@ -176,6 +184,74 @@ m83apb_search(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
 		config_attach(parent, cf, &apba, m83apb_print, CFARGS_NONE);
 
 	return 0;
+}
+
+static int
+apb_find(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
+{
+	struct apb_attach_args * const apba = aux;
+	struct apb_attach_args apba0;
+
+	if (strcmp(apba->apba_name, "apb"))
+		return 0;
+	if (apba->apba_addr != AHBCF_ADDR_DEFAULT
+	    && apba->apba_addr != cf->cf_loc[AHBCF_ADDR])
+		return 0;
+	if (apba->apba_size != AHBCF_SIZE_DEFAULT
+	    && apba->apba_size != cf->cf_loc[AHBCF_SIZE])
+		return 0;
+	if (apba->apba_intr != AHBCF_INTR_DEFAULT
+	    && apba->apba_intr != cf->cf_loc[AHBCF_INTR])
+		return 0;
+	if (apba->apba_irqbase != AHBCF_IRQBASE_DEFAULT
+	    && apba->apba_irqbase != cf->cf_loc[AHBCF_IRQBASE])
+		return 0;
+
+	apba0 = *apba;
+	apba0.apba_addr = cf->cf_loc[AHBCF_ADDR];
+	apba0.apba_size = cf->cf_loc[AHBCF_SIZE];
+	apba0.apba_intr = cf->cf_loc[AHBCF_INTR];
+	apba0.apba_irqbase = cf->cf_loc[AHBCF_IRQBASE];
+
+	return config_match(parent, cf, &apba0);
+}
+
+static const struct {
+	const char *name;
+	bus_addr_t addr;
+	bool required;
+} critical_devs[] = {
+	{ .name = "intc", .addr = 0x100a0000, .required = true }
+};
+
+static void
+m83apb_attach_critical(struct m83apb_softc *sc)
+{
+	struct apb_attach_args apba;
+	cfdata_t cf;
+	size_t i;
+
+	for (i = 0; i < __arraycount(critical_devs); i++) {
+		apba.apba_name = "apb";
+		apba.apba_memt = sc->sc_bust;
+
+		apba.apba_addr = critical_devs[i].addr;
+		apba.apba_size = AHBCF_SIZE_DEFAULT;
+		apba.apba_intr = AHBCF_INTR_DEFAULT;
+		apba.apba_irqbase = AHBCF_IRQBASE_DEFAULT;
+
+		cf = config_search(sc->sc_dev, &apba,
+		    CFARGS(.submatch = apb_find));
+		if (cf == NULL && critical_devs[i].required)
+			panic("apb_attach_critical: failed to find %s!",
+			    critical_devs[i].name);
+
+		apba.apba_addr = cf->cf_loc[AHBCF_ADDR];
+		apba.apba_size = cf->cf_loc[AHBCF_SIZE];
+		apba.apba_intr = cf->cf_loc[AHBCF_INTR];
+		apba.apba_irqbase = cf->cf_loc[AHBCF_IRQBASE];
+		config_attach(sc->sc_dev, cf, &apba, m83apb_print, CFARGS_NONE);
+	}
 }
 
 static int

@@ -148,8 +148,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/arm32/machdep.h>
 
 #include <arm/mindspeed/m83xxx_reg.h>
-#include <arm/mindspeed/m83xxx_uartreg.h>
-#include <arm/mindspeed/m83xxx_uartvar.h>
+//#include <arm/mindspeed/m83xxx_uartreg.h>
+//#include <arm/mindspeed/m83xxx_uartvar.h>
+#include <arm/mindspeed/m83xxx_com.h>
 #include <evbarm/mindspeed/m83xxx_reg.h>
 
 /* Kernel text starts 1MB in from the bottom of the kernel address space. */
@@ -406,7 +407,10 @@ consinit(void)
 	consinit_called = 1;
 
 	/* initialize the console functions */
-	m83uart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
+//	m83uart_cnattach(&m83_bs_tag, 0x10090000, consrate, consmode);
+	if (comcnattach(&m83_bs_tag, 0x10090000, 115200,
+		GEMINI_COM_FREQ, COM_TYPE_16550_NOERS, consmode))
+			panic("Serial console can not be initialized.");
 }
 
 #ifdef KGDB
