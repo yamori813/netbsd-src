@@ -39,8 +39,34 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/mindspeed/m83xxx_reg.h>
 #include <arm/mindspeed/m83xxx_var.h>
 
+#define USB_REFCLK_PD		(1 << 24)
+#define USB_AHBCLK_PD		(1 << 19)
+#define PCIE1_AHBCLK_PD		(1 << 15)
+#define PCIE0_AHBCLK_PD		(1 << 14)
+#define PCIE_REFCLK_NP_PD	(1 << 6)
+#define ARM0_FCLK_PD		(1 << 0)
+#define ARM1_FCLK_PD		(1 << 1)
+#define GEMAC0_REFCLK_PD	(1 << 2)
+#define GEMAC1_REFCLK_PD	(1 << 3)
+#define PHY_REFCLK_PD		(1 << 4)
+#define DDR_CLK_PD		(1 << 5)
+#define IPSEC_CORECLK_PD	(1 << 8)
+#define ARM0_AHBCLK_PD		(1 << 9)
+#define ARM1_AHBCLK_PD		(1 << 10)
+#define GEMAC0_AHBCLK_PD	(1 << 11)
+#define GEMAC1_AHBCLK_PD	(1 << 12)
+#define DDRCTRL_AHBCLK_PD	(1 << 13)
+#define TDM_AHBCLK_PD		(1 << 16)
+#define MDMA_AHBCLK_PD		(1 << 17)
+#define UART_AHBCLK_PD		(1 << 18)
+#define I2CSPI_AHBCLK_PD	(1 << 20)
+#define IPSEC_AHBCLK_PD		(1 << 21)
+#define TDM_CLK_PD		(1 << 22)
+#define IPSEC2_AHBCLK_PD	(1 << 23)
+
 static int	m83xxx_pmc_match(device_t, cfdata_t, void *);
 static void	m83xxx_pmc_attach(device_t, device_t, void *);
+static void	m83xxx_pmc_init(void);
 
 struct m83xxx_pmc_softc {
 	device_t		pmc_dev;
@@ -84,45 +110,31 @@ m83xxx_pmc_attach(device_t parent, device_t self, void *aux)
 	KASSERT(pmc_softc == NULL);
 	pmc_softc = pmc;
 
+	m83xxx_pmc_init();
+
 	aprint_naive("\n");
 	aprint_normal(": PMC\n");
 }
 
-#if 0
 static void
-m83xxx_pmc_get_bs(bus_space_tag_t *pbst, bus_space_handle_t *pbsh)
+m83xxx_pmc_init(void)
 {
-	if (pmc_softc) {
-		*pbst = pmc_softc->sc_bst;
-		*pbsh = pmc_softc->sc_bsh;
-	} else {
-		extern struct bus_space arm_generic_bs_tag;
+	uint32_t reg;
 
-		*pbst = &arm_generic_bs_tag;
-
-		bus_space_subregion(*pbst, m83xxx_apb_bsh,
-		    TEGRA_PMC_OFFSET, TEGRA_PMC_SIZE, pbsh);
-	}
+	reg = bus_space_read_4(pmc_softc->pmc_memt, pmc_softc->pmc_memh,
+	    CLK_CLK_PWR_DWN);
+	reg |= PCIE_REFCLK_NP_PD;
+	reg |= PCIE0_AHBCLK_PD;
+	reg |= PCIE1_AHBCLK_PD;
+	reg |= TDM_AHBCLK_PD;
+	reg |= ARM1_AHBCLK_PD;
+	reg |= I2CSPI_AHBCLK_PD;
+	reg |= USB_AHBCLK_PD;
+	bus_space_write_4(pmc_softc->pmc_memt, pmc_softc->pmc_memh,
+	    CLK_CLK_PWR_DWN, reg);
 }
 
-void
-m83xxx_pmc_reset(void)
-{
-	bus_space_tag_t bst;
-	bus_space_handle_t bsh;
-	uint32_t cntrl;
-
-	m83xxx_pmc_get_bs(&bst, &bsh);
-
-	cntrl = bus_space_read_4(bst, bsh, PMC_CNTRL_0_REG);
-	cntrl |= PMC_CNTRL_0_MAIN_RST;
-	bus_space_write_4(bst, bsh, PMC_CNTRL_0_REG, cntrl);
-
-	for (;;) {
-		__asm("wfi");
-	}
-}
-
+#if 0
 void
 m83xxx_pmc_power(u_int partid, bool enable)
 {
