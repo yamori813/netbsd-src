@@ -221,7 +221,8 @@ static const struct {
 	bus_addr_t addr;
 	bool required;
 } critical_devs[] = {
-	{ .name = "intc", .addr = 0x100a0000, .required = true }
+	{ .name = "intc", .addr = 0x100a0000, .required = true },
+	{ .name = "m83pmc", .addr = 0x100b0000, .required = true }
 };
 
 static void

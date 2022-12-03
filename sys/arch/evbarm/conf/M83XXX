@@ -110,7 +110,7 @@ options 	USERCONF	# userconf(4) support
 # Development and Debugging options
 
 #options 	DIAGNOSTIC	# internal consistency checks
-options		DEBUG
+#options	DEBUG
 #options	USBHIST_PRINT
 #options	USB_DEBUG
 #options	EHCI_DEBUG
@@ -140,6 +140,7 @@ options 	MEMSIZE=0x8000000
 ahb0		at mainbus?
 apb0		at ahb0 addr 0x10000000
 intc0		at apb? addr 0x100a0000 irqbase 0
+m83pmc0		at apb? addr 0x100b0000
 com*		at apb? addr 0x10090000 intr 41
 timer0		at apb? addr 0x10050000 intr 31
 timer1		at apb? addr 0x10050000 intr 30
