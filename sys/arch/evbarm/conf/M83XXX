@@ -21,6 +21,7 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 # For StrongARM systems
 options 	CPU_ARM1136	# Support the SA110 core
 #options 	CPU_ARM11
+#options 	CPU_ARM11MPCORE
 options 	ARM11_COMPAT_MMU
 
 # Architecture options
@@ -145,6 +146,7 @@ com*		at apb? addr 0x10090000 intr 41
 timer0		at apb? addr 0x10050000 intr 31
 timer1		at apb? addr 0x10050000 intr 30
 m83gpio0	at apb? addr 0x10070000 intr 33
+gpio*		at m83gpio?
 
 ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
 
