@@ -120,7 +120,7 @@ m83xxx_com_attach(device_t parent, device_t self, void *aux)
 		panic(": can't map registers\n");
 		return;
 	}
-	com_init_regs(&sc->sc_regs, memt, ioh, iobase);
+	com_init_regs_stride(&sc->sc_regs, memt, ioh, iobase, 2);
 
 	com_attach_subr(sc);
 	aprint_naive("\n");
