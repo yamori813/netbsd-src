@@ -62,8 +62,6 @@ __KERNEL_RCSID(0, "$NetBSD: m83xxx_com.c,v 1.4 2018/12/08 17:46:09 thorpej Exp $
 #include <arm/mindspeed/m83xxx_reg.h>
 #include <arm/mindspeed/m83xxx_var.h>
 
-#include <arm/mindspeed/m83xxx_com.h>
-
 #include "locators.h"
 
 static int	m83xxx_com_match(device_t, cfdata_t , void *);
@@ -83,7 +81,7 @@ m83xxx_com_match(device_t parent, cfdata_t cf, void *aux)
 	    panic("m83xxx_com must have addr and intr specified in config.");
 
 	if (apba->apba_size == 0)
-		apba->apba_size = GEMINI_UART_SIZE;
+		apba->apba_size = COMCERTO_UART_SIZE;
 
 	if (com_is_console(apba->apba_memt, apba->apba_addr, NULL))
 		return (1);
@@ -111,7 +109,7 @@ m83xxx_com_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	memt = apba->apba_memt;
 	iobase = apba->apba_addr;
-	sc->sc_frequency = GEMINI_COM_FREQ;
+	sc->sc_frequency = COMCERTO_APB_FREQ;
 	sc->sc_type = COM_TYPE_16550_NOERS;
 //	sc->sc_type = COM_TYPE_NORMAL;
 
