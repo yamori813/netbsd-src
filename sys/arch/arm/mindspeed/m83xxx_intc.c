@@ -190,7 +190,6 @@ m83_irq_handler(void *frame)
 {
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
-//	int saved_spl;
 	int32_t stat0, mask0;
 	int32_t stat1, mask1;
 	int32_t irq;
@@ -206,24 +205,6 @@ m83_irq_handler(void *frame)
 		irq = ffs(stat1 & mask1) - 1 + 32;
 	}
 
-/*
-	saved_spl = curcpl();
-
-	cpsie(I32_bit);
-
-	pic_dispatch(pic->pic_sources[irq], frame);
-
-	if (irq <  32)
-		INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
-	else {
-		INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq % 32));
-	}
-
-	cpsid(I32_bit);
-
-	splx(saved_spl);
-*/
-//	pic_do_pending_ints(I32_bit, irq, frame);
 	pic_dispatch(pic->pic_sources[irq], frame);
 
 	/* ack */
@@ -236,58 +217,6 @@ m83_irq_handler(void *frame)
 		INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
 		intc_unblock_irqs(pic, 32, 1 << (irq & 0x1f));
 	}
-#if 0
-	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
-	struct pic_softc * const pic = &intc->intc_pic;
-//	int32_t saved_nimask;
-	int32_t irq;
-	int ipl, newipl, oldipl;
-
-//	saved_nimask = INTC_READ(intc, IMX31_NIMASK);
-	for (;;) {
-//		irq = INTC_READ(intc, IMX31_NIVECSR);
-		irq = 31;
-		if (irq < 0)
-			break;
-		ipl = (int16_t) irq;
-		KASSERT(ipl >= 0);
-//		irq >>= 16;
-		KASSERT(irq < 64);
-		KASSERT(pic->pic_sources[irq] != NULL);
-
-		/*
-		 * If this interrupt is not above the current spl,
-		 * mark it as pending and try again.
-		 */
-		newipl = HW_TO_SW_IPL(ipl);
-/*
-		if (newipl <= curcpu()->ci_cpl) {
-			pic_mark_pending(pic, irq);
-			continue;
-		}
-*/
-
-		/*
-		 * Before enabling interrupts, mask out lower priority
-		 * interrupts and raise SPL to its equivalent.
-		 */
-
-//		INTC_WRITE(intc, IMX31_NIMASK, ipl);
-		oldipl = _splraise(newipl);
-		cpsie(I32_bit);
-
-		pic_dispatch(pic->pic_sources[irq], frame);
-
-		/*
-		 * Disable interrupts again.  Drop SPL.  Restore saved
-		 * HW interrupt level.
-		 */
-		cpsid(I32_bit);
-		splx(oldipl);
-//		INTC_WRITE(intc, IMX31_NIMASK, saved_nimask);
-		break;
-	}
-#endif
 }
 
 static int intc_match(device_t, cfdata_t, void *);
