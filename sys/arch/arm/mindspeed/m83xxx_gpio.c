@@ -327,40 +327,44 @@ CFATTACH_DECL_NEW(m83gpio,
 
 #if NGPIO > 0 || NGEMINIGMAC > 0
 
+int m83gpio_pin_read(void *arg, int pin);
+void m83gpio_pin_write(void *arg, int pin, int value);
+void m83gpio_pin_ctl(void *arg, int pin, int flags);
+
 int
 m83gpio_pin_read(void *arg, int pin)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 
-	return (GPIO_READ(gpio, GEMINI_GPIO_DATAIN) >> pin) & 1;
-#endif
-	return 1;
+	return (GPIO_READ(gpio, GPIO_INPUT_REG) >> pin) & 1;
 }
 
 void
 m83gpio_pin_write(void *arg, int pin, int value)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 	uint32_t mask = 1 << pin;
+	uint32_t old, new;
 
+	old = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	new = old;
 	if (value)
-		GPIO_WRITE(gpio, GEMINI_GPIO_DATASET, mask);
+		new &= ~mask;
 	else
-		GPIO_WRITE(gpio, GEMINI_GPIO_DATACLR, mask);
-#endif
+		new |= mask;
+
+printf("MORI MORI GPIO %x %x,",old,new);
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
 }
 
 void
 m83gpio_pin_ctl(void *arg, int pin, int flags)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 	uint32_t mask = 1 << pin;
 	uint32_t old, new;
 
-	old = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
+	old = GPIO_READ(gpio, GPIO_OE_REG);
 	new = old;
 	switch (flags & (GPIO_PIN_INPUT|GPIO_PIN_OUTPUT)) {
 	case GPIO_PIN_INPUT:	new &= ~mask; break;
@@ -368,21 +372,20 @@ m83gpio_pin_ctl(void *arg, int pin, int flags)
 	default:		return;
 	}
 	if (old != new)
-		GPIO_WRITE(gpio, GEMINI_GPIO_PINDIR, new);
-#endif
+		GPIO_WRITE(gpio, GPIO_OE_REG, new);
 }
 
 static void
 gpio_defer(device_t self)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(self);
 	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
 	struct gpiobus_attach_args gba;
+/*
 	gpio_pin_t *pins;
 	uint32_t mask, dir, valueout, valuein;
 	int pin;
-
+*/
 	gp->gp_cookie = gpio->gpio_dev;
 	gp->gp_pin_read = m83gpio_pin_read;
 	gp->gp_pin_write = m83gpio_pin_write;
@@ -392,6 +395,7 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
+#if 0
 	dir = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
 	valueout = GPIO_READ(gpio, GEMINI_GPIO_DATAOUT);
 	valuein = GPIO_READ(gpio, GEMINI_GPIO_DATAIN);
@@ -410,8 +414,8 @@ gpio_defer(device_t self)
 			: GPIO_PIN_LOW;
 	}
 
-	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
 #endif
+	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
 }
 #endif /* NGPIO > 0 */
 
@@ -490,10 +494,10 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		KASSERT(gpio->gpio_is != NULL);
 		aprint_normal(", intr %d", oa->obio_intr);
 	}
+#endif
 	aprint_normal("\n");
 #if NGPIO > 0
 	config_interrupts(self, gpio_defer);
-#endif
 #endif
 	aprint_normal("\n");
 }
