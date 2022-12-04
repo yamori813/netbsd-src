@@ -190,32 +190,52 @@ m83_irq_handler(void *frame)
 {
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
-	int saved_spl;
-	int32_t reg;
+//	int saved_spl;
+	int32_t stat0, mask0;
+	int32_t stat1, mask1;
 	int32_t irq;
 
-	reg = INTC_READ(intc, INTC_STATUS_REG_0);
+	stat0 = INTC_READ(intc, INTC_STATUS_REG_0);
+	mask0 = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
+	stat1 = INTC_READ(intc, INTC_STATUS_REG_1);
+	mask1 = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
 
-	if (reg & (1 << 5))
-		irq = 5;
-	else if (reg & (1 << 30))
-		irq = 30;
-	else
-		irq = 31;
-if(irq == 5)
-printf("+");
+	if (stat0 & mask0) {
+		irq = ffs(stat0 & mask0) - 1;
+	} else {
+		irq = ffs(stat1 & mask1) - 1 + 32;
+	}
 
-	INTC_WRITE(intc, INTC_STATUS_REG_0, reg);
-
+/*
 	saved_spl = curcpl();
 
 	cpsie(I32_bit);
 
 	pic_dispatch(pic->pic_sources[irq], frame);
 
+	if (irq <  32)
+		INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
+	else {
+		INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq % 32));
+	}
+
 	cpsid(I32_bit);
 
 	splx(saved_spl);
+*/
+//	pic_do_pending_ints(I32_bit, irq, frame);
+	pic_dispatch(pic->pic_sources[irq], frame);
+
+	/* ack */
+	if (irq < 32) {
+		intc_block_irqs(pic, 0, 1 << irq);
+		INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
+		intc_unblock_irqs(pic, 0, 1 << irq);
+	} else {
+		intc_block_irqs(pic, 32, 1 << (irq & 0x1f));
+		INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
+		intc_unblock_irqs(pic, 32, 1 << (irq & 0x1f));
+	}
 #if 0
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;

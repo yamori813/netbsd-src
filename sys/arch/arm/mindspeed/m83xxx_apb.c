@@ -222,7 +222,8 @@ static const struct {
 	bool required;
 } critical_devs[] = {
 	{ .name = "intc", .addr = 0x100a0000, .required = true },
-	{ .name = "m83pmc", .addr = 0x100b0000, .required = true }
+	{ .name = "m83pmc", .addr = 0x100b0000, .required = true },
+	{ .name = "m83gpio", .addr = 0x10070000 , .required = true }
 };
 
 static void
