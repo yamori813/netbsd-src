@@ -454,6 +454,9 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 
+	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
+	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
+
 	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, GSEL);
 
 	oen = 0;

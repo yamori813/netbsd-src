@@ -113,6 +113,7 @@ m83xxx_com_attach(device_t parent, device_t self, void *aux)
 	iobase = apba->apba_addr;
 	sc->sc_frequency = GEMINI_COM_FREQ;
 	sc->sc_type = COM_TYPE_16550_NOERS;
+//	sc->sc_type = COM_TYPE_NORMAL;
 
 	if (com_is_console(memt, iobase, &ioh) == 0 &&
 	    bus_space_map(memt, iobase, apba->apba_size, 0, &ioh)) {
@@ -126,4 +127,5 @@ m83xxx_com_attach(device_t parent, device_t self, void *aux)
 
 	intr_establish(apba->apba_intr, IPL_SERIAL, IST_LEVEL_HIGH,
 		comintr, sc);
+
 }

@@ -135,6 +135,7 @@
 #define	GPIO_INPUT_REG			0x10
 #define	GPIO_APB_WS			0x14
 #define	GPIO_USB_PHY_CONF_REG		0x18	/* 0x002D64C2 */
+#define	GPIO_LOCK_REG			0x38
 #define	GPIO_IOCTRL_REG			0x44
 /* USB PHY Built-In-Self-Test ? */
 #define	GPIO_USB_PHY_BIST_STATUS_REG	0x48
