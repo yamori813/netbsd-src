@@ -353,7 +353,6 @@ m83gpio_pin_write(void *arg, int pin, int value)
 	else
 		new |= mask;
 
-printf("MORI MORI GPIO %x %x,",old,new);
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
 }
 
@@ -381,11 +380,10 @@ gpio_defer(device_t self)
 	struct gpio_softc * const gpio = device_private(self);
 	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
 	struct gpiobus_attach_args gba;
-/*
 	gpio_pin_t *pins;
 	uint32_t mask, dir, valueout, valuein;
 	int pin;
-*/
+
 	gp->gp_cookie = gpio->gpio_dev;
 	gp->gp_pin_read = m83gpio_pin_read;
 	gp->gp_pin_write = m83gpio_pin_write;
@@ -395,6 +393,22 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
+	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
+	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	dir = GPIO_READ(gpio, GPIO_OE_REG);
+	for (pin = 0, mask = 1, pins = gpio->gpio_pins;
+	     pin < 32; pin++, mask <<= 1, pins++) {
+		pins->pin_num = pin;
+		if (dir & (1 << pin)) {
+			pins->pin_caps = GPIO_PIN_OUTPUT;
+			pins->pin_flags = GPIO_PIN_OUTPUT;
+			pins->pin_state = (valueout & (1 << pin)) ? 1 : 0;
+		} else {
+			pins->pin_caps = GPIO_PIN_INPUT;
+			pins->pin_flags = GPIO_PIN_INPUT;
+			pins->pin_state = (valuein & (1 << pin)) ? 1 : 0;
+		}
+	}
 #if 0
 	dir = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
 	valueout = GPIO_READ(gpio, GEMINI_GPIO_DATAOUT);
@@ -499,5 +513,4 @@ gpio_attach(device_t parent, device_t self, void *aux)
 #if NGPIO > 0
 	config_interrupts(self, gpio_defer);
 #endif
-	aprint_normal("\n");
 }
