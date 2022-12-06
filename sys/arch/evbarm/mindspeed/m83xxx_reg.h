@@ -1,4 +1,4 @@
-/* $NetBSD: m83xxx_reg.h,v 1.2 2008/04/27 18:58:46 matt Exp $ */
+/* $NetBSD$ */
 
 /* derived from: */
 /*	NetBSD: viper_reg.h,v 1.2 2005/12/11 12:17:11 christos Exp */
