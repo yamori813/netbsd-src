@@ -72,6 +72,9 @@ struct intc_softc {
 	bus_space_handle_t intc_memh;
 };
 
+static void set_intc_priority(struct intc_softc *intc, uint32_t irq,
+    uint32_t prio);
+
 extern struct cfdriver intc_cd;
 
 #define	INTC_READ(intc, reg) \
@@ -108,8 +111,6 @@ static struct comcerto_irq_desc comcerto_irq_table[] =
 	{IRQ_FPP_CAP,			22}
 };
 
-static void set_intc_priority(struct intc_softc *intc, uint32_t irq,
-    uint32_t prio);
 void
 set_intc_priority(struct intc_softc *intc, uint32_t irq, uint32_t prio)
 {
@@ -188,35 +189,38 @@ intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
 void
 m83_irq_handler(void *frame)
 {
+	struct cpu_info * const ci = curcpu();
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
 	int32_t stat0, mask0;
 	int32_t stat1, mask1;
 	int32_t irq;
 
+        ci->ci_data.cpu_nintr++;
+
 	stat0 = INTC_READ(intc, INTC_STATUS_REG_0);
 	mask0 = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
 	stat1 = INTC_READ(intc, INTC_STATUS_REG_1);
 	mask1 = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
 
-	if (stat0 & mask0) {
-		irq = ffs(stat0 & mask0) - 1;
-	} else {
-		irq = ffs(stat1 & mask1) - 1 + 32;
-	}
+	do {
+		if (stat0 & mask0) {
+			irq = ffs(stat0 & mask0) - 1;
+		} else {
+			irq = ffs(stat1 & mask1) - 1 + 32;
+		}
 
-	pic_dispatch(pic->pic_sources[irq], frame);
+		pic_dispatch(pic->pic_sources[irq], frame);
 
-	/* ack */
-	if (irq < 32) {
-		intc_block_irqs(pic, 0, 1 << irq);
-		INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
-		intc_unblock_irqs(pic, 0, 1 << irq);
-	} else {
-		intc_block_irqs(pic, 32, 1 << (irq & 0x1f));
-		INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
-		intc_unblock_irqs(pic, 32, 1 << (irq & 0x1f));
-	}
+		/* ack */
+		if (irq < 32) {
+			INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
+			stat0 &= ~(1 << irq);
+		} else {
+			INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
+			stat1 &= ~(1 << (irq & 0x1f));
+		}
+	} while ((stat0 & 1) && (stat1 & mask1));
 }
 
 static int intc_match(device_t, cfdata_t, void *);
