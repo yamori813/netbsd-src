@@ -264,7 +264,7 @@ timer_init(struct timer_softc *sc)
 		TIMER_WRITE(sc, TIMER2_HIGH_BOUND, ~0u);
 		TIMER_WRITE(sc, TIMER2_CURRENT_COUNT, 0);
 		m83tmr_timecounter.tc_priv = sc;
-		m83tmr_timecounter.tc_frequency = 165 * 1000 * 1000;
+		m83tmr_timecounter.tc_frequency = COMCERTO_APB_FREQ;
 		tc_init(&m83tmr_timecounter);
 	} else {
 		if (sc->freq != 0) {
