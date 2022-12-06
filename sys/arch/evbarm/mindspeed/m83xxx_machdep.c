@@ -1,6 +1,12 @@
 /* $NetBSD$ */
 
 /*
+ * Copyright (c) 2022  Hiroki Mori.  All rights reserved.
+ *
+ * Machine dependent functions for kernel setup for Mindspeed Comcerto
+ * 1000(M83XXX) boards using U-Boot firmware.
+ */
+/*
  * Copyright (c) 2002, 2003, 2005  Genetec Corporation.  All rights reserved.
  * Written by Hiroyuki Bessho for Genetec Corporation.
  *
@@ -27,10 +33,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * Machine dependent functions for kernel setup for
- * Intel DBPXA250 evaluation board (a.k.a. Lubbock).
- * Based on iq80310_machhdep.c
  */
 /*
  * Copyright (c) 2001 Wasabi Systems, Inc.
@@ -99,9 +101,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * Machine dependent functions for kernel setup for Intel IQ80310 evaluation
- * boards using RedBoot firmware.
  */
 
 #include <sys/cdefs.h>
@@ -178,18 +177,6 @@ extern struct bus_space m83_bs_tag;
 int max_processes = 64;			/* Default number */
 #endif	/* !PMAP_STATIC_L1S */
 
-//paddr_t msgbufphys;
-
-#define KERNEL_PT_SYS		0	/* Page table for mapping proc0 zero page */
-#define KERNEL_PT_KERNEL	1	/* Page table for mapping kernel */
-#define	KERNEL_PT_KERNEL_NUM	4
-#define KERNEL_PT_VMDATA	(KERNEL_PT_KERNEL+KERNEL_PT_KERNEL_NUM)
-				        /* Page tables for mapping kernel VM */
-#define	KERNEL_PT_VMDATA_NUM	4	/* start with 16MB of KVM */
-#define NUM_KERNEL_PTS		(KERNEL_PT_VMDATA + KERNEL_PT_VMDATA_NUM)
-
-pv_addr_t kernel_pt_table[NUM_KERNEL_PTS];
-
 /* Prototypes */
 
 void m83xxx_platform_early_putchar(char c);
@@ -197,23 +184,11 @@ void m83xxx_platform_early_putchar(char c);
 void	kgdb_port_init(void);
 void	change_clock(uint32_t v);
 
-bs_protos(bs_notimpl);
-
 #include "com.h"
 #if NCOM > 0
 #include <dev/ic/comreg.h>
 #include <dev/ic/comvar.h>
 #endif
-
-#ifndef CONSPEED
-#define CONSPEED B115200	/* What RedBoot uses */
-#endif
-#ifndef CONMODE
-#define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
-#endif
-
-int comcnspeed = CONSPEED;
-int comcnmode = CONMODE;
 
 /*
  * Static device mappings. These peripheral registers are mapped at
@@ -295,14 +270,7 @@ initarm(void *arg)
 
 	kern_vtopdiff = KERNEL_BASE - KERNEL_BASE_PHYS;
 
-//	disable_interrupts(I32_bit|F32_bit);
-		/* XXX move to m83xxx_start.S */
-
-
 	/* Register devmap for devices we mapped in start */
-//	pmap_devmap_register(m83xxx_devmap);
-//	extern char ARM_BOOTSTRAP_LxPT[];
-//	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m83xxx_devmap);
 	pmap_devmap_bootstrap((vaddr_t)armreg_ttbr_read() & -L1_TABLE_SIZE, m83xxx_devmap);
 
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
@@ -340,8 +308,6 @@ initarm(void *arg)
 	arm32_bootmem_init(bootconfig.dram[0].address, MEMSIZE,
 	     (uintptr_t) KERNEL_BASE_phys);
 	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_HIGH, 0, m83xxx_devmap, true);
-//	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_HIGH, 0, m83xxx_devmap, false);
-//	arm32_kernel_vm_init(KERNEL_VM_BASE, ARM_VECTORS_LOW, 0, m83xxx_devmap, true);
 	int rt =  initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE, NULL, 0);
 	return rt;
 }
@@ -429,7 +395,7 @@ consinit(void)
 	consinit_called = 1;
 
 	/* initialize the console functions */
-	if (m83comcnattach(&m83_bs_tag, APB_UART0_BASE, 115200,
+	if (m83comcnattach(&m83_bs_tag, APB_UART0_BASE, consrate,
 		COMCERTO_APB_FREQ, COM_TYPE_16550_NOERS, consmode))
 			panic("Serial console can not be initialized.");
 }
