@@ -47,6 +47,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <sys/device.h>
 #include <sys/sockio.h>
 #include <sys/kernel.h>
+#include <sys/rndsource.h>
 
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -143,7 +144,8 @@ struct gsec_softc {
 
 	struct gse_if_softc *sc_if_gse[2];
 #if NRND > 0
-	rndsource_element_t sc_rnd_source;
+//	rndsource_element_t sc_rnd_source;
+	krndsource_t sc_rnd_source;
 #endif
 };
 
@@ -211,9 +213,9 @@ static void gse_stop(struct ifnet *, int);
 static void gse_watchdog(struct ifnet *);
 
 /* for MII */
-static int gse_miibus_readreg(device_t, int, int);
-static void gse_miibus_writereg(device_t, int, int, int);
-static void gse_miibus_statchg(device_t);
+static int gse_miibus_readreg(device_t, int, int, uint16_t *);
+static int gse_miibus_writereg(device_t, int, int, uint16_t);
+static void gse_miibus_statchg(struct ifnet *);
 /* vsc7385 */
 static int gse_ifmedia_upd(struct ifnet *);
 static void gse_ifmedia_sts(struct ifnet *, struct ifmediareq *);
@@ -318,7 +320,8 @@ gsec_attach(device_t parent __unused, device_t self, void *aux)
 
 	for (i = 0; i < 2; i++) {
 		gaa.ga_portno = i;
-		(void)config_found(sc->sc_dev, &gaa, gsec_print);
+//		(void)config_found(sc->sc_dev, &gaa, gsec_print);
+		(void)config_found(sc->sc_dev, &gaa, gsec_print, CFARGS_NONE);
 	}
 
 	if ((sc->sc_ih_stat = intr_establish(STAR_IRQ_NIC_STAT, IPL_NET,
@@ -406,7 +409,8 @@ gse_attach(device_t parent, device_t self, void *aux)
 	    IFCAP_CSUM_TCPv4_Tx | IFCAP_CSUM_TCPv4_Rx |
 	    IFCAP_CSUM_UDPv4_Tx | IFCAP_CSUM_UDPv4_Rx;
 #endif
-	IFQ_SET_MAXLEN(&ifp->if_snd, max(GSE_TX_RING_CNT - 1, IFQ_MAXLEN));
+//	IFQ_SET_MAXLEN(&ifp->if_snd, max(GSE_TX_RING_CNT - 1, IFQ_MAXLEN));
+	IFQ_SET_MAXLEN(&ifp->if_snd, uimax(GSE_TX_RING_CNT - 1, IFQ_MAXLEN));
 	IFQ_SET_READY(&ifp->if_snd);
 
 	/* setup MII */
@@ -550,7 +554,8 @@ gsec_tx_intr(void *arg)
 			m_freem(txs->txs_mbuf);
 			txs->txs_mbuf = NULL;
 
-			ifp->if_opackets++;
+//			ifp->if_opackets++;
+			if_statinc(ifp, if_opackets);
 		}
 		sc->sc_tx_free++;
 	}
@@ -671,7 +676,8 @@ gsec_rx_intr(void *arg)
 
 		len = ctrl & GSE_RXDESC_CTRL_SDL_MASK;
 		if (len < ETHER_HDR_LEN) {
-			ifp->if_ierrors++;
+//			ifp->if_ierrors++;
+			if_statinc(ifp, if_ierrors);
 			gsec_reset_rxdesc(sc, idx);
 			continue;
 		}
@@ -687,13 +693,14 @@ gsec_rx_intr(void *arg)
 		}
 
 		/* packet receive ok */
-		ifp->if_ipackets++;
+//		ifp->if_ipackets++;
+		if_statinc(ifp, if_ipackets);
 
 		/*
 		 * build mbuf from RX Descriptor if needed
 		 */
 		m = rxs->rxs_mbuf;
-		m->m_pkthdr.rcvif = ifp;
+//		m->m_pkthdr.rcvif = ifp;
 		m->m_pkthdr.len = m->m_len = len;
 
 		/* checksum offloading */
@@ -727,9 +734,11 @@ gsec_rx_intr(void *arg)
 		    rxs->rxs_dmamap->dm_mapsize, BUS_DMASYNC_PREREAD);
 
 		/* Pass this up to any BPF listeners. */
-		bpf_mtap(ifp, m);
+//		bpf_mtap(ifp, m);
+		bpf_mtap(ifp, m, BPF_D_OUT);
 
-		(*ifp->if_input)(ifp, m);
+//		(*ifp->if_input)(ifp, m);
+		if_input(ifp, m);
 
 		/* clear this rxsoft, and realloc rxbuf */
 		bus_dmamap_unload(sc->sc_dmat, rxs->rxs_dmamap);
@@ -1057,7 +1066,8 @@ gse_start(struct ifnet *ifp)
 		if (gsec_encap(sc, &m, scp->sc_portno) != 0) {
 			if (m == NULL) {
 				/* cannot mapping TX chain */
-				ifp->if_oerrors++;
+//				ifp->if_oerrors++;
+				if_statinc(ifp, if_oerrors);
 				IFQ_DEQUEUE(&ifp->if_snd, m);
 			} else {
 				/*
@@ -1080,7 +1090,8 @@ gse_start(struct ifnet *ifp)
 		 * If there's a BPF listener, bounce a copy of this frame
 		 * to him.
 		 */
-		bpf_mtap(ifp, m);
+//		bpf_mtap(ifp, m);
+		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
 	if (npkt) {
@@ -1358,12 +1369,12 @@ gse_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
  * for MII
  */
 static int
-gse_miibus_readreg(device_t dev, int phy, int reg)
+gse_miibus_readreg(device_t dev, int phy, int reg, uint16_t *val)
 {
 	struct gse_if_softc *scif;
 	struct gsec_softc *sc;
 	int timeout;
-	uint32_t val, status;
+	uint32_t status;
 
 	scif = device_private(dev);
 	sc = scif->sc_gsec;
@@ -1390,20 +1401,20 @@ gse_miibus_readreg(device_t dev, int phy, int reg)
 	}
 	if (timeout <= 0) {
 		aprint_error("%s: MII read timeout: reg=0x%02x\n", device_xname(sc->sc_dev), reg);
-		val = -1;
+		*val = -1;
 	} else {
-		val = (status >> 16) & 0xffff;
+		*val = (status >> 16) & 0xffff;
 	}
 
 #ifdef DEBUG_GSE_DUMP_MII
 	printf("%s:%d: phy=%d, reg=%d => val=%08x (status=%08x)\n", __func__, __LINE__, phy, reg, val, status);
 #endif
 
-	return val;
+	return *val;
 }
 
-static void
-gse_miibus_writereg(device_t dev, int phy, int reg, int val)
+static int
+gse_miibus_writereg(device_t dev, int phy, int reg, uint16_t val)
 {
 	struct gse_if_softc *scif;
 	struct gsec_softc *sc;
@@ -1441,11 +1452,14 @@ gse_miibus_writereg(device_t dev, int phy, int reg, int val)
 	if (timeout <= 0) {
 		aprint_error("%s: MII write timeout: reg=0x%02x\n", device_xname(sc->sc_dev), reg);
 	}
+
+	return timeout <= 0 ? 0 : 1;
 }
 
 static void
-gse_miibus_statchg(device_t dev)
+gse_miibus_statchg(struct ifnet *ifp)
 {
+#if 0
 	struct gse_if_softc *scif;
 	struct gsec_softc *sc;
 
@@ -1454,6 +1468,7 @@ gse_miibus_statchg(device_t dev)
 
 	(void)&scif;
 	(void)&sc;
+#endif
 }
 
 /*
@@ -1603,7 +1618,8 @@ gsec_drain_txbuf(struct gsec_softc *sc)
 				ifp = &sc->sc_if_gse[1]->sc_ethercom.ec_if;
 			else
 				panic("%s: nether port0 nor port1 (drain_txbuf)", device_xname(sc->sc_dev));
-			ifp->if_oerrors++;
+//			ifp->if_oerrors++;
+			if_statinc(ifp, if_oerrors);
 
 			bus_dmamap_unload(sc->sc_dmat,
 			    txs->txs_dmamap);
