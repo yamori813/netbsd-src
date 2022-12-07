@@ -45,6 +45,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/cpufunc.h>
 
+#include <arm/pic/picvar.h>
+
 #include <arm/star/starreg.h>
 #include <arm/star/starvar.h>
 
@@ -208,7 +210,8 @@ cpu_initclocks(void)
 	bus_space_write_4(sc->sc_iot, sc->sc_ioh, STAR_TIMER_INT_STATUS,
 	    0xffffffff);
 
-	sc->sc_ih1 = star_intr_establish(STAR_IRQ_TIMER1, IPL_CLOCK,
+//	sc->sc_ih1 = star_intr_establish(STAR_IRQ_TIMER1, IPL_CLOCK,
+	sc->sc_ih1 = intr_establish(STAR_IRQ_TIMER1, IPL_CLOCK,
 	    STAR_INTR_RISING_EDGE, star_timer1_intr, NULL);
 	if (sc->sc_ih1 == NULL)
 		panic("cpu_initclocks: unable to register timer1 interrupt");
@@ -230,7 +233,8 @@ cpu_initclocks(void)
 		    STAR_TIMER_CTRL_TM2OVERFLOWENABLE |
 		    STAR_TIMER_CTRL_TM2_DECREMENT);
 
-		sc->sc_ih2 = star_intr_establish(STAR_IRQ_TIMER2, IPL_HIGH,
+//		sc->sc_ih2 = star_intr_establish(STAR_IRQ_TIMER2, IPL_HIGH,
+		sc->sc_ih2 = intr_establish(STAR_IRQ_TIMER2, IPL_HIGH,
 		    STAR_INTR_RISING_EDGE, star_timer2_intr, NULL);
 		if (sc->sc_ih2 == NULL)
 			panic("cpu_initclocks: "

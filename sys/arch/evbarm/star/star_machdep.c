@@ -584,7 +584,7 @@ initarm(void *arg __unused)
 #ifdef VERBOSE_INIT_ARM
 	printf("irq ");
 #endif
-	star_intr_init();
+//	star_intr_init();
 
 #ifdef VERBOSE_INIT_ARM
 	printf("done.\n");

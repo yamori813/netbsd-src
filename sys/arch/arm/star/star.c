@@ -52,6 +52,8 @@ struct star_softc {
 	bus_dma_tag_t sc_dmat;
 };
 
+void star_intr_init(void);
+
 static int star_match(device_t, struct cfdata *, void *);
 static void star_attach(device_t, device_t, void *);
 static int star_search(device_t, struct cfdata *, const int *, void *);
@@ -220,6 +222,9 @@ star_attach(device_t parent __unused, device_t self, void *aux __unused)
 	else
 		aprint_normal(", %dMHz\n", 175 + cpuclk * 25);
 	aprint_naive("\n");
+
+	star_intr_init();
+
 	config_search(self, &sa, CFARGS(.search = star_critical_search));
 	config_search(self, &sa, CFARGS(.search = star_search));
 }
