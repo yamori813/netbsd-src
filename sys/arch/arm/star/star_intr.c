@@ -331,6 +331,7 @@ star_intr_dispatch(void *arg)
 #endif
 }
 
+#if 0
 void *
 star_intr_establish(int irq, int ipl, int scheme, int (*func)(void *), void *arg)
 {
@@ -368,6 +369,7 @@ star_intr_establish(int irq, int ipl, int scheme, int (*func)(void *), void *arg
 
 	return ih;
 }
+#endif
 
 void
 star_intr_disestablish(void *cookie)
