@@ -252,7 +252,7 @@ star_intr_handler(void *frame)
 		STAR_REG_WRITE32(ORION_INT_CLEAR, pending);
 	}
 
-	irq = ffs(pending) - 1;
+	irq = ffs(pending & star_intr_enabled) - 1;
 
 	pic_dispatch(pic_sc.pic_sources[irq], frame);
 
