@@ -222,24 +222,24 @@ options 	PCI_NETBSD_CONFIGURE
 
 
 # SCSI bus support
-#scsibus*	at scsi?
+scsibus*	at scsi?
 
 # SCSI devices
-#sd*		at scsibus? target ? lun ?	# SCSI disk drives
+sd*		at scsibus? target ? lun ?	# SCSI disk drives
 
 # Embedded USB 1.1 Host Controller
-#ohci0		at star? addr 0xc4000000 irq 23
+ohci0		at star? addr 0xc4000000 irq 23
 
 # Embedded USB 2.0 Host Controller
 #ehci0		at star? addr 0xcc000000 irq 24
 
 # USB bus support
-#usb*		at ohci?
+usb*		at ohci?
 #usb*		at ehci?
 
 # USB Hubs
-#uhub*		at usb?
-#uhub*		at uhub? port ?
+uhub*		at usb?
+uhub*		at uhub? port ?
 
 # USB HID device
 #uhidev*		at uhub? port ? configuration ? interface ?
@@ -274,7 +274,7 @@ options 	PCI_NETBSD_CONFIGURE
 #ucom*		at uhmodem? portno ?
 
 # USB Mass Storage
-#umass*		at uhub? port ? configuration ? interface ?
+umass*		at uhub? port ? configuration ? interface ?
 #wd*		at umass?
 
 # USB audio
