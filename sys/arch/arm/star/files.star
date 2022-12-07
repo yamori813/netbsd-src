@@ -3,7 +3,8 @@
 # Configuration info for Star STR8100, STR9100
 #
 
-device	star { [addr=-1], [irq=-1] }: bus_space_generic
+include "arch/arm/pic/files.pic"
+device	star { [addr=-1], [irq=-1] }: bus_space_generic, pic, pic_splfuncs
 file	arch/arm/star/star.c			star
 file	arch/arm/star/star_intr.c		star
 

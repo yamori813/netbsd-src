@@ -29,13 +29,18 @@
 #ifndef _STAR_INTR_H_
 #define _STAR_INTR_H_
 
-#define ARM_IRQ_HANDLER	_C_LABEL(star_intr_dispatch)
+#ifdef _LOCORE
 
-#ifndef _LOCORE
+//#define ARM_IRQ_HANDLER	_C_LABEL(star_intr_dispatch)
+#define ARM_IRQ_HANDLER	_C_LABEL(star_intr_handler)
+
+#else
 
 #include <arm/cpu.h>
 #include <arm/armreg.h>
 #include <arm/cpufunc.h>
+
+#include <arm/pic/picvar.h>
 
 #include <arm/star/starreg.h>
 #include <arm/star/starvar.h>
@@ -47,6 +52,7 @@ extern volatile uint32_t star_intr_enabled;
 extern volatile uint32_t star_intr_pending;
 extern void (*star_set_intrmask)(void);
 
+#if 0
 static inline void __attribute__((__unused__))
 star_splx(int ipl)
 {
@@ -94,6 +100,7 @@ star_spllower(int ipl)
 
 	return old;
 }
+#endif
 
 void star_intr_calculate_masks(void);
 void splx(int);
@@ -101,12 +108,14 @@ int _spllower(int);
 int _splraise(int);
 void _setsoftintr(int);
 
+#if 0
 #if !defined(EVBARM_SPL_NOINLINE)
 #define splx(ipl)		star_splx(ipl)
 #define _spllower(ipl)		star_spllower(ipl)
 #define _splraise(ipl)		star_splraise(ipl)
 #define _setsoftintr(ipl)	star_setsoftintr(ipl)
 #endif /* EVBARM_SPL_NOINLINE */
+#endif
 
 #define STAR_INTR_HIGHLEVEL_TRIGGER	0
 #define STAR_INTR_LOWLEVEL_TRIGGER	1
@@ -117,6 +126,8 @@ void star_intr_init(void);
 void star_intr_dispatch(void *);
 void *star_intr_establish(int, int, int, int (*)(void *), void *);
 void star_intr_disestablish(void *);
+
+void star_intr_handler(void *frame);
 
 #endif /* _LOCORE */
 

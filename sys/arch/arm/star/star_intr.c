@@ -28,6 +28,7 @@
 
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
+#define _INTR_PRIVATE
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,8 +43,21 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/star/starreg.h>
 #include <arm/star/starvar.h>
+#include <arm/star/star_intr.h>
 #include <arm/star/star_equuleus_intr.h>
 #include <arm/star/star_orion_intr.h>
+
+static void intc_unblock_irqs(struct pic_softc *, size_t, uint32_t);
+static void intc_block_irqs(struct pic_softc *, size_t, uint32_t);
+static void intc_establish_irq(struct pic_softc *, struct intrsource *);
+static void intc_source_name(struct pic_softc *, int, char *, size_t);
+
+const struct pic_ops intc_pic_ops = {
+	.pic_unblock_irqs = intc_unblock_irqs,
+	.pic_block_irqs = intc_block_irqs,
+	.pic_establish_irq = intc_establish_irq,
+	.pic_source_name = intc_source_name
+};
 
 struct intrhand {
 	TAILQ_ENTRY(intrhand) ih_list;	/* link on intrq list */
@@ -106,6 +120,23 @@ struct intrq irqhandler[STAR_NIRQ];
 uint32_t star_intr_mask[NIPL];
 volatile uint32_t star_intr_pending;
 volatile uint32_t star_intr_enabled;
+struct pic_softc pic_sc;
+
+void
+intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{}
+
+void
+intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{}
+
+void
+intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
+{}
+
+void
+intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
+{}
 
 void (*star_set_intrmask)(void);
 
@@ -190,10 +221,17 @@ star_intr_init(void)
 
 	star_intr_calculate_masks();
 
+	pic_sc.pic_ops = &intc_pic_ops;
+	pic_sc.pic_maxsources = 32;
+	strlcpy(pic_sc.pic_name, "star_intr", sizeof(pic_sc.pic_name));
+ 
+	pic_add(&pic_sc, 0);
+
 	/* Enable IRQs (don't yet use FIQs). */
 	enable_interrupts(I32_bit);
 }
 
+#if 0
 #undef splx
 void
 splx(int x)
@@ -214,7 +252,13 @@ _splraise(int s)
 {
 	return star_splraise(s);
 }
+#endif
 int star_timer1_intr(void *);
+void
+star_intr_handler(void *frame)
+{
+printf("INTR HAND");
+}
 /*
  * called from irq_entry.
  */
