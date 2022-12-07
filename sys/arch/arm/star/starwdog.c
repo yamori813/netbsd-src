@@ -122,7 +122,7 @@ starwdog_attach(device_t parent __unused, device_t self, void *aux)
 		aprint_error("%s: unable to register with sysmon\n",
 		    device_xname(sc->sc_dev));
 
-	sc->sc_ih = star_intr_establish(STAR_IRQ_WDOG, IPL_HIGH,
+	sc->sc_ih = intr_establish(STAR_IRQ_WDOG, IPL_HIGH,
 	    STAR_INTR_RISING_EDGE, starwdog_intr, sc);
 }
 

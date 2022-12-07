@@ -216,7 +216,7 @@ stargpio_attach(device_t parent __unused, device_t self, void *aux)
 
 	stargpio_init(sc);
 
-	sc->sc_ih = star_intr_establish(STAR_IRQ_GPIO, IPL_BIO,
+	sc->sc_ih = intr_establish(STAR_IRQ_GPIO, IPL_BIO,
 	    STAR_INTR_RISING_EDGE, stargpio_intr, sc);
 
 	/*
