@@ -122,22 +122,6 @@ volatile uint32_t star_intr_pending;
 volatile uint32_t star_intr_enabled;
 struct pic_softc pic_sc;
 
-void
-intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
-{}
-
-void
-intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
-{}
-
-void
-intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
-{}
-
-void
-intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
-{}
-
 void (*star_set_intrmask)(void);
 
 static inline void
@@ -257,7 +241,21 @@ int star_timer1_intr(void *);
 void
 star_intr_handler(void *frame)
 {
-printf("INTR HAND");
+	uint32_t irq, pending;
+
+	/* read interrupt status, and clear */
+	if (CPU_IS_STR8100()) {
+		pending = STAR_REG_READ32(EQUULEUS_INT_IRQSTATUS);
+		STAR_REG_WRITE32(EQUULEUS_INT_CLEAR, pending);
+	} else {
+		pending = STAR_REG_READ32(ORION_INT_IRQSTATUS);
+		STAR_REG_WRITE32(ORION_INT_CLEAR, pending);
+	}
+
+	irq = ffs(pending) - 1;
+
+	pic_dispatch(pic_sc.pic_sources[irq], frame);
+
 }
 /*
  * called from irq_entry.
@@ -391,3 +389,29 @@ star_intr_disestablish(void *cookie)
 	}
 	restore_interrupts(s);
 }
+
+void
+intc_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{
+
+	star_intr_enabled |= irq_mask;
+	star_set_intrmask();
+}
+
+void
+intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{
+
+	star_intr_enabled &= irq_mask;
+	star_set_intrmask();
+}
+
+void
+intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
+{
+}
+
+void
+intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
+{}
+
