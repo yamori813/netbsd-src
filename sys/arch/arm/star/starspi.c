@@ -142,7 +142,7 @@ starspi_attach(device_t parent __unused, device_t self, void *aux)
 
 	starspi_init(sc);
 
-	sc->sc_ih = star_intr_establish(STAR_IRQ_SPI, IPL_SERIAL,
+	sc->sc_ih = intr_establish(STAR_IRQ_SPI, IPL_SERIAL,
 	    STAR_INTR_LOWLEVEL_TRIGGER, starspi_intr, sc);
 
 	/*

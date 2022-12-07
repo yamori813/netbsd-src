@@ -321,7 +321,7 @@ gsec_attach(device_t parent __unused, device_t self, void *aux)
 		(void)config_found(sc->sc_dev, &gaa, gsec_print);
 	}
 
-	if ((sc->sc_ih_stat = star_intr_establish(STAR_IRQ_NIC_STAT, IPL_NET,
+	if ((sc->sc_ih_stat = intr_establish(STAR_IRQ_NIC_STAT, IPL_NET,
 	    STAR_INTR_HIGHLEVEL_TRIGGER, gsec_stat_intr, sc)) == NULL) {
 		printf("%s: unable to establish STAT interrupt\n",
 		    device_xname(sc->sc_dev));
@@ -932,13 +932,13 @@ gsec_enable_intr(struct gsec_softc *sc)
 #ifdef DEBUG_GSE
 	printf("%s:%d\n", __func__, __LINE__);
 #endif
-	if ((sc->sc_ih_tx = star_intr_establish(STAR_IRQ_NIC_TX, IPL_NET,
+	if ((sc->sc_ih_tx = intr_establish(STAR_IRQ_NIC_TX, IPL_NET,
 	    STAR_INTR_RISING_EDGE, gsec_tx_intr, sc)) == NULL) {
 		printf("%s: unable to establish TX interrupt\n",
 		    device_xname(sc->sc_dev));
 		goto failure;
 	}
-	if ((sc->sc_ih_rx = star_intr_establish(STAR_IRQ_NIC_RX, IPL_NET,
+	if ((sc->sc_ih_rx = intr_establish(STAR_IRQ_NIC_RX, IPL_NET,
 	    STAR_INTR_RISING_EDGE, gsec_rx_intr, sc)) == NULL) {
 		printf("%s: unable to establish RX interrupt\n",
 		    device_xname(sc->sc_dev));

@@ -137,10 +137,10 @@ starpci_attach(device_t parent __unused, device_t self, void *aux)
 	starpci_pciinit(sc);
 
 
-	sc->sc_ih_bridge = star_intr_establish(STAR_IRQ_PCIBRIDGE, IPL_SERIAL,
+	sc->sc_ih_bridge = intr_establish(STAR_IRQ_PCIBRIDGE, IPL_SERIAL,
 	    STAR_INTR_HIGHLEVEL_TRIGGER, starpci_bridge_intr, sc);
 
-	sc->sc_ih_arbiter = star_intr_establish(STAR_IRQ_PCIARBITER, IPL_SERIAL,
+	sc->sc_ih_arbiter = intr_establish(STAR_IRQ_PCIARBITER, IPL_SERIAL,
 	    STAR_INTR_HIGHLEVEL_TRIGGER, starpci_arbiter_intr, sc);
 
 }
@@ -567,13 +567,13 @@ starpci_intr_establish(void *v, pci_intr_handle_t pin __unused, int ipl,
 	sc = v;
 
 #if 0 /* XXX: irq mapping debug */
-	star_intr_establish(STAR_IRQ_PCIEXT1, ipl,
+	intr_establish(STAR_IRQ_PCIEXT1, ipl,
 	    STAR_INTR_LOWLEVEL_TRIGGER, intrhand, intrarg);
-	star_intr_establish(STAR_IRQ_PCIEXT2, ipl,
+	_intr_establish(STAR_IRQ_PCIEXT2, ipl,
 	    STAR_INTR_LOWLEVEL_TRIGGER, intrhand, intrarg);
 #endif
 
-	return star_intr_establish(STAR_IRQ_PCIEXT0, ipl,
+	return intr_establish(STAR_IRQ_PCIEXT0, ipl,
 	    STAR_INTR_LOWLEVEL_TRIGGER, intrhand, intrarg);
 }
 

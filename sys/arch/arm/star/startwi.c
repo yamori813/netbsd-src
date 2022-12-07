@@ -112,7 +112,7 @@ startwi_attach(device_t parent __unused, device_t self, void *aux)
 	startwi_init(sc);
 
 	mutex_init(&sc->sc_buslock, MUTEX_DEFAULT, IPL_NONE);
-	sc->sc_ih = star_intr_establish(STAR_IRQ_TWI, IPL_SERIAL,
+	sc->sc_ih = intr_establish(STAR_IRQ_TWI, IPL_SERIAL,
 	    STAR_INTR_LOWLEVEL_TRIGGER, startwi_intr, sc);
 
 	sc->sc_i2c.ic_cookie = sc;
