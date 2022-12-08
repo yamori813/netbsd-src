@@ -1,4 +1,4 @@
-/*	$NetBSD: m83xxx_com.c,v 1.4 2018/12/08 17:46:09 thorpej Exp $	*/
+/*	$NetBSD$	*/
 
 /* adapted from:
  *	NetBSD: omap_com.c,v 1.2 2008/03/14 15:09:09 cube Exp
@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: m83xxx_com.c,v 1.4 2018/12/08 17:46:09 thorpej Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_com.h"
 
