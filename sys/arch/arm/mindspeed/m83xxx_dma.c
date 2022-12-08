@@ -1,4 +1,4 @@
-/*	$NetBSD$ */
+/*	$NetBSD$	*/
 
 /*
  * Copyright (c) 2009  Genetec Corporation.  All rights reserved.

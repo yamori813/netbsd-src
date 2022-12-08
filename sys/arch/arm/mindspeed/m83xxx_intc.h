@@ -1,4 +1,5 @@
 /*	$NetBSD$	*/
+
 /*-
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
