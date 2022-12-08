@@ -1,9 +1,5 @@
 /*	$NetBSD$	*/
 
-/* adapted from:
- *	NetBSD: omap_com.c,v 1.2 2008/03/14 15:09:09 cube Exp
- */
-
 /*
  * Based on arch/arm/xscale/pxa2x0_com.c
  *

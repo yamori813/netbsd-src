@@ -1,4 +1,4 @@
-/*	$NetBSD$ */
+/*	$NetBSD$	*/
 
 /*
  * Based on ep93xx_space.c
@@ -34,7 +34,7 @@
 __KERNEL_RCSID(0, "$NetBSD$");
 
 /*
- * bus_space I/O functions for ep93xx
+ * bus_space I/O functions for m83xxx
  */
 
 #include <sys/param.h>

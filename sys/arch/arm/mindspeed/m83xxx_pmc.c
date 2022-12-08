@@ -1,4 +1,4 @@
-/* $NetBSD$ */
+/*	$NetBSD$	*/
 
 /*-
  * Copyright (c) 2015 Jared D. McNeill <jmcneill@invisible.ca>

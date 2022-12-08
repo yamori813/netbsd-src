@@ -1,4 +1,4 @@
-/* $Id$ */
+/*	$NetBSD$	*/
 
 /*
  * Copyright (c) 2012 The NetBSD Foundation, Inc.

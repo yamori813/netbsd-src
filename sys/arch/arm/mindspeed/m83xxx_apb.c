@@ -1,7 +1,4 @@
-/*	$Id$	*/
-
-/* derived from:	*/
-/*	$NetBSD$ */
+/*	$NetBSD$	*/
 
 /*
  * Copyright (c) 2002, 2005  Genetec Corporation.  All rights reserved.
