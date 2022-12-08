@@ -35,10 +35,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include "locators.h"
 #include "gpio.h"
-/*
-#include "geminigmac.h"
-#include "opt_gemini.h"
-*/
  
 #include <sys/param.h>
 #include <sys/bus.h>
