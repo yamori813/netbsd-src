@@ -2,7 +2,7 @@
 #
 #  This configuration supports for HP MV2120/MV5140/MV5150.
 
-include 	"arch/evbarm/conf/std.mv2120"
+include 	"arch/evbarm/conf/std.orion"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 makeoptions	COPY_SYMTAB=1
@@ -192,7 +192,8 @@ mvsoctmr* at mvsoc? offset ? irq ?
 pcf8563rtc* at iic? addr 0x51
 
 # MII/PHY support
-makphy*	at mii? phy ?			# Marvell Semiconductor 88E1000 PHYs
+#makphy*	at mii? phy ?			# Marvell Semiconductor 88E1000 PHYs
+mvphy*	at mii? phy ?			# Marvell Semiconductor 88E6060 SW
 rgephy*	at mii? phy ?			# Realtek 8169S/8110S/8211 PHYs
 rlphy*	at mii? phy ?			# Realtek 8139/8201L PHYs
 ukphy*	at mii? phy ?			# generic unknown PHYs

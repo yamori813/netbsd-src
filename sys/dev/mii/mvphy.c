@@ -77,6 +77,10 @@ static void	mvphyattach(device_t, device_t, void *);
 CFATTACH_DECL_NEW(mvphy, sizeof(struct mii_softc),
     mvphymatch, mvphyattach, mii_phy_detach, mii_phy_activate);
 
+static void	mvphy_6060_init(struct mii_softc *sc,
+		    struct mii_attach_args *ma);
+static void	mvphy_6131_init(struct mii_softc *sc,
+		    struct mii_attach_args *ma);
 static int	mvphy_service(struct mii_softc *, struct mii_data *, int);
 static void	mvphy_status(struct mii_softc *);
 static void	mvphy_reset(struct mii_softc *sc);
@@ -87,6 +91,7 @@ static const struct mii_phy_funcs mvphy_funcs = {
 
 static const struct mii_phydesc mvphys[] = {
 	MII_PHY_DESC(xxMARVELL, E6060),
+	{MII_OUI_xxMARVELL, 0},
 	MII_PHY_END,
 };
 
@@ -179,11 +184,7 @@ mvphyattach(device_t parent, device_t self, void *aux)
 	struct mii_softc *sc = device_private(self);
 	struct mii_attach_args *ma = aux;
 	struct mii_data *mii = ma->mii_data;
-	const struct mii_phydesc *mpd;
-
-	mpd = mii_phy_match(ma, mvphys);
-	aprint_naive(": Media interface\n");
-	aprint_normal(": %s, rev. %d\n", mpd->mpd_name, MII_REV(ma->mii_id2));
+	uint16_t swid;
 
 	sc->mii_dev = self;
 	sc->mii_inst = mii->mii_instance;
@@ -193,6 +194,34 @@ mvphyattach(device_t parent, device_t self, void *aux)
 	sc->mii_flags = ma->mii_flags;
 
 	mii_lock(mii);
+
+	MV_READ(sc, 0x8, 3, &swid);
+	if ((swid >> 8) == 0x60) {
+		/* 88E6060 */
+		mvphy_6060_init(sc, ma);
+	} else {
+		MV_READ(sc, 0x10, 3, &swid);
+		if ((swid >> 4) == 0x106) {
+			mvphy_6131_init(sc, ma);
+		}
+	}
+
+	mii_unlock(mii);
+
+	aprint_naive(": Media interface\n");
+	if ((swid >> 4) == 0x60) {
+		aprint_normal(": 88E6060 Ethernet Switch\n");
+	} else if((swid >> 4) == 0x106) {
+		aprint_normal(": 88E6131 Ethernet Switch\n");
+	} else {
+		aprint_normal(": Unknown Ethernet Switch\n");
+	}
+	mii_phy_add_media(sc);
+}
+
+static void
+mvphy_6060_init(struct mii_softc *sc, struct mii_attach_args *ma)
+{
 
 	if (MV_PORT(sc) == 0) {		/* NB: only when attaching first PHY */
 		/*
@@ -208,10 +237,18 @@ mvphyattach(device_t parent, device_t self, void *aux)
 
 	PHY_READ(sc, MII_BMSR, &sc->mii_capabilities);
 	sc->mii_capabilities &= ma->mii_capmask;
+}
 
-	mii_unlock(mii);
+static void
+mvphy_6131_init(struct mii_softc *sc, struct mii_attach_args *ma)
+{
+	int i;
 
-	mii_phy_add_media(sc);
+	/* PORT BASE VLAN connect to all port */
+	for(i = 0x10; i < 0x18; ++i) {
+		MV_WRITE(sc, i, 6, 0x7ff & ~(1 << (i - 0x10)));
+	}
+
 }
 
 static int
@@ -271,13 +308,20 @@ static void
 mvphy_status(struct mii_softc *sc)
 {
 	struct mii_data *mii = sc->mii_pdata;
-	uint16_t hwstatus;
+//	uint16_t hwstatus;
 
 	KASSERT(mii_locked(mii));
 
 	mii->mii_media_status = IFM_AVALID;
 	mii->mii_media_active = IFM_ETHER;
 
+#if 1
+	mii->mii_media_status |= IFM_ACTIVE;
+	mii->mii_media_active |= IFM_1000_T;
+	mii->mii_media_active |= IFM_FDX;
+	if (0)
+		mvphy_flushatu(sc);
+#else
 	PHY_READ(sc, MII_MV_PHY_SPECIFIC_STATUS, &hwstatus);
 	if (hwstatus & MV_STATUS_REAL_TIME_LINK_UP) {
 		mii->mii_media_status |= IFM_ACTIVE;
@@ -294,6 +338,7 @@ mvphy_status(struct mii_softc *sc)
 		/* XXX flush ATU only on link down transition */
 		mvphy_flushatu(sc);
 	}
+#endif
 }
 
 static void
