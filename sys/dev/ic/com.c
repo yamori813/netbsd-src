@@ -1,4 +1,4 @@
-/* $NetBSD: com.c,v 1.380 2022/12/03 11:28:38 skrll Exp $ */
+/* $NetBSD: com.c,v 1.382 2022/12/09 00:35:58 knakahara Exp $ */
 
 /*-
  * Copyright (c) 1998, 1999, 2004, 2008 The NetBSD Foundation, Inc.
@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: com.c,v 1.380 2022/12/03 11:28:38 skrll Exp $");
+__KERNEL_RCSID(0, "$NetBSD: com.c,v 1.382 2022/12/09 00:35:58 knakahara Exp $");
 
 #include "opt_com.h"
 #include "opt_ddb.h"

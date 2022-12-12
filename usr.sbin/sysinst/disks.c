@@ -1,4 +1,4 @@
-/*	$NetBSD: disks.c,v 1.92 2022/11/30 19:44:06 martin Exp $ */
+/*	$NetBSD: disks.c,v 1.94 2022/12/10 20:58:37 reinoud Exp $ */
 
 /*
  * Copyright 1997 Piermont Information Systems Inc.
@@ -88,12 +88,12 @@ static const char name_prefix[] = NAME_PREFIX;
 
 /* things we could have as /sbin/newfs_* and /sbin/fsck_* */
 static const char *extern_fs_with_chk[] = {
-	"ext2fs", "lfs", "msdos", "v7fs"
+	"ext2fs", "lfs", "msdos", "udf", "v7fs"
 };
 
 /* things we could have as /sbin/newfs_* but not /sbin/fsck_* */
 static const char *extern_fs_newfs_only[] = {
-	"sysvbfs", "udf"
+	"sysvbfs"
 };
 
 /* Local prototypes */
@@ -114,7 +114,7 @@ getfslabelname(uint f, uint f_version)
 		return "mfs";
 	else if (f == FS_EFI_SP)
 		return msg_string(MSG_fs_type_efi_sp);
-	else if (f == FS_BSDFFS && f_version > 0) {
+	else if (f == FS_BSDFFS) {
 		switch (f_version) {
 		default:
 		case 1:	return msg_string(MSG_fs_type_ffs);
