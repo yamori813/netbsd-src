@@ -1211,6 +1211,20 @@ mvgbe_init(struct ifnet *ifp)
 		MVGBE_WRITE(sc, MVGBE_PACC, MVGVE_PACC_ACCELERATIONMODE_EDM);
 #endif
 	} else {
+#ifdef MVGBE_88E6131_SUPPORT
+		/* GMII support */
+		MVGBE_WRITE(sc, MVGBE_PSC,
+		    MVGBE_PSC_FLP |
+		    MVGBE_PSC_ANDUPLEX |
+		    MVGBE_PSC_ANFC |
+		    MVGBE_PSC_RESERVED |
+		    (1 << 13) |
+		    MVGBE_PSC_MRU(MVGBE_PSC_MRU_1552) |
+		    MVGBE_PSC_SETFULLDX |
+		    MVGBE_PSC_SETGMIISPEED);
+		MVGBE_WRITE(sc, MVGBE_PSC1, 0xff);
+		MVGBE_WRITE(sc, MVGBE_TQFPC, 0x00);
+#else
 		MVGBE_WRITE(sc, MVGBE_PSC,
 		    MVGBE_PSC_ANFC |		/* Enable Auto-Neg Flow Ctrl */
 		    MVGBE_PSC_RESERVED |	/* Must be set to 1 */
@@ -1223,6 +1237,7 @@ mvgbe_init(struct ifnet *ifp)
 		/* XXXX: Also always Weighted Round-Robin Priority Mode */
 		MVGBE_WRITE(sc, MVGBE_TQFPC, MVGBE_TQFPC_EN(0));
 
+#endif
 		sc->sc_cmdsts_opts = MVGBE_TX_GENERATE_CRC;
 	}
 
