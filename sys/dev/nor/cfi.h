@@ -230,7 +230,12 @@ enum {
 	CFI_QUERY_DATA = 0x98,
 
 	CFI_AMD_UNLOCK_ADDR1 = 0x555*8,
+#ifdef __arm__
+	CFI_AMD_UNLOCK_ADDR2 = 0x555*8,
+#else
 	CFI_AMD_UNLOCK_ADDR2 = 0x555*4,
+#endif
+
 };
 
 static __inline void
