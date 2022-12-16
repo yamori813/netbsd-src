@@ -138,6 +138,8 @@ options 	MEMSIZE=0x8000000
 
 # NOR Flash
 #options        NOR_VERBOSE
+options		CFI_ADDRESS=0x20000000
+options		CFI_BUS_TAG=m83_bs_tag
 cfi0		at mainbus?
 nor0		at cfi0
 flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-boot
