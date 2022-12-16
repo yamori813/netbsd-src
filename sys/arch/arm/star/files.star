@@ -8,6 +8,10 @@ device	star { [addr=-1], [irq=-1] }: bus_space_generic, pic, pic_splfuncs
 file	arch/arm/star/star.c			star
 file	arch/arm/star/star_intr.c		star
 
+device  cfi : norbus
+attach  cfi at mainbus with mainbus_cfi
+file    arch/arm/mainbus/mainbus_cfi.c	mainbus_cfi
+
 # STR8100 Equuleus Family
 file	arch/arm/star/star_equuleus_intr.c	star & star_equuleus
 
