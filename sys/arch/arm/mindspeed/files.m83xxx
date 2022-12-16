@@ -11,6 +11,10 @@ define	bus_dma_generic
 file	arch/arm/mindspeed/m83xxx_space.c
 file	arch/arm/mindspeed/m83xxx_dma.c
 
+device	cfi { [addr=-1] } : norbus
+attach	cfi at mainbus with mainbus_cfi
+file	arch/arm/mindspeed/mainbus_cfi.c	mainbus_cfi
+
 # AHB
 device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	ahb at mainbus
