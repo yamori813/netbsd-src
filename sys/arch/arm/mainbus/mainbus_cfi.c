@@ -87,15 +87,7 @@ mainbus_cfi_match(device_t parent, cfdata_t match, void *aux)
 	struct cfi cfi;
 	int rv;
 
-//	KASSERT(mb->mb_iobase != NULL);
-
 	addr = mainbus_cfi_addr(mb);
-#ifdef NOTYET
-	if (addr == MAINBUSCF_ADDR_DEFAULT) {
-		aprint_error("%s: no base address\n", __func__);
-		return 0;
-	}
-#endif
 
 	cfi.cfi_bst = &ARM_CFI_BUS_TAG;
 	int error = bus_space_map(cfi.cfi_bst, addr, tmpsize, 0, &cfi.cfi_bsh);
