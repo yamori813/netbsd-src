@@ -51,7 +51,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/nor/nor.h>
 #include <dev/nor/cfi.h>
 
-extern struct bus_space CFI_BUS_TAG;
+extern struct bus_space ARM_CFI_BUS_TAG;
 
 static int  mainbus_cfi_match(device_t, cfdata_t, void *);
 static void mainbus_cfi_attach(device_t, device_t, void *);
@@ -75,7 +75,7 @@ CFATTACH_DECL_NEW(mainbus_cfi, sizeof(struct mainbus_cfi_softc),
 static inline bus_addr_t
 mainbus_cfi_addr(struct mainbus_attach_args * const mb)
 {
-	return CFI_ADDRESS;
+	return ARM_CFI_ADDRESS;
 }
 
 static int
@@ -97,7 +97,7 @@ mainbus_cfi_match(device_t parent, cfdata_t match, void *aux)
 	}
 #endif
 
-	cfi.cfi_bst = &CFI_BUS_TAG;
+	cfi.cfi_bst = &ARM_CFI_BUS_TAG;
 	int error = bus_space_map(cfi.cfi_bst, addr, tmpsize, 0, &cfi.cfi_bsh);
 	if (error != 0) {
 		aprint_error("%s: cannot map %#" PRIxBUSSIZE"  at offset %#"
@@ -131,7 +131,7 @@ mainbus_cfi_attach(device_t parent, device_t self, void *aux)
 	aprint_normal("\n");
 
 	sc->sc_dev = self;
-	sc->sc_cfi.cfi_bst = &CFI_BUS_TAG;
+	sc->sc_cfi.cfi_bst = &ARM_CFI_BUS_TAG;
 	sc->sc_addr = mainbus_cfi_addr(mb);
 
 	/* map enough to identify, remap later when size is known */

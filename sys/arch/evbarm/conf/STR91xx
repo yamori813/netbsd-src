@@ -157,6 +157,8 @@ options		PCIVERBOSE	# Verbose PCI descriptions
 #options 	PERFCTRS	# performance counters
 #options 	DIAGNOSTIC	# internally consistency checks
 #options 	DEBUG
+#options 	USBHIST_PRINT	# also set ehcidebug at ehci.c
+#options 	USB_DEBUG
 #options 	PMAP_DEBUG	# Enable pmap_debug_level code
 #options 	VERBOSE_INIT_ARM # verbose bootstraping messages
 options 	DDB		# in-kernel debugger
@@ -176,6 +178,14 @@ cpu0		at mainbus?
 
 # STR9100(Orion Family) System-on-Chip
 star0		at mainbus?
+
+# NOR Flash
+#options	NOR_VERBOSE
+options		ARM_CFI_ADDRESS=0x10000000
+options		ARM_CFI_BUS_TAG=star_bs_tag
+cfi0		at mainbus?
+nor0		at cfi0
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-boot
 
 # on-chip 16550 UARTs
 com0		at star? addr 0x78000000 irq 10		# UART0
@@ -404,7 +414,7 @@ pseudo-device	swcrypto		# software crypto implementation
 #options 	RF_INCLUDE_PARITY_DECLUSTERING_DS=1
 #pseudo-device	fss		4	# file system snapshot device
 
-pseudo-device	md		1	# memory disk device (ramdisk)
+#pseudo-device	md		1	# memory disk device (ramdisk)
 pseudo-device	vnd			# disk-like interface to files
 options 	VND_COMPRESSION		# compressed vnd(4)
 
