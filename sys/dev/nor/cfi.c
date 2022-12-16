@@ -423,7 +423,8 @@ cfi_probe(struct cfi * const cfi)
 			cfi->cfi_portwidth = pw;
 			cfi->cfi_chipwidth = cw;
 			found = cfi_chip_query(cfi);
-			cfi_jedec_id(cfi);
+			if (found)
+				cfi_jedec_id(cfi);
 			if (! found)
 				found = cfi_emulate(cfi);
 			if (found)
@@ -632,9 +633,11 @@ cfi_read_qry(struct cfi * const cfi, bus_size_t off)
 	case 2:
 		data = bus_space_read_4(bst, bsh, off);
 		break;
+#ifdef NOTYET
 	case 3:
 		data = bus_space_read_8(bst, bsh, off);
 		break;
+#endif
 	default:
 		data = ~0;
 		break;

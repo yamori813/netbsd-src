@@ -146,9 +146,11 @@ flash_attach(device_t parent, device_t self, void *aux)
 
 	aprint_naive("\n");
 
+#if 0
 	aprint_normal(": partition");
 	if (sc->sc_partinfo.part_name != NULL)
 		aprint_normal(" \"%s\"", sc->sc_partinfo.part_name);
+#endif
 
 	aprint_normal(", size %s, offset %#jx",
 		pbuf[0], (uintmax_t)sc->sc_partinfo.part_offset);

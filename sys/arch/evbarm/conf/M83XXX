@@ -35,7 +35,7 @@ file-system	MFS		# memory file system
 file-system	NFS		# Network file system
 #file-system 	ADOSFS		# AmigaDOS-compatible file system
 #file-system 	EXT2FS		# second extended file system (linux)
-#file-system	CD9660		# ISO 9660 + Rock Ridge file system
+file-system	CD9660		# ISO 9660 + Rock Ridge file system
 #file-system	MSDOSFS		# MS-DOS file system
 file-system	FDESC		# /dev/fd
 file-system	KERNFS		# /kern
@@ -135,6 +135,12 @@ cpu0		at mainbus?
 
 # Specify the memory size in bytes.
 options 	MEMSIZE=0x8000000
+
+# NOR Flash
+#options        NOR_VERBOSE
+cfi0		at mainbus?
+nor0		at cfi0
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-boot
 
 # Devices
 
