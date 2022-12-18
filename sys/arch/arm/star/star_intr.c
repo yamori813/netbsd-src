@@ -134,7 +134,7 @@ star_enable_irq(int irq)
 static inline void
 star_disable_irq(int irq)
 {
-	star_intr_enabled &= (1U << irq);
+	star_intr_enabled &= ~(1U << irq);
 	star_set_intrmask();
 }
 
@@ -416,6 +416,18 @@ intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 void
 intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 {
+	int s;
+
+	KASSERT(is->is_irq < 32);
+
+	s = disable_interrupts(I32_bit);
+
+	if (CPU_IS_STR8100())
+		star_equuleus_set_intrmode(is->is_irq, is->is_type);
+	else
+		star_orion_set_intrmode(is->is_irq, is->is_type);
+
+	restore_interrupts(s);
 }
 
 void
