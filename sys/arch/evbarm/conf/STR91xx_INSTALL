@@ -1,0 +1,10 @@
+#	$NetBSD: MV2120_INSTALL,v 1.3 2014/05/02 23:49:10 dogcow Exp $
+#
+#	MV2120_INSTALL -- MV2120 kernel with installation-sized
+#	ramdisk
+#
+
+include "arch/evbarm/conf/STR91xx"
+include "arch/evbarm/conf/INSTALL"
+
+options BOOTHOWTO=RB_SINGLE
