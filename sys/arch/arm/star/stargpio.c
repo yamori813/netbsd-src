@@ -26,10 +26,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-//#define DEBUG_STARGPIO
 
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
+
+//#define DEBUG_STARGPIO
 
 #include <sys/param.h>
 #include <sys/device.h>

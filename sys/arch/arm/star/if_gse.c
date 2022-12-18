@@ -34,7 +34,7 @@
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
-//#define DEBUG_GSE
+#define DEBUG_GSE
 #undef DEBUG_GSE_DUMP
 #undef DEBUG_GSE_DUMP_MII
 
