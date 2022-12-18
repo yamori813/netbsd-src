@@ -13,6 +13,10 @@ file	arch/arm/marvell/mvsoc_dma.c
 
 file	arch/arm/arm32/irq_dispatch.S
 
+device	cfi : norbus
+attach	cfi at mainbus with mainbus_cfi
+file	arch/arm/mainbus/mainbus_cfi.c  mainbus_cfi
+
 # Some SoC(ARMADAXP) reports false DeviceID. 
 defflag opt_mvsoc.h				ORION KIRKWOOD MV78XX0 DOVE
 						ARMADAXP
