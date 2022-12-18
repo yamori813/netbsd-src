@@ -185,7 +185,7 @@ options		ARM_CFI_ADDRESS=0x10000000
 options		ARM_CFI_BUS_TAG=star_bs_tag
 cfi0		at mainbus?
 nor0		at cfi0
-flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-boot
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # ARMBOOT
 
 # on-chip 16550 UARTs
 com0		at star? addr 0x78000000 irq 10		# UART0
@@ -209,9 +209,9 @@ gpioow* 	at gpio?
 onewire*	at gpioow?
 
 # on-chip network interfaces
-#gsec0		at star? addr 0x70000000 irq 18	# STR9100 Gigabit Switch Engine Controller
-#gse*		at gsec?
-#ukphy*		at mii? phy ?			# generic unknown PHYs
+gsec0		at star? addr 0x70000000 irq 18	# STR9100 Gigabit Switch Engine Controller
+gse*		at gsec?
+ukphy*		at mii? phy ?			# generic unknown PHYs
 
 
 # On-chip PCI Interface
@@ -310,7 +310,7 @@ umass*		at uhub? port ? configuration ? interface ?
 #axe*		at uhub? port ?		# ASIX AX88172 based adapters
 #cdce*		at uhub? port ?		# CDC, Ethernet Networking Control Model
 #cue*		at uhub? port ?		# CATC USB-EL1201A based adapters
-#kue*		at uhub? port ?		# Kawasaki LSI KL5KUSB101B based adapters
+kue*		at uhub? port ?		# Kawasaki LSI KL5KUSB101B based adapters
 #udav*		at uhub? port ?		# Davicom DM9601 based adapters
 #url*		at uhub? port ?		# Realtek RTL8150L based adapters
 
