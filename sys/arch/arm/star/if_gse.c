@@ -34,7 +34,7 @@
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
-#define DEBUG_GSE
+//#define DEBUG_GSE
 #undef DEBUG_GSE_DUMP
 #undef DEBUG_GSE_DUMP_MII
 
@@ -224,7 +224,9 @@ static void gse_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 static inline uint32_t gsec_arl_wait(struct gsec_softc *);
 static void gsec_arl_write(struct gsec_softc *, struct gse_arl *);
 static int gsec_arl_read(struct gsec_softc *, uint32_t, struct gse_arl *);
+#ifdef DEBUG_GSE
 static void gsec_arl_dump(struct gsec_softc *);
+#endif
 static void gsec_arl_clearall(struct gsec_softc *);
 static void gse_arl_clear(struct gse_if_softc *);
 static void gse_setmulti(struct gse_if_softc *);
@@ -543,7 +545,9 @@ gsec_tx_intr(void *arg)
 		else if (sc->sc_txdesc_ring[idx].tx_ctrl & GSE_TXDESC_CTRL_PMAP_PORT1)
 			ifp = &sc->sc_if_gse[1]->sc_ethercom.ec_if;
 		else {
+#ifdef DEBUG_GSE
 			gse_dump_txdesc(sc, idx, "TX_INTR:");
+#endif
 			panic("%s: nether port0 nor port1", device_xname(sc->sc_dev));
 		}
 
@@ -636,12 +640,14 @@ gsec_rx_intr(void *arg)
 			    (p[6+6+2+20] == 0x08)) {
 
 				switch (p[6+6+2+20+16]) {
+#ifdef DEBUG_GSE
 				case 0x95:
 					gse_dumpall_txdesc(sc, "rx_intr:");
 					break;
 				case 0x96:
 					gse_dumpall_rxdesc(sc, "rx_intr:");
 					break;
+#endif
 				case 0x97:
 					debug_rx_dump ^= 1;
 					break;
@@ -670,7 +676,9 @@ gsec_rx_intr(void *arg)
 			ifp = &sc->sc_if_gse[1]->sc_ethercom.ec_if;
 			break;
 		default:
+#ifdef DEBUG_GSE
 			gse_dump_rxdesc(sc, idx, "RX_INTR:");
+#endif
 			panic("%s: nether port0 nor port1", device_xname(sc->sc_dev));
 		}
 
@@ -824,6 +832,7 @@ gsec_arl_read(struct gsec_softc *sc, uint32_t cmd, struct gse_arl *arl)
 	return 0;
 }
 
+#ifdef DEBUG_GSE
 static void
 gsec_arl_dump(struct gsec_softc *sc)
 {
@@ -848,6 +857,7 @@ gsec_arl_dump(struct gsec_softc *sc)
 		cmd = GSE_ARL_TABLE_CTRL0_SRCH_AGAIN_CMD;
 	}
 }
+#endif
 
 static void
 gsec_arl_clearall(struct gsec_softc *sc)
