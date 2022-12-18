@@ -26,6 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+//#define DEBUG_STARGPIO
+
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
@@ -306,7 +308,9 @@ stargpio_intr(void *arg)
 	status = bus_space_read_4(sc->sc_iot, sc->sc_ioh,
 	    STAR_GPIO_INT_MASKSTAT_REG);
 
+#ifdef DEBUG_STARGPIO
 	printf("%s: interrupt: status=0x%08x\n", __func__, status);
+#endif
 
 	bus_space_write_4(sc->sc_iot, sc->sc_ioh,
 	    STAR_GPIO_INT_CLEAR_REG, status);

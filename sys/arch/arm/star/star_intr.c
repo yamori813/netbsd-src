@@ -252,10 +252,15 @@ star_intr_handler(void *frame)
 		STAR_REG_WRITE32(ORION_INT_CLEAR, pending);
 	}
 
-	irq = ffs(pending & star_intr_enabled) - 1;
+	pending &= star_intr_enabled;
 
-	pic_dispatch(pic_sc.pic_sources[irq], frame);
+	while(pending) {
+		irq = ffs(pending) - 1;
 
+		pic_dispatch(pic_sc.pic_sources[irq], frame);
+
+		pending &= ~(1 << irq);
+	}
 }
 /*
  * called from irq_entry.
@@ -404,7 +409,7 @@ void
 intc_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
 
-	star_intr_enabled &= irq_mask;
+	star_intr_enabled &= ~irq_mask;
 	star_set_intrmask();
 }
 
