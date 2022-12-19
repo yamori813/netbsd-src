@@ -432,5 +432,9 @@ intc_establish_irq(struct pic_softc *pic, struct intrsource *is)
 
 void
 intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
-{}
+{
+
+	KASSERT((unsigned int)irq < 32);
+	strlcpy(buf, irqnames[irq], len);
+}
 
