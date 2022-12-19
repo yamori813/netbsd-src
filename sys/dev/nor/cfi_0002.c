@@ -197,11 +197,11 @@ cfi_0002_version_init(struct cfi * const cfi)
 		cfi->cfi_ops.cfi_busy = cfi_0002_busy_reg;
 		cfi->cfi_ops.cfi_erase_sector = cfi_0002_erase_sector_1;
 		cfi->cfi_ops.cfi_program_word = cfi_0002_program_word_no_ub;
-#endif
 	} else {
 		/* XXX this is excessive */
 		panic("%s: unknown cmdset version %c.%c\n",
 			__func__, major, minor);
+#endif
 	}
 
 }
