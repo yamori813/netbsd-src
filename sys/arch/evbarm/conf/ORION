@@ -139,11 +139,11 @@ cpu0	at mainbus?
 
 # NOR Flash
 #options	NOR_VERBOSE
-#options		ARM_CFI_ADDRESS=0xff800000
-#options		ARM_CFI_BUS_TAG=mvsoc_bs_tag
-#cfi0		at mainbus?
-#nor0		at cfi0
-#flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-Boot
+options		ARM_CFI_ADDRESS=0xff800000
+options		ARM_CFI_BUS_TAG=mvsoc_bs_tag
+cfi0		at mainbus?
+nor0		at cfi0
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-Boot
 
 # Mervell MV88Fxx81 Orion System-on-Chip
 mvsoc0	at mainbus?
