@@ -143,7 +143,7 @@ starspi_attach(device_t parent __unused, device_t self, void *aux)
 	starspi_init(sc);
 
 	sc->sc_ih = intr_establish(STAR_IRQ_SPI, IPL_SERIAL,
-	    STAR_INTR_LOWLEVEL_TRIGGER, starspi_intr, sc);
+	    IST_LEVEL_LOW, starspi_intr, sc);
 
 	/*
 	 * Initialize spi controller and queue

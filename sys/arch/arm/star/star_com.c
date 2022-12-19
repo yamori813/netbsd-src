@@ -109,5 +109,5 @@ star_com_attach(device_t parent __unused, device_t self, void *aux)
 	aprint_naive("\n");
 
 	intr_establish(sa->sa_irq, IPL_SERIAL,
-	    STAR_INTR_HIGHLEVEL_TRIGGER, comintr, sc);
+	    IST_LEVEL_HIGH, comintr, sc);
 }

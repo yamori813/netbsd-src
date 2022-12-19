@@ -291,17 +291,17 @@ gec_attach(device_t parent __unused, device_t self, void *aux)
 	 * setup interrupt handlers
 	 */
 	if ((sc->sc_ih_mib = intr_establish(STAR_IRQ_NIC_STAT, IPL_NET,
-	    STAR_INTR_HIGHLEVEL_TRIGGER, gec_mib_intr, sc)) == NULL) {
+	    IST_LEVEL_HIGH, gec_mib_intr, sc)) == NULL) {
 		aprint_error_dev(self, "unable to establish MIB interrupt\n");
 		goto failure;
 	}
 	if ((sc->sc_ih_tx = intr_establish(STAR_IRQ_NIC_TX, IPL_NET,
-	    STAR_INTR_RISING_EDGE, gec_tx_intr, sc)) == NULL) {
+	    IST_EDGE_RISING, gec_tx_intr, sc)) == NULL) {
 		aprint_error_dev(self, "unable to establish TX interrupt\n");
 		goto failure;
 	}
 	if ((sc->sc_ih_rx = intr_establish(STAR_IRQ_NIC_RX, IPL_NET,
-	    STAR_INTR_RISING_EDGE, gec_rx_intr, sc)) == NULL) {
+	    IST_EDGE_RISING, gec_rx_intr, sc)) == NULL) {
 		aprint_error_dev(self, "unable to establish RX interrupt\n");
 		goto failure;
 	}

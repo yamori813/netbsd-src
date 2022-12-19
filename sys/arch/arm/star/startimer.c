@@ -211,7 +211,7 @@ cpu_initclocks(void)
 	    0xffffffff);
 
 	sc->sc_ih1 = intr_establish(STAR_IRQ_TIMER1, IPL_CLOCK,
-	    STAR_INTR_RISING_EDGE, star_timer1_intr, NULL);
+	    IST_EDGE_RISING, star_timer1_intr, NULL);
 	if (sc->sc_ih1 == NULL)
 		panic("cpu_initclocks: unable to register timer1 interrupt");
 
@@ -233,7 +233,7 @@ cpu_initclocks(void)
 		    STAR_TIMER_CTRL_TM2_DECREMENT);
 
 		sc->sc_ih2 = intr_establish(STAR_IRQ_TIMER2, IPL_HIGH,
-		    STAR_INTR_RISING_EDGE, star_timer2_intr, NULL);
+		    IST_EDGE_RISING, star_timer2_intr, NULL);
 		if (sc->sc_ih2 == NULL)
 			panic("cpu_initclocks: "
 			    "unable to register timer2 interrupt");

@@ -110,7 +110,7 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 	EOWRITE2(&sc->sc_ehci, EHCI_USBINTR, 0);
 
 	intr_establish(sa->sa_irq, IPL_USB,
-	    STAR_INTR_LOWLEVEL_TRIGGER, ehci_intr, &sc->sc_ehci);
+	    IST_LEVEL_LOW, ehci_intr, &sc->sc_ehci);
 
 //	sc->sc_ehci.sc_bus.usbrev = USBREV_2_0;
 	sc->sc_ehci.sc_bus.ub_revision = USBREV_2_0;

@@ -54,25 +54,25 @@ star_equuleus_set_intrmode(int irq, int scheme)
 	uint32_t level, mode, r;
 
 	KASSERT(irq <= STAR_NIRQ);
-	KASSERT((scheme == STAR_INTR_HIGHLEVEL_TRIGGER) ||
-	    (scheme == STAR_INTR_LOWLEVEL_TRIGGER) ||
-	    (scheme == STAR_INTR_RISING_EDGE) ||
-	    (scheme == STAR_INTR_FALLING_EDGE));
+	KASSERT((scheme == IST_LEVEL_HIGH) ||
+	    (scheme == IST_LEVEL_LOW) ||
+	    (scheme == IST_EDGE_RISING) ||
+	    (scheme == IST_EDGE_FALLING));
 
 	switch (scheme) {
-	case STAR_INTR_HIGHLEVEL_TRIGGER:
+	case IST_LEVEL_HIGH:
 		mode = 0;
 		level = 0;
 		break;
-	case STAR_INTR_LOWLEVEL_TRIGGER:
+	case IST_LEVEL_LOW:
 		mode = 0;
 		level = 1;
 		break;
-	case STAR_INTR_RISING_EDGE:
+	case IST_EDGE_RISING:
 		mode = 1;
 		level = 0;
 		break;
-	case STAR_INTR_FALLING_EDGE:
+	case IST_EDGE_FALLING:
 	default:
 		mode = 1;
 		level = 1;
