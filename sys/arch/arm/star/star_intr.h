@@ -117,11 +117,13 @@ void _setsoftintr(int);
 #endif /* EVBARM_SPL_NOINLINE */
 #endif
 
+#if 0
 /* same as intr.h */
 #define STAR_INTR_HIGHLEVEL_TRIGGER	4
 #define STAR_INTR_LOWLEVEL_TRIGGER	3
 #define STAR_INTR_RISING_EDGE		5
 #define STAR_INTR_FALLING_EDGE		2
+#endif
 
 void star_intr_init(void);
 void star_intr_dispatch(void *);

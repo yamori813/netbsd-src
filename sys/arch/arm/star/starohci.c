@@ -106,7 +106,7 @@ starohci_attach(device_t parent __unused, device_t self, void *aux)
 		goto attach_failure_unmap;
 
 	intr_establish(sa->sa_irq, IPL_USB,
-	    STAR_INTR_LOWLEVEL_TRIGGER, ohci_intr, &sc->sc_ohci);
+	    IST_LEVEL_LOW, ohci_intr, &sc->sc_ohci);
 
 //	strlcpy(sc->sc_ohci.sc_vendor, "Star", sizeof(sc->sc_ohci.sc_vendor));
 	r = ohci_init(&sc->sc_ohci);
