@@ -34,7 +34,7 @@
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
-#define DEBUG_GSE
+//#define DEBUG_GSE
 #undef DEBUG_GSE_DUMP
 #undef DEBUG_GSE_DUMP_MII
 
@@ -628,7 +628,17 @@ gsec_rx_intr(void *arg)
 		ctrl = sc->sc_rxdesc_ring[idx].rx_ctrl;
 		if ((ctrl & GSE_RXDESC_CTRL_COWN) == 0)
 			continue;
+/*
+		{
+			unsigned char *p;
+			int i;
 
+			p = mtod(rxs->rxs_mbuf, char *);
+			for(i = 0;i < 20; ++i)
+			printf("%02x,", p[i]);
+			printf("\n");
+		}
+*/
 #if 1	/* XXX: Magic Packet Debugger: e.g. ping -c1 -p 98 str9104 */
 		KASSERT(rxs->rxs_mbuf != NULL);
 		{
@@ -709,7 +719,9 @@ gsec_rx_intr(void *arg)
 		 */
 		m = rxs->rxs_mbuf;
 //		m->m_pkthdr.rcvif = ifp;
+		m_set_rcvif(m, ifp);
 		m->m_pkthdr.len = m->m_len = len;
+		m->m_data += 2;
 
 		/* checksum offloading */
 		if (ifp->if_csum_flags_rx & M_CSUM_IPv4) {
@@ -743,10 +755,11 @@ gsec_rx_intr(void *arg)
 
 		/* Pass this up to any BPF listeners. */
 //		bpf_mtap(ifp, m);
-		bpf_mtap(ifp, m, BPF_D_OUT);
+//		bpf_mtap(ifp, m, BPF_D_OUT);
 
 //		(*ifp->if_input)(ifp, m);
-		if_input(ifp, m);
+//		if_input(ifp, m);
+		if_percpuq_enqueue(ifp->if_percpuq, m);
 
 		/* clear this rxsoft, and realloc rxbuf */
 		bus_dmamap_unload(sc->sc_dmat, rxs->rxs_dmamap);
