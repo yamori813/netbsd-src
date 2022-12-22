@@ -54,4 +54,7 @@ struct arm32_bus_dma_tag star_bus_dma_tag = {
 	._dmamem_map		= _bus_dmamem_map,
 	._dmamem_unmap		= _bus_dmamem_unmap,
 	._dmamem_mmap		= _bus_dmamem_mmap,
+
+	._dmatag_subregion	= _bus_dmatag_subregion,
+	._dmatag_destroy	= _bus_dmatag_destroy
 };
