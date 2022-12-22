@@ -92,26 +92,16 @@ options 	INET6		# IPV6
 #options 	NFS_BOOTSTATIC_SERVADDR="\"172.31.185.65\""
 #options 	NFS_BOOTSTATIC_SERVER="\"172.31.185.65:/src/boot/str9100\""
 
-#config		netbsd		root on gse0 type nfs
-#config		netbsd		root on sd0a type ffs
 config		netbsd		root on ? type ?
 
-
 # Compatibility options
-#include		"conf/compat_netbsd50.config"
-#options		COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
+#include	"conf/compat_netbsd50.config"
+#options	COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
 
 # Note: SysV IPC parameters could be changed dynamically, see sysctl(8).
 options 	SYSVMSG		# System V-like message queues
 options 	SYSVSEM		# System V-like semaphores
 options 	SYSVSHM		# System V-like memory sharing
-#options 	P1003_1B_SEMAPHORE	# p1003.1b semaphore support
-
-# Device options
-#options 	MEMORY_DISK_HOOKS	# boottime setup of ramdisk
-#options 	MEMORY_DISK_IS_ROOT	# use memory disk as root
-#options 	MEMORY_DISK_DYNAMIC
-#options 	MEMORY_DISK_ROOT_SIZE=22528	# Size in blocks
 
 # Console options. The default console is speed is 115200 baud.
 options 	CONSPEED=38400		# Console speed
@@ -144,8 +134,6 @@ options 	DDB		# in-kernel debugger
 #options 	DEBUG_KGDB
 makeoptions	DEBUG="-g -O2"	# compile full symbol table
 options 	SYMTAB_SPACE=450000
-
-#config		netbsd		root on ? type ?
 
 # The main bus device
 mainbus0	at root
