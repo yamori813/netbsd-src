@@ -115,9 +115,9 @@ starehci_attach(device_t parent __unused, device_t self, void *aux)
 //	sc->sc_ehci.sc_bus.usbrev = USBREV_2_0;
 	sc->sc_ehci.sc_bus.ub_revision = USBREV_2_0;
 //	strlcpy(sc->sc_ehci.sc_vendor, "Star", sizeof(sc->sc_ehci.sc_vendor));
-printf("@");
+
 	r = ehci_init(&sc->sc_ehci);
-printf("@");
+
 	if (r != USBD_NORMAL_COMPLETION) {
 		aprint_error("%s: init failed, error=%d\n",
 		    device_xname(self), r);
