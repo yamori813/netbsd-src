@@ -174,10 +174,13 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 
 /*
 	bus_space_handle_t bsh;
-	bus_space_map(sc->iot, APB_GPIO_BASE, 0x20000, 0, &bsh);
-	bus_space_write_4(sc->iot, bsh,
-	    GPIO_USB_PHY_CONF_REG, 0);
-	bus_space_unmap(sc->iot, bsh, 0x20000);
+	bus_space_map(sc->iot, ahb->ahba_addr, 0x100, 0, &bsh);
+	bus_space_write_4(sc->iot, bsh, 0x80, 0x3e7);
+	bus_space_write_4(sc->iot, bsh, 0x84, (1 << 31) | (1 << 30) | (1 << 24));
+	printf("%x,",bus_space_read_4(sc->iot, bsh, 0x80));
+ delay(1);
+	printf("%x\n",bus_space_read_4(sc->iot, bsh, 0x84));
+	bus_space_unmap(sc->iot, bsh, 0x100);
 */
 
 	/* Map I/O registers */
@@ -193,8 +196,10 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
 	DPRINTF(("%s: offs=%d\n", devname, sc->sc_offs));
 	EOWRITE4(sc, EHCI_USBINTR, 0);
+/*
 	bus_space_write_4(sc->iot, sc->ioh, EHCI_HCOTGDEV_INTR_MASK,
 	    OTG_INT|DEV_INT);
+*/
 
 //	if (ahb->ahb_intr != OBIOCF_INTR_DEFAULT) {
 		intr_establish(ahb->ahba_intr, IPL_USB, IST_LEVEL,
@@ -204,6 +209,7 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 
 	start_ehci(sc->iot);
 
+	sc->sc_flags = EHCIF_ETTF;
 	sc->sc_bus.ub_revision = USBREV_2_0;
 
 	int err = ehci_init(sc);
