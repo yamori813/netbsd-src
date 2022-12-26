@@ -82,6 +82,8 @@ ehci_ahb_intr(void *arg)
 }
 */
 
+static void m83ehci_init(struct ehci_softc *hsc);
+
 void start_ehci(bus_space_tag_t iot);
 void start_ehci(bus_space_tag_t iot)
 {
@@ -168,6 +170,7 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	sc->sc_bus.ub_hcpriv = sc;
 	sc->iot = ahb->ahba_memt;
+	sc->sc_vendor_init = m83ehci_init;
 
 	aprint_naive(": USB Interfacer\n");
 	aprint_normal(": USB Interface\n");
@@ -220,6 +223,27 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 
 	/* Attach usb device. */
 	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint, CFARGS_NONE);
+}
+
+#define USBMODE		0xa8
+#define USBMODE_CM_HC	3
+#define USBMODE_SDIS	0x10
+
+static void
+m83ehci_init(struct ehci_softc *sc)
+{
+	uint32_t reg;
+
+	reg = EOREAD4(sc, EHCI_PORTSC(1));
+	reg &= ~(EHCI_PS_CSC | EHCI_PS_PEC | EHCI_PS_OCC);
+	reg |= EHCI_PS_PP | EHCI_PS_PE;
+	EOWRITE4(sc, EHCI_PORTSC(1), reg);
+
+	reg = bus_space_read_4(sc->iot, sc->ioh, USBMODE);
+	reg |= USBMODE_CM_HC;
+	/* Set "Streaming disable mode"  to avoid Tx under run */
+	reg |= USBMODE_SDIS;
+	bus_space_write_4(sc->iot, sc->ioh, USBMODE, reg);
 }
 
 CFATTACH_DECL2_NEW(ehci_ahb, sizeof(struct ehci_softc),
