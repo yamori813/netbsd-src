@@ -253,7 +253,8 @@ umass*		at uhub? port ? configuration ? interface ?
 #wd*		at umass?
 
 # USB audio
-#uaudio*	at uhub? port ? configuration ?
+uaudio*		at uhub? port ? configuration ?
+audio*		at audiobus?
 
 # USB MIDI
 #umidi* 	at uhub? port ? configuration ?
