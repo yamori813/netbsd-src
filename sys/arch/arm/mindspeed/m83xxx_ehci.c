@@ -61,27 +61,6 @@ extern int ehcidebug;
 #define DPRINTF(x)
 #endif
 
-#define	EHCI_HCOTGDEV_INTR_STATUS		0xc0
-#define	EHCI_HCOTGDEV_INTR_MASK			0xc4
-#define	HC_INT					0x04
-#define	OTG_INT					0x02
-#define	DEV_INT					0x01
-/*
-static int
-ehci_ahb_intr(void *arg)
-{
-	struct ehci_softc * const sc = arg;
-	int rv = 0;
-	uint32_t v;
-
-	v = bus_space_read_4(sc->iot, sc->ioh, EHCI_HCOTGDEV_INTR_STATUS);
-	bus_space_write_4(sc->iot, sc->ioh, EHCI_HCOTGDEV_INTR_STATUS, v);
-	if (v & HC_INT)
-		rv = ehci_intr(sc);
-	return rv;
-}
-*/
-
 static void m83ehci_init(struct ehci_softc *hsc);
 
 void start_ehci(bus_space_tag_t iot);
@@ -141,10 +120,6 @@ void start_ehci(bus_space_tag_t iot)
 	    GPIO_GENERAL_CONTROL_REG);
 	bus_space_write_4(iot, bsh,
 	    GPIO_GENERAL_CONTROL_REG, reg & ~USB_FORCE_SUSPEND);
-/*
-	bus_space_write_4(iot, bsh,
-	    GPIO_USB_PHY_CONF_REG, 0x002D64C2);
-*/
 
 	bus_space_unmap(iot, bsh, 0x20000);
 }
@@ -171,24 +146,15 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_bus.ub_hcpriv = sc;
 	sc->iot = ahb->ahba_memt;
 	sc->sc_vendor_init = m83ehci_init;
+	sc->sc_flags = EHCIF_ETTF;
+	sc->sc_bus.ub_revision = USBREV_2_0;
 
 	aprint_naive(": USB Interfacer\n");
 	aprint_normal(": USB Interface\n");
 
-/*
-	bus_space_handle_t bsh;
-	bus_space_map(sc->iot, ahb->ahba_addr, 0x100, 0, &bsh);
-	bus_space_write_4(sc->iot, bsh, 0x80, 0x3e7);
-	bus_space_write_4(sc->iot, bsh, 0x84, (1 << 31) | (1 << 30) | (1 << 24));
-	printf("%x,",bus_space_read_4(sc->iot, bsh, 0x80));
- delay(1);
-	printf("%x\n",bus_space_read_4(sc->iot, bsh, 0x84));
-	bus_space_unmap(sc->iot, bsh, 0x100);
-*/
-
 	/* Map I/O registers */
-	if (bus_space_map(sc->iot, ahb->ahba_addr+0x100, ahb->ahba_size-0x100, 0,
-			   &sc->ioh)) {
+	if (bus_space_map(sc->iot, ahb->ahba_addr+0x100, ahb->ahba_size-0x100,
+	    0, &sc->ioh)) {
 		aprint_error("%s: can't map memory space\n", devname);
 		return;
 	}
@@ -199,21 +165,11 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
 	DPRINTF(("%s: offs=%d\n", devname, sc->sc_offs));
 	EOWRITE4(sc, EHCI_USBINTR, 0);
-/*
-	bus_space_write_4(sc->iot, sc->ioh, EHCI_HCOTGDEV_INTR_MASK,
-	    OTG_INT|DEV_INT);
-*/
 
-//	if (ahb->ahb_intr != OBIOCF_INTR_DEFAULT) {
-		intr_establish(ahb->ahba_intr, IPL_USB, IST_LEVEL,
-		     //ehci_ahb_intr, sc);
-		    ehci_intr, sc);
-//	}
+	intr_establish(ahb->ahba_intr, IPL_USB, IST_LEVEL,
+	    ehci_intr, sc);
 
 	start_ehci(sc->iot);
-
-	sc->sc_flags = EHCIF_ETTF;
-	sc->sc_bus.ub_revision = USBREV_2_0;
 
 	int err = ehci_init(sc);
 	if (err) {
@@ -222,7 +178,8 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	}
 
 	/* Attach usb device. */
-	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint, CFARGS_NONE);
+	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint,
+	    CFARGS_NONE);
 }
 
 #define USBMODE		0xa8
@@ -239,11 +196,10 @@ m83ehci_init(struct ehci_softc *sc)
 	reg |= EHCI_PS_PP | EHCI_PS_PE;
 	EOWRITE4(sc, EHCI_PORTSC(1), reg);
 
-	reg = bus_space_read_4(sc->iot, sc->ioh, USBMODE);
-	reg |= USBMODE_CM_HC;
+	reg = USBMODE_CM_HC;
 	/* Set "Streaming disable mode"  to avoid Tx under run */
 	reg |= USBMODE_SDIS;
-	bus_space_write_4(sc->iot, sc->ioh, USBMODE, reg);
+	EWRITE4(sc, USBMODE, reg);
 }
 
 CFATTACH_DECL2_NEW(ehci_ahb, sizeof(struct ehci_softc),
