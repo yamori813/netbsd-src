@@ -55,3 +55,7 @@ file	arch/arm/mindspeed/m83xxx_com.c		m83xxx_com
 attach ehci at ahb with ehci_ahb
 file	arch/arm/mindspeed/m83xxx_ehci.c	ehci_ahb
 
+# Ethernet
+device  cge: ether, ifnet, arp, mii, mii_phy
+attach  cge at apb
+file    arch/arm/mindspeed/if_cge.c		cge

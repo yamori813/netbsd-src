@@ -156,6 +156,9 @@ timer1		at apb? addr 0x10050000 intr 30
 m83gpio0	at apb? addr 0x10070000 intr 33
 gpio*		at m83gpio?
 
+cge0		at apb? addr 0x100d0000 intr 6
+cge1		at apb? addr 0x10090000 intr 7
+
 ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
 
 # USB bus support
