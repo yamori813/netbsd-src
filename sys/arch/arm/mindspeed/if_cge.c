@@ -83,73 +83,6 @@ __KERNEL_RCSID(1, "$NetBSD$");
 
 #define CGE_TXFRAGS	16
 
-#if 0
-#define FDT_INTR_FLAGS	0
-
-#define CPSW_CPPI_RAM_SIZE (0x2000)
-#define CPSW_CPPI_RAM_TXDESCS_SIZE (CPSW_CPPI_RAM_SIZE/2)
-#define CPSW_CPPI_RAM_RXDESCS_SIZE \
-    (CPSW_CPPI_RAM_SIZE - CPSW_CPPI_RAM_TXDESCS_SIZE)
-#define CPSW_CPPI_RAM_TXDESCS_BASE (CPSW_CPPI_RAM_OFFSET + 0x0000)
-#define CPSW_CPPI_RAM_RXDESCS_BASE \
-    (CPSW_CPPI_RAM_OFFSET + CPSW_CPPI_RAM_TXDESCS_SIZE)
-
-#define CPSW_NTXDESCS (CPSW_CPPI_RAM_TXDESCS_SIZE/sizeof(struct cge_cpdma_bd))
-#define CPSW_NRXDESCS (CPSW_CPPI_RAM_RXDESCS_SIZE/sizeof(struct cge_cpdma_bd))
-
-CTASSERT(powerof2(CPSW_NTXDESCS));
-CTASSERT(powerof2(CPSW_NRXDESCS));
-
-#define CPSW_PAD_LEN (ETHER_MIN_LEN - ETHER_CRC_LEN)
-
-struct cge_ring_data {
-	bus_dmamap_t tx_dm[CPSW_NTXDESCS];
-	struct mbuf *tx_mb[CPSW_NTXDESCS];
-	bus_dmamap_t rx_dm[CPSW_NRXDESCS];
-	struct mbuf *rx_mb[CPSW_NRXDESCS];
-};
-
-struct cge_softc {
-	device_t sc_dev;
-	bus_space_tag_t sc_bst;
-	bus_space_handle_t sc_bsh;
-	bus_size_t sc_bss;
-	bus_dma_tag_t sc_bdt;
-	bus_space_handle_t sc_bsh_txdescs;
-	bus_space_handle_t sc_bsh_rxdescs;
-	bus_addr_t sc_txdescs_pa;
-	bus_addr_t sc_rxdescs_pa;
-	struct ethercom sc_ec;
-	struct mii_data sc_mii;
-	bool sc_phy_has_1000t;
-	bool sc_attached;
-	callout_t sc_tick_ch;
-	void *sc_ih;
-	struct cge_ring_data *sc_rdp;
-	volatile u_int sc_txnext;
-	volatile u_int sc_txhead;
-	volatile u_int sc_rxhead;
-	bool sc_txbusy;
-	void *sc_rxthih;
-	void *sc_rxih;
-	void *sc_txih;
-	void *sc_miscih;
-	void *sc_txpad;
-	bus_dmamap_t sc_txpad_dm;
-#define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
-	uint8_t sc_enaddr[ETHER_ADDR_LEN];
-	volatile bool sc_txrun;
-	volatile bool sc_rxrun;
-	volatile bool sc_txeoq;
-	volatile bool sc_rxeoq;
-};
-#endif
-#define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
-#define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
-
-#define RXDESC_NEXT(x) cge_rxdesc_adjust((x), 1)
-#define RXDESC_PREV(x) cge_rxdesc_adjust((x), -1)
-
 static int cge_match(device_t, cfdata_t, void *);
 static void cge_attach(device_t, device_t, void *);
 static int cge_detach(device_t, int);
@@ -170,7 +103,6 @@ static int cge_new_rxbuf(struct cge_softc * const, const u_int);
 static int cge_intr(void *);
 static int cge_rxintr(void *);
 #if 0
-static int cge_rxthintr(void *);
 static int cge_txintr(void *);
 static int cge_miscintr(void *);
 #endif
@@ -235,19 +167,6 @@ cge_write_4(struct cge_softc * const sc, bus_size_t const offset,
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
 
-#if 0
-static inline void
-cge_set_txdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i + 0;
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, n, 0);
-
-	bus_space_write_4(sc->sc_bst, sc->sc_bsh_txdescs, o, n);
-}
-#endif
-
 static inline void
 cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 {
@@ -258,57 +177,6 @@ cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, n);
 }
-
-#if 0
-static inline void
-cge_get_txdesc(struct cge_softc * const sc, const u_int i,
-    struct cge_cpdma_bd * const bdp)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i;
-	uint32_t * const dp = bdp->word;
-	const bus_size_t c = __arraycount(bdp->word);
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, bdp, 0);
-
-	bus_space_read_region_4(sc->sc_bst, sc->sc_bsh_txdescs, o, dp, c);
-	KERNHIST_LOG(cgehist, "%08x %08x %08x %08x\n",
-	    dp[0], dp[1], dp[2], dp[3]);
-}
-
-static inline void
-cge_set_txdesc(struct cge_softc * const sc, const u_int i,
-    struct cge_cpdma_bd * const bdp)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i;
-	uint32_t * const dp = bdp->word;
-	const bus_size_t c = __arraycount(bdp->word);
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, bdp, 0);
-	KERNHIST_LOG(cgehist, "%08x %08x %08x %08x\n",
-	    dp[0], dp[1], dp[2], dp[3]);
-
-	bus_space_write_region_4(sc->sc_bst, sc->sc_bsh_txdescs, o, dp, c);
-}
-
-static inline void
-cge_get_rxdesc(struct cge_softc * const sc, const u_int i,
-    struct cge_cpdma_bd * const bdp)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i;
-	uint32_t * const dp = bdp->word;
-	const bus_size_t c = __arraycount(bdp->word);
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, bdp, 0);
-
-	bus_space_read_region_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, dp, c);
-
-	KERNHIST_LOG(cgehist, "%08x %08x %08x %08x\n",
-	    dp[0], dp[1], dp[2], dp[3]);
-}
-#endif
 
 static inline void
 cge_set_rxdesc(struct cge_softc * const sc, const u_int i,
@@ -326,30 +194,12 @@ cge_set_rxdesc(struct cge_softc * const sc, const u_int i,
 	bus_space_write_region_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, dp, c);
 }
 
-#if 0
-static inline bus_addr_t
-cge_txdesc_paddr(struct cge_softc * const sc, u_int x)
-{
-	KASSERT(x < CGE_TX_RING_CNT);
-	return sc->sc_txdescs_pa + sizeof(struct cge_cpdma_bd) * x;
-}
-#endif
-
 static inline bus_addr_t
 cge_rxdesc_paddr(struct cge_softc * const sc, u_int x)
 {
 	KASSERT(x < CGE_RX_RING_CNT);
 	return sc->sc_rxdescs_pa + sizeof(struct cge_cpdma_bd) * x;
 }
-
-#if 0
-static const struct device_compatible_entry compat_data[] = {
-	{ .compat = "ti,am335x-cge-switch" },
-	{ .compat = "ti,am335x-cge" },
-	{ .compat = "ti,cge" },
-	DEVICE_COMPAT_EOL
-};
-#endif
 
 static int
 cge_match(device_t parent, cfdata_t cf, void *aux)
@@ -552,219 +402,7 @@ cge_attach(device_t parent, device_t self, void *aux)
 
 	/* The attach is successful. */
 	sc->sc_attached = true;
-#if 0
-	struct fdt_attach_args * const faa = aux;
-	struct cge_softc * const sc = device_private(self);
-	struct ethercom * const ec = &sc->sc_ec;
-	struct ifnet * const ifp = &ec->ec_if;
-	struct mii_data * const mii = &sc->sc_mii;
-	const int phandle = faa->faa_phandle;
-	const uint8_t *macaddr;
-	bus_addr_t addr;
-	bus_size_t size;
-	int error, slave, len;
-	char xname[16];
-	u_int i;
 
-	KERNHIST_INIT(cgehist, 4096);
-
-	if (fdtbus_get_reg(phandle, 0, &addr, &size) != 0) {
-		aprint_error(": couldn't get registers\n");
-		return;
-	}
-
-	sc->sc_dev = self;
-
-	aprint_normal(": TI Layer 2 3-Port Switch\n");
-	aprint_naive("\n");
-
-	callout_init(&sc->sc_tick_ch, 0);
-	callout_setfunc(&sc->sc_tick_ch, cge_tick, sc);
-
-	macaddr = NULL;
-	slave = of_find_firstchild_byname(phandle, "slave");
-	if (slave == -1) {
-		slave = of_find_firstchild_byname(phandle, "ethernet-ports");
-		if (slave != -1) {
-			slave = of_find_firstchild_byname(slave, "port");
-		}
-	}
-	if (slave != -1) {
-		macaddr = fdtbus_get_prop(slave, "mac-address", &len);
-		if (len != ETHER_ADDR_LEN)
-			macaddr = NULL;
-	}
-	if (macaddr == NULL) {
-#if 0
-		/* grab mac_id0 from AM335x control module */
-		uint32_t reg_lo, reg_hi;
-
-		if (sitara_cm_reg_read_4(OMAP2SCM_MAC_ID0_LO, &reg_lo) == 0 &&
-		    sitara_cm_reg_read_4(OMAP2SCM_MAC_ID0_HI, &reg_hi) == 0) {
-			sc->sc_enaddr[0] = (reg_hi >>  0) & 0xff;
-			sc->sc_enaddr[1] = (reg_hi >>  8) & 0xff;
-			sc->sc_enaddr[2] = (reg_hi >> 16) & 0xff;
-			sc->sc_enaddr[3] = (reg_hi >> 24) & 0xff;
-			sc->sc_enaddr[4] = (reg_lo >>  0) & 0xff;
-			sc->sc_enaddr[5] = (reg_lo >>  8) & 0xff;
-		} else
-#endif
-		{
-			aprint_error_dev(sc->sc_dev,
-			    "using fake station address\n");
-			/* 'N' happens to have the Local bit set */
-#if 0
-			sc->sc_enaddr[0] = 'N';
-			sc->sc_enaddr[1] = 'e';
-			sc->sc_enaddr[2] = 't';
-			sc->sc_enaddr[3] = 'B';
-			sc->sc_enaddr[4] = 'S';
-			sc->sc_enaddr[5] = 'D';
-#else
-			/* XXX Glor */
-			sc->sc_enaddr[0] = 0xd4;
-			sc->sc_enaddr[1] = 0x94;
-			sc->sc_enaddr[2] = 0xa1;
-			sc->sc_enaddr[3] = 0x97;
-			sc->sc_enaddr[4] = 0x03;
-			sc->sc_enaddr[5] = 0x94;
-#endif
-		}
-	} else {
-		memcpy(sc->sc_enaddr, macaddr, ETHER_ADDR_LEN);
-	}
-
-	snprintf(xname, sizeof(xname), "%s rxth", device_xname(self));
-	sc->sc_rxthih = fdtbus_intr_establish_xname(phandle, CPSW_INTROFF_RXTH,
-	    IPL_VM, FDT_INTR_FLAGS, cge_rxthintr, sc, xname);
-
-	snprintf(xname, sizeof(xname), "%s rx", device_xname(self));
-	sc->sc_rxih = fdtbus_intr_establish_xname(phandle, CPSW_INTROFF_RX,
-	    IPL_VM, FDT_INTR_FLAGS, cge_rxintr, sc, xname);
-
-	snprintf(xname, sizeof(xname), "%s tx", device_xname(self));
-	sc->sc_txih = fdtbus_intr_establish_xname(phandle, CPSW_INTROFF_TX,
-	    IPL_VM, FDT_INTR_FLAGS, cge_txintr, sc, xname);
-
-	snprintf(xname, sizeof(xname), "%s misc", device_xname(self));
-	sc->sc_miscih = fdtbus_intr_establish_xname(phandle, CPSW_INTROFF_MISC,
-	    IPL_VM, FDT_INTR_FLAGS, cge_miscintr, sc, xname);
-
-	sc->sc_bst = faa->faa_bst;
-	sc->sc_bss = size;
-	sc->sc_bdt = faa->faa_dmat;
-
-	error = bus_space_map(sc->sc_bst, addr, size, 0,
-	    &sc->sc_bsh);
-	if (error) {
-		aprint_error_dev(sc->sc_dev,
-			"can't map registers: %d\n", error);
-		return;
-	}
-
-	sc->sc_txdescs_pa = addr + CPSW_CPPI_RAM_TXDESCS_BASE;
-	error = bus_space_subregion(sc->sc_bst, sc->sc_bsh,
-	    CPSW_CPPI_RAM_TXDESCS_BASE, CPSW_CPPI_RAM_TXDESCS_SIZE,
-	    &sc->sc_bsh_txdescs);
-	if (error) {
-		aprint_error_dev(sc->sc_dev,
-			"can't subregion tx ring SRAM: %d\n", error);
-		return;
-	}
-	aprint_debug_dev(sc->sc_dev, "txdescs at %p\n",
-	    (void *)sc->sc_bsh_txdescs);
-
-	sc->sc_rxdescs_pa = addr + CPSW_CPPI_RAM_RXDESCS_BASE;
-	error = bus_space_subregion(sc->sc_bst, sc->sc_bsh,
-	    CPSW_CPPI_RAM_RXDESCS_BASE, CPSW_CPPI_RAM_RXDESCS_SIZE,
-	    &sc->sc_bsh_rxdescs);
-	if (error) {
-		aprint_error_dev(sc->sc_dev,
-			"can't subregion rx ring SRAM: %d\n", error);
-		return;
-	}
-	aprint_debug_dev(sc->sc_dev, "rxdescs at %p\n",
-	    (void *)sc->sc_bsh_rxdescs);
-
-	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
-
-	for (i = 0; i < CPSW_NTXDESCS; i++) {
-		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES,
-		    CPSW_TXFRAGS, MCLBYTES, 0, 0,
-		    &sc->sc_rdp->tx_dm[i])) != 0) {
-			aprint_error_dev(sc->sc_dev,
-			    "unable to create tx DMA map: %d\n", error);
-		}
-		sc->sc_rdp->tx_mb[i] = NULL;
-	}
-
-	for (i = 0; i < CPSW_NRXDESCS; i++) {
-		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES, 1,
-		    MCLBYTES, 0, 0, &sc->sc_rdp->rx_dm[i])) != 0) {
-			aprint_error_dev(sc->sc_dev,
-			    "unable to create rx DMA map: %d\n", error);
-		}
-		sc->sc_rdp->rx_mb[i] = NULL;
-	}
-
-	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
-	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
-	    BUS_DMA_WAITOK, &sc->sc_txpad_dm);
-	bus_dmamap_load(sc->sc_bdt, sc->sc_txpad_dm, sc->sc_txpad,
-	    ETHER_MIN_LEN, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
-	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
-	    BUS_DMASYNC_PREWRITE);
-
-	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
-	    ether_sprintf(sc->sc_enaddr));
-
-	strlcpy(ifp->if_xname, device_xname(sc->sc_dev), IFNAMSIZ);
-	ifp->if_softc = sc;
-	ifp->if_capabilities = 0;
-	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
-	ifp->if_start = cge_start;
-	ifp->if_ioctl = cge_ioctl;
-	ifp->if_init = cge_init;
-	ifp->if_stop = cge_stop;
-	ifp->if_watchdog = cge_watchdog;
-	IFQ_SET_READY(&ifp->if_snd);
-
-	cge_stop(ifp, 0);
-
-	mii->mii_ifp = ifp;
-	mii->mii_readreg = cge_mii_readreg;
-	mii->mii_writereg = cge_mii_writereg;
-	mii->mii_statchg = cge_mii_statchg;
-
-	sc->sc_ec.ec_mii = mii;
-	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
-
-	/* Initialize MDIO */
-	cge_write_4(sc, MDIOCONTROL,
-	    MDIOCTL_ENABLE | MDIOCTL_FAULTENB | MDIOCTL_CLKDIV(0xff));
-	/* Clear ALE */
-	cge_write_4(sc, CPSW_ALE_CONTROL, ALECTL_CLEAR_TABLE);
-
-	mii_attach(self, mii, 0xffffffff, MII_PHY_ANY, 0, 0);
-	if (LIST_FIRST(&mii->mii_phys) == NULL) {
-		aprint_error_dev(self, "no PHY found!\n");
-		sc->sc_phy_has_1000t = false;
-		ifmedia_add(&mii->mii_media, IFM_ETHER | IFM_MANUAL, 0, NULL);
-		ifmedia_set(&mii->mii_media, IFM_ETHER | IFM_MANUAL);
-	} else {
-		sc->sc_phy_has_1000t = cge_phy_has_1000t(sc);
-
-		ifmedia_set(&mii->mii_media, IFM_ETHER | IFM_AUTO);
-	}
-
-	if_attach(ifp);
-	if_deferred_start_init(ifp, NULL);
-	ether_ifattach(ifp, sc->sc_enaddr);
-
-	/* The attach is successful. */
-	sc->sc_attached = true;
-
-#endif
 	return;
 }
 
@@ -1404,31 +1042,11 @@ cge_tick(void *arg)
 
 	callout_schedule(&sc->sc_tick_ch, hz);
 }
-
-static int
-cge_rxthintr(void *arg)
-{
-	struct cge_softc * const sc = arg;
-
-	/* this won't deassert the interrupt though */
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_RXTH);
-
-	return 1;
-}
 #endif
 
 static int
 cge_rxintr(void *arg)
 {
-/*
-	struct ifnet * const ifp = &sc->sc_ec.ec_if;
-	struct cge_ring_data * const rdp = sc->sc_rdp;
-	struct cge_cpdma_bd bd;
-	const uint32_t * const dw = bd.word;
-	bus_dmamap_t dm;
-	struct mbuf *m;
-	u_int len, off;
-*/
 	struct cge_softc * const sc = arg;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	u_int i, count;
@@ -1459,7 +1077,7 @@ cge_rxintr(void *arg)
 		}
 	}
 if (count != 0)
-printf("MORI %x %d,", reg, count);
+printf("MORI %x %d,", reg, length);
 
 	return 1;
 }
