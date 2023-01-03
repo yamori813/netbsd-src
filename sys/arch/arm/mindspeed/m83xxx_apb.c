@@ -119,8 +119,11 @@ __KERNEL_RCSID(0, "$Id$");
 
 #include <arm/mindspeed/m83xxx_var.h>
 
+extern struct arm32_bus_dma_tag m83_bus_dma_tag;
+
 struct m83apb_softc {
 	device_t sc_dev;
+	bus_dma_tag_t sc_dmat;
 	bus_space_tag_t sc_bust;
 };
 
@@ -149,6 +152,7 @@ m83apb_attach(device_t parent, device_t self, void *aux)
 
 	sc->sc_dev = self;
 	sc->sc_bust = ahba->ahba_memt;
+	sc->sc_dmat = &m83_bus_dma_tag;
 
 	aprint_normal(": AHB to APB Bus Bridge\n");
 
@@ -172,6 +176,7 @@ m83apb_search(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
 
 	apba.apba_name = "aisp";
 	apba.apba_memt = sc->sc_bust;
+	apba.apba_dmat = sc->sc_dmat;
 	apba.apba_addr = cf->cf_loc[APBCF_ADDR];
 	apba.apba_size = cf->cf_loc[APBCF_SIZE];
 	apba.apba_intr = cf->cf_loc[APBCF_INTR];

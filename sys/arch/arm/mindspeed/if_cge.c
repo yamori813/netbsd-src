@@ -1,6 +1,7 @@
 /*	$NetBSD$	*/
 
 /*
+ * Copyright (c) 2022 Hiroki Mori
  * Copyright (c) 2013 Jonathan A. Kollasch
  * All rights reserved.
  *
@@ -52,6 +53,8 @@
  * SUCH DAMAGE.
  */
 
+/* Mindspeed Comcerto 1000 GEMAC Interface. based on ti/if_cpsw.c */
+
 #include <sys/cdefs.h>
 __KERNEL_RCSID(1, "$NetBSD$");
 
@@ -73,14 +76,15 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
 
-#include <dev/fdt/fdtvar.h>
-
+#include <arm/mindspeed/m83xxx_reg.h>
+#include <arm/mindspeed/m83xxx_var.h>
+#include <arm/mindspeed/m83xxx_intc.h>
 #include <arm/mindspeed/if_cgereg.h>
+
+#define CGE_TXFRAGS	16
 
 #if 0
 #define FDT_INTR_FLAGS	0
-
-#define CPSW_TXFRAGS	16
 
 #define CPSW_CPPI_RAM_SIZE (0x2000)
 #define CPSW_CPPI_RAM_TXDESCS_SIZE (CPSW_CPPI_RAM_SIZE/2)
@@ -97,12 +101,6 @@ CTASSERT(powerof2(CPSW_NTXDESCS));
 CTASSERT(powerof2(CPSW_NRXDESCS));
 
 #define CPSW_PAD_LEN (ETHER_MIN_LEN - ETHER_CRC_LEN)
-
-#define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
-#define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
-
-#define RXDESC_NEXT(x) cge_rxdesc_adjust((x), 1)
-#define RXDESC_PREV(x) cge_rxdesc_adjust((x), -1)
 
 struct cge_ring_data {
 	bus_dmamap_t tx_dm[CPSW_NTXDESCS];
@@ -146,12 +144,16 @@ struct cge_softc {
 	volatile bool sc_rxeoq;
 };
 #endif
+#define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
+#define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
+
+#define RXDESC_NEXT(x) cge_rxdesc_adjust((x), 1)
+#define RXDESC_PREV(x) cge_rxdesc_adjust((x), -1)
 
 static int cge_match(device_t, cfdata_t, void *);
 static void cge_attach(device_t, device_t, void *);
 static int cge_detach(device_t, int);
 
-#if 0
 static void cge_start(struct ifnet *);
 static int cge_ioctl(struct ifnet *, u_long, void *);
 static void cge_watchdog(struct ifnet *);
@@ -163,23 +165,21 @@ static int cge_mii_writereg(device_t, int, int, uint16_t);
 static void cge_mii_statchg(struct ifnet *);
 
 static int cge_new_rxbuf(struct cge_softc * const, const u_int);
-static void cge_tick(void *);
+//static void cge_tick(void *);
 
-static int cge_rxthintr(void *);
+static int cge_intr(void *);
 static int cge_rxintr(void *);
+#if 0
+static int cge_rxthintr(void *);
 static int cge_txintr(void *);
 static int cge_miscintr(void *);
-
-/* ALE support */
-#define CPSW_MAX_ALE_ENTRIES	1024
-
-static int cge_ale_update_addresses(struct cge_softc *, int purge);
 #endif
+
+static int cge_alloc_dma(struct cge_softc *, size_t, void **,bus_dmamap_t *);
 
 CFATTACH_DECL_NEW(cge, sizeof(struct cge_softc),
     cge_match, cge_attach, cge_detach, NULL);
 
-#if 0
 #include <sys/kernhist.h>
 KERNHIST_DEFINE(cgehist);
 
@@ -188,17 +188,38 @@ KERNHIST_DEFINE(cgehist);
 		(uintptr_t)(A), (uintptr_t)(B), (uintptr_t)(C), (uintptr_t)(D));\
 	} while (0)
 
+int arswitch_readreg(device_t dev, int addr);
+int arswitch_writereg(device_t dev, int addr, int value);
+
+static inline void
+arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
+    uint16_t *reg)
+{
+//	struct arswitch_softc *sc = device_get_softc(dev);
+	uint16_t page;
+
+	page = (addr >> 9) & 0x1ff;
+	*phy = (addr >> 6) & 0x7;
+	*reg = (addr >> 1) & 0x1f;
+
+//	if (sc->page != page) {
+//		MDIO_WRITEREG(device_get_parent(dev), 0x18, 0, page);
+		cge_mii_writereg(dev, 0x18, 0, page);
+		delay(2000);
+//		sc->page = page;
+//	}
+}
 
 static inline u_int
 cge_txdesc_adjust(u_int x, int y)
 {
-	return (((x) + y) & (CPSW_NTXDESCS - 1));
+	return (((x) + y) & (CGE_TX_RING_CNT - 1));
 }
 
 static inline u_int
 cge_rxdesc_adjust(u_int x, int y)
 {
-	return (((x) + y) & (CPSW_NRXDESCS - 1));
+	return (((x) + y) & (CGE_RX_RING_CNT - 1));
 }
 
 static inline uint32_t
@@ -214,6 +235,7 @@ cge_write_4(struct cge_softc * const sc, bus_size_t const offset,
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
 
+#if 0
 static inline void
 cge_set_txdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 {
@@ -224,6 +246,7 @@ cge_set_txdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh_txdescs, o, n);
 }
+#endif
 
 static inline void
 cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
@@ -236,6 +259,7 @@ cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, n);
 }
 
+#if 0
 static inline void
 cge_get_txdesc(struct cge_softc * const sc, const u_int i,
     struct cge_cpdma_bd * const bdp)
@@ -284,6 +308,7 @@ cge_get_rxdesc(struct cge_softc * const sc, const u_int i,
 	KERNHIST_LOG(cgehist, "%08x %08x %08x %08x\n",
 	    dp[0], dp[1], dp[2], dp[3]);
 }
+#endif
 
 static inline void
 cge_set_rxdesc(struct cge_softc * const sc, const u_int i,
@@ -301,20 +326,23 @@ cge_set_rxdesc(struct cge_softc * const sc, const u_int i,
 	bus_space_write_region_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, dp, c);
 }
 
+#if 0
 static inline bus_addr_t
 cge_txdesc_paddr(struct cge_softc * const sc, u_int x)
 {
-	KASSERT(x < CPSW_NTXDESCS);
+	KASSERT(x < CGE_TX_RING_CNT);
 	return sc->sc_txdescs_pa + sizeof(struct cge_cpdma_bd) * x;
 }
+#endif
 
 static inline bus_addr_t
 cge_rxdesc_paddr(struct cge_softc * const sc, u_int x)
 {
-	KASSERT(x < CPSW_NRXDESCS);
+	KASSERT(x < CGE_RX_RING_CNT);
 	return sc->sc_rxdescs_pa + sizeof(struct cge_cpdma_bd) * x;
 }
 
+#if 0
 static const struct device_compatible_entry compat_data[] = {
 	{ .compat = "ti,am335x-cge-switch" },
 	{ .compat = "ti,am335x-cge" },
@@ -347,7 +375,6 @@ cge_phy_has_1000t(struct cge_softc * const sc)
 static int
 cge_detach(device_t self, int flags)
 {
-#if 0
 	struct cge_softc * const sc = device_private(self);
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
 	u_int i;
@@ -361,6 +388,7 @@ cge_detach(device_t self, int flags)
 	/* Stop the interface. Callouts are stopped in it. */
 	cge_stop(ifp, 1);
 
+#if 0
 	/* Destroy our callout. */
 	callout_destroy(&sc->sc_tick_ch);
 
@@ -369,6 +397,7 @@ cge_detach(device_t self, int flags)
 	intr_disestablish(sc->sc_rxih);
 	intr_disestablish(sc->sc_txih);
 	intr_disestablish(sc->sc_miscih);
+#endif
 
 	ether_ifdetach(ifp);
 	if_detach(ifp);
@@ -381,24 +410,148 @@ cge_detach(device_t self, int flags)
 	bus_dmamap_destroy(sc->sc_bdt, sc->sc_txpad_dm);
 
 	/* Destroy all the descriptors */
-	for (i = 0; i < CPSW_NTXDESCS; i++)
+	for (i = 0; i < CGE_TX_RING_CNT; i++)
 		bus_dmamap_destroy(sc->sc_bdt, sc->sc_rdp->tx_dm[i]);
-	for (i = 0; i < CPSW_NRXDESCS; i++)
+	for (i = 0; i < CGE_RX_RING_CNT; i++)
 		bus_dmamap_destroy(sc->sc_bdt, sc->sc_rdp->rx_dm[i]);
 	kmem_free(sc->sc_rdp, sizeof(*sc->sc_rdp));
 
 	/* Unmap */
 	bus_space_unmap(sc->sc_bst, sc->sc_bsh, sc->sc_bss);
 
-#endif
 	return 0;
 }
 
 static void
 cge_attach(device_t parent, device_t self, void *aux)
 {
-	aprint_normal(" GEMAC Interface\n");
+	struct apb_attach_args * const aa = aux;
+	struct cge_softc * const sc = device_private(self);
+	int i, error;
+	struct ethercom * const ec = &sc->sc_ec;
+	struct ifnet * const ifp = &ec->ec_if;
+	struct mii_data * const mii = &sc->sc_mii;
+
+	sc->sc_dev = self;
+	sc->sc_bst = aa->apba_memt;
+	sc->sc_bdt = aa->apba_dmat;
+	sc->sc_bss = 0x10000;
+
+	aprint_normal(": GEMAC Interface\n");
 	aprint_naive("\n");
+
+//	callout_init(&sc->sc_tick_ch, 0);
+//	callout_setfunc(&sc->sc_tick_ch, cge_tick, sc);
+
+//	error = bus_space_map(aa->apba_memt, aa->apba_addr, aa->apba_size,
+	error = bus_space_map(aa->apba_memt, aa->apba_addr, sc->sc_bss,
+	    0, &sc->sc_bsh);
+	if (error) {
+		aprint_error_dev(sc->sc_dev,
+			"can't map registers: %d\n", error);
+		return;
+	}
+
+	intr_establish(aa->apba_intr, IPL_NET, IST_LEVEL,
+	    cge_intr, sc);
+
+	sc->sc_enaddr[0] = 0xd4;
+	sc->sc_enaddr[1] = 0x94;
+	sc->sc_enaddr[2] = 0xa1;
+	sc->sc_enaddr[3] = 0x97;
+	sc->sc_enaddr[4] = 0x03;
+	sc->sc_enaddr[5] = 0x94;
+
+	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
+
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES,
+		    CGE_TXFRAGS, MCLBYTES, 0, 0,
+		    &sc->sc_rdp->tx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create tx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->tx_mb[i] = NULL;
+	}
+
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES, 1,
+		    MCLBYTES, 0, 0, &sc->sc_rdp->rx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create rx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->rx_mb[i] = NULL;
+	}
+
+	if (cge_alloc_dma(sc, sizeof(struct tRXdesc) * CGE_RX_RING_CNT,
+	    (void **)&(sc->sc_rxdesc_ring), &(sc->sc_rxdesc_dmamap)) != 0)
+		return;
+
+	memset(sc->sc_rxdesc_ring, 0, sizeof(struct tRXdesc) * CGE_RX_RING_CNT);
+/*
+	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
+	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
+	    BUS_DMA_WAITOK, &sc->sc_txpad_dm);
+	bus_dmamap_load(sc->sc_bdt, sc->sc_txpad_dm, sc->sc_txpad,
+	    ETHER_MIN_LEN, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
+	    BUS_DMASYNC_PREWRITE);
+*/
+
+	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
+	    ether_sprintf(sc->sc_enaddr));
+
+	strlcpy(ifp->if_xname, device_xname(sc->sc_dev), IFNAMSIZ);
+	ifp->if_softc = sc;
+	ifp->if_capabilities = 0;
+	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+	ifp->if_start = cge_start;
+	ifp->if_ioctl = cge_ioctl;
+	ifp->if_init = cge_init;
+	ifp->if_stop = cge_stop;
+	ifp->if_watchdog = cge_watchdog;
+	IFQ_SET_READY(&ifp->if_snd);
+
+	cge_stop(ifp, 0);
+
+	mii->mii_ifp = ifp;
+	mii->mii_readreg = cge_mii_readreg;
+	mii->mii_writereg = cge_mii_writereg;
+	mii->mii_statchg = cge_mii_statchg;
+
+	sc->sc_ec.ec_mii = mii;
+	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
+
+/*
+	uint16_t val;
+	for (i = 0; i < 32; ++i) {
+	cge_mii_readreg(self, i, 3, &val);
+	printf("%04x ", val);
+	}
+	printf("\n");
+*/
+	if (device_unit(self) == 0) {
+		arswitch_writereg(self, 8, 0x81461bea);
+		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, 0),
+		    arswitch_readreg(self, 8));
+//		arswitch_writereg(self, 0, (1 << 31));
+	}
+
+#if 0
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QFULLTHR, CGE_RX_RING_CNT - 2);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QDROPMAXTHR,
+	    (CGE_RX_RING_CNT - 8 - 6) << 8);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QDROPMINTHR,
+	    (CGE_RX_RING_CNT - 8 - 6 - 6) << 8);
+#endif
+
+	if_attach(ifp);
+	if_deferred_start_init(ifp, NULL);
+	ether_ifattach(ifp, sc->sc_enaddr);
+
+	/* The attach is successful. */
+	sc->sc_attached = true;
 #if 0
 	struct fdt_attach_args * const faa = aux;
 	struct cge_softc * const sc = device_private(self);
@@ -615,10 +768,10 @@ cge_attach(device_t parent, device_t self, void *aux)
 	return;
 }
 
-#if 0
 static void
 cge_start(struct ifnet *ifp)
 {
+#if 0
 	struct cge_softc * const sc = ifp->if_softc;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	struct cge_cpdma_bd bd;
@@ -744,6 +897,7 @@ cge_start(struct ifnet *ifp)
 	}
 	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
+#endif
 }
 
 static int
@@ -769,6 +923,7 @@ cge_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 static void
 cge_watchdog(struct ifnet *ifp)
 {
+#if 0
 	struct cge_softc *sc = ifp->if_softc;
 
 	device_printf(sc->sc_dev, "device timeout\n");
@@ -776,69 +931,37 @@ cge_watchdog(struct ifnet *ifp)
 	if_statinc(ifp, if_oerrors);
 	cge_init(ifp);
 	cge_start(ifp);
-}
-
-static int
-cge_mii_wait(struct cge_softc * const sc, int reg)
-{
-	u_int tries;
-
-	for (tries = 0; tries < 1000; tries++) {
-		if ((cge_read_4(sc, reg) & __BIT(31)) == 0)
-			return 0;
-		delay(1);
-	}
-	return ETIMEDOUT;
+#endif
 }
 
 static int
 cge_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
 {
 	struct cge_softc * const sc = device_private(dev);
-	uint32_t v;
+	int result, wdata;
 
-	if (cge_mii_wait(sc, MDIOUSERACCESS0) != 0)
-		return -1;
+	wdata = 0x60020000;
+	wdata |= ((phy << 23) | (reg << 18));
+	cge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(cge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
+	result = cge_read_4(sc, GEM_IP + GEM_PHY_MAN);
 
-	cge_write_4(sc, MDIOUSERACCESS0, (1 << 31) |
-	    ((reg & 0x1F) << 21) | ((phy & 0x1F) << 16));
-
-	if (cge_mii_wait(sc, MDIOUSERACCESS0) != 0)
-		return -1;
-
-	v = cge_read_4(sc, MDIOUSERACCESS0);
-	if (v & __BIT(29)) {
-		*val = v & 0xffff;
-		return 0;
-	}
-
-	return -1;
+	*val = (uint16_t)result;
+	return 0;
 }
 
 static int
 cge_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
 {
 	struct cge_softc * const sc = device_private(dev);
-	uint32_t v;
+	int wdata;
 
-	KASSERT((val & 0xffff0000UL) == 0);
-
-	if (cge_mii_wait(sc, MDIOUSERACCESS0) != 0)
-		goto out;
-
-	cge_write_4(sc, MDIOUSERACCESS0, (1 << 31) | (1 << 30) |
-	    ((reg & 0x1F) << 21) | ((phy & 0x1F) << 16) | val);
-
-	if (cge_mii_wait(sc, MDIOUSERACCESS0) != 0)
-		goto out;
-
-	v = cge_read_4(sc, MDIOUSERACCESS0);
-	if ((v & __BIT(29)) == 0) {
-out:
-		device_printf(sc->sc_dev, "%s error\n", __func__);
-		return -1;
-	}
-
+	wdata = 0x50020000;
+	wdata |= ((phy << 23) | (reg << 18) | val);
+	cge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(cge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
 	return 0;
 }
 
@@ -852,9 +975,9 @@ static int
 cge_new_rxbuf(struct cge_softc * const sc, const u_int i)
 {
 	struct cge_ring_data * const rdp = sc->sc_rdp;
-	const u_int h = RXDESC_PREV(i);
-	struct cge_cpdma_bd bd;
-	uint32_t * const dw = bd.word;
+//	const u_int h = RXDESC_PREV(i);
+//	struct cge_cpdma_bd bd;
+//	uint32_t * const dw = bd.word;
 	struct mbuf *m;
 	int error = ENOBUFS;
 
@@ -891,15 +1014,29 @@ cge_new_rxbuf(struct cge_softc * const sc, const u_int i)
 	error = 0;
 
 reuse:
+#if 0
 	/* (re-)setup the descriptor */
 	dw[0] = 0;
 	dw[1] = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 	dw[2] = MIN(0x7ff, rdp->rx_dm[i]->dm_segs[0].ds_len);
-	dw[3] = CPDMA_BD_OWNER;
+//	dw[3] = CPDMA_BD_OWNER;
 
 	cge_set_rxdesc(sc, i, &bd);
 	/* and link onto ring */
 	cge_set_rxdesc_next(sc, h, cge_rxdesc_paddr(sc, i));
+#endif
+
+	sc->sc_rxdesc_ring[i].rx_data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
+	sc->sc_rxdesc_ring[i].rx_status = RX_INT;
+	sc->sc_rxdesc_ring[i].rx_extstatus = 0;
+//	sc->sc_rxdesc_ring[i].rx_extstatus = GEMRX_OWN;
+
+	if (i == CGE_RX_RING_CNT - 1)
+		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
+
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+	    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+            BUS_DMASYNC_PREWRITE);
 
 	return error;
 }
@@ -907,6 +1044,109 @@ reuse:
 static int
 cge_init(struct ifnet *ifp)
 {
+	struct cge_softc * const sc = ifp->if_softc;
+	int i;
+	int reg;
+//	int orgreg;
+	int mac;
+	paddr_t paddr;
+
+	cge_stop(ifp, 0);
+
+	sc->sc_txnext = 0;
+	sc->sc_txhead = 0;
+
+	/* Init circular RX list. */
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+		cge_new_rxbuf(sc, i);
+	}
+	sc->sc_rxhead = 0;
+
+	/*
+	 * Give the transmit and receive rings to the chip.
+	 */
+	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
+	cge_write_4(sc, GEM_IP + GEM_RX_QPTR, paddr);
+
+	mac = sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
+	    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24);
+	cge_write_4(sc, GEM_IP + GEM_LADDR1_BOT, mac);
+	mac = sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8);
+	cge_write_4(sc, GEM_IP + GEM_LADDR1_TOP, mac);
+
+	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+
+#if 0
+	/* clean up queue */
+	while (cge_read_4(sc, GEM_ADM_BLOCK + ADM_QUEUEDEPTH))
+		cge_write_4(sc, GEM_ADM_BLOCK + ADM_PKTDQ, 0);
+
+	/* Start the controller */
+	cge_write_4(sc, GEM_IP + GEM_RX_OFFSET, 0);
+
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QFULLTHR, CGE_RX_RING_CNT - 2);
+
+	/* setup Rx coalescing */
+#define DEFAULT_RX_COAL_TIME		500 // us
+#define DEFAULT_RX_COAL_PKTS		3
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRTIMERINIT,
+	    DEFAULT_RX_COAL_TIME * 125);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRPKTTHRES,
+	    DEFAULT_RX_COAL_PKTS);
+
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CNFG, 0x84210030);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_DECAYTIMER, 0x000000aa);
+
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRPKTCNT, 0);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, 0x7F);
+#endif
+	reg = cge_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
+
+#if 0
+	delay(1000);
+
+	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONFIG);
+	reg |= GEM_COPY_ALL;
+	cge_write_4(sc, GEM_IP + GEM_NET_CONFIG, reg);
+
+	reg = cge_read_4(sc, GEM_CFG);
+	reg &= ~GEM_CONF_SPEED_MASK;
+	reg |= GEM_CONF_SPEED_GEM_1G;
+	reg &= ~GEM_CONF_MODE_GEM_MASK;
+	reg |= GEM_CONF_MODE_GEM_RGMII;
+	reg |= GEM_CONF_MODE_SEL_GEM;
+	cge_write_4(sc, GEM_CFG, reg);
+
+	/*
+	 * Initialize DMA
+	 */
+
+	orgreg = reg = cge_read_4(sc, GEM_IP + GEM_DMA_CONFIG);
+	reg |=(1UL<<31); //enable scheduler
+	reg &= ~((1UL<<26) | (1UL<<25)); //hardware buffer allocation
+	reg |=(1UL<<12); //enable scheduler
+	reg &= ~(0x00FF001F); // enable admittance manager
+	reg |= 0x00200000; // set buffer size to 2048 bytes
+	reg |= 0x00000010; // Attempt to use INCR16 AHB bursts
+	reg |=  GEM_RX_SW_ALLOC;
+	cge_write_4(sc, GEM_IP + GEM_DMA_CONFIG, reg);
+printf("GEM_DMA_CONFIG %x %x\n", orgreg, reg);
+	/* Disabling GEM delay */
+	cge_write_4(sc, 0xf00c, 0);
+#endif
+ 
+	/* Enable the receive circuitry */
+	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg | GEM_RX_EN);
+
+	/*
+	 * Initialize the interrupt mask and enable interrupts.
+	 */
+	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
+
+	ifp->if_flags |= IFF_RUNNING;
+#if 0
 	struct cge_softc * const sc = ifp->if_softc;
 	struct mii_data * const mii = &sc->sc_mii;
 	int i;
@@ -1050,13 +1290,14 @@ cge_init(struct ifnet *ifp)
 	callout_schedule(&sc->sc_tick_ch, hz);
 	ifp->if_flags |= IFF_RUNNING;
 	sc->sc_txbusy = false;
-
+#endif
 	return 0;
 }
 
 static void
 cge_stop(struct ifnet *ifp, int disable)
 {
+#if 0
 	struct cge_softc * const sc = ifp->if_softc;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	u_int i;
@@ -1129,8 +1370,27 @@ cge_stop(struct ifnet *ifp, int disable)
 		m_freem(rdp->rx_mb[i]);
 		rdp->rx_mb[i] = NULL;
 	}
+#endif
 }
 
+static int
+cge_intr(void *arg)
+{
+	struct cge_softc * const sc = arg;
+	int reg;
+
+	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+	printf("CGE intr %x,", reg);
+
+	if (reg & GEM_IRQ_RX_DONE)
+		cge_rxintr(arg);
+
+	cge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
+
+	return 1;
+}
+
+#if 0
 static void
 cge_tick(void *arg)
 {
@@ -1155,93 +1415,56 @@ cge_rxthintr(void *arg)
 
 	return 1;
 }
+#endif
 
 static int
 cge_rxintr(void *arg)
 {
-	struct cge_softc * const sc = arg;
+/*
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	struct cge_cpdma_bd bd;
 	const uint32_t * const dw = bd.word;
 	bus_dmamap_t dm;
 	struct mbuf *m;
-	u_int i;
 	u_int len, off;
+*/
+	struct cge_softc * const sc = arg;
+	struct cge_ring_data * const rdp = sc->sc_rdp;
+	u_int i, count;
+	int reg;
+	int length;
+	struct mbuf *m;
+	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	count = 0;
 
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, 0, 0, 0);
-
-	for (;;) {
-		KASSERT(sc->sc_rxhead < CPSW_NRXDESCS);
-
-		i = sc->sc_rxhead;
-		KERNHIST_LOG(cgehist, "rxhead %x CP %x\n", i,
-		    cge_read_4(sc, CPSW_CPDMA_RX_CP(0)), 0, 0);
-		dm = rdp->rx_dm[i];
-		m = rdp->rx_mb[i];
-
-		KASSERT(dm != NULL);
-		KASSERT(m != NULL);
-
-		cge_get_rxdesc(sc, i, &bd);
-
-		if (ISSET(dw[3], CPDMA_BD_OWNER))
-			break;
-
-		if (ISSET(dw[3], CPDMA_BD_TDOWNCMPLT)) {
-			sc->sc_rxrun = false;
-			return 1;
+	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
+			length = sc->sc_rxdesc_ring[i].rx_status &
+			    RX_STA_LEN_MASK;
+			m = rdp->rx_mb[i];
+			m_set_rcvif(m, ifp);
+			m->m_pkthdr.len = m->m_len = length;
+			if_percpuq_enqueue(ifp->if_percpuq, m);
+			cge_new_rxbuf(sc, i);
+			
+/*
+			sc->sc_rxdesc_ring[i].rx_extstatus &= ~GEMRX_OWN;
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+			    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+       			    BUS_DMASYNC_PREWRITE);
+*/
+			++count;
 		}
-
-		if ((dw[3] & (CPDMA_BD_SOP | CPDMA_BD_EOP)) !=
-		    (CPDMA_BD_SOP | CPDMA_BD_EOP)) {
-			//Debugger();
-		}
-
-		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
-		    BUS_DMASYNC_POSTREAD);
-
-		if (cge_new_rxbuf(sc, i) != 0) {
-			/* drop current packet, reuse buffer for new */
-			if_statinc(ifp, if_ierrors);
-			goto next;
-		}
-
-		off = __SHIFTOUT(dw[2], (uint32_t)__BITS(26, 16));
-		len = __SHIFTOUT(dw[3], (uint32_t)__BITS(10,  0));
-
-		if (ISSET(dw[3], CPDMA_BD_PASSCRC))
-			len -= ETHER_CRC_LEN;
-
-		m_set_rcvif(m, ifp);
-		m->m_pkthdr.len = m->m_len = len;
-		m->m_data += off;
-
-		if_percpuq_enqueue(ifp->if_percpuq, m);
-
-next:
-		sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
-		if (ISSET(dw[3], CPDMA_BD_EOQ)) {
-			sc->sc_rxeoq = true;
-			break;
-		} else {
-			sc->sc_rxeoq = false;
-		}
-		cge_write_4(sc, CPSW_CPDMA_RX_CP(0),
-		    cge_rxdesc_paddr(sc, i));
 	}
-
-	if (sc->sc_rxeoq) {
-		device_printf(sc->sc_dev, "rxeoq\n");
-		//Debugger();
-	}
-
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_RX);
+if (count != 0)
+printf("MORI %x %d,", reg, count);
 
 	return 1;
 }
 
+#if 0
 static int
 cge_txintr(void *arg)
 {
@@ -1399,198 +1622,106 @@ cge_miscintr(void *arg)
 
 	return 1;
 }
+#endif
+
+static int
+cge_alloc_dma(struct cge_softc *sc, size_t size, void **addrp,
+              bus_dmamap_t *mapp)
+{
+	bus_dma_segment_t seglist[1];
+	int nsegs, error;
+
+	if ((error = bus_dmamem_alloc(sc->sc_bdt, size, PAGE_SIZE, 0, seglist,
+	    1, &nsegs, M_WAITOK)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to allocate DMA buffer, error=%d\n", error);
+		goto fail_alloc;
+	}
+
+	if ((error = bus_dmamem_map(sc->sc_bdt, seglist, 1, size, addrp,
+	    BUS_DMA_NOWAIT | BUS_DMA_COHERENT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map DMA buffer, error=%d\n",
+		    error);
+		goto fail_map;
+	}
+
+	if ((error = bus_dmamap_create(sc->sc_bdt, size, 1, size, 0,
+	    BUS_DMA_NOWAIT, mapp)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to create DMA map, error=%d\n", error);
+		goto fail_create;
+	}
+
+	if ((error = bus_dmamap_load(sc->sc_bdt, *mapp, *addrp, size, NULL,
+	    BUS_DMA_NOWAIT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to load DMA map, error=%d\n", error);
+		goto fail_load;
+	}
+
+	return 0;
+
+ fail_load:
+	bus_dmamap_destroy(sc->sc_bdt, *mapp);
+ fail_create:
+	bus_dmamem_unmap(sc->sc_bdt, *addrp, size);
+ fail_map:
+	bus_dmamem_free(sc->sc_bdt, seglist, 1);
+ fail_alloc:
+	return error;
+}
+
+static uint32_t
+arswitch_reg_read32(device_t dev, int phy, int reg)
+{
+	uint16_t lo, hi;
+	cge_mii_readreg(dev, phy, reg, &lo);
+	cge_mii_readreg(dev, phy, reg + 1, &hi);
+
+	return (hi << 16) | lo;
+}
+static int
+arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
+{
+//	struct arswitch_softc *sc;
+	int r;
+	uint16_t lo, hi;
+
+//	sc = device_get_softc(dev);
+	lo = value & 0xffff;
+	hi = (uint16_t) (value >> 16);
 
 /*
- *
- * ALE support routines.
- *
- */
+	if (sc->mii_lo_first) {
+		r = cge_mii_writereg(dev, phy, reg, lo);
+		r |= cge_mii_writereg(dev, phy, reg + 1, hi);
+	} else {
+*/
+		r = cge_mii_writereg(dev, phy, reg + 1, hi);
+		r |= cge_mii_writereg(dev, phy, reg, lo);
+//	}
 
-static void
-cge_ale_entry_init(uint32_t *ale_entry)
-{
-	ale_entry[0] = ale_entry[1] = ale_entry[2] = 0;
+	return r;
 }
 
-static void
-cge_ale_entry_set_mac(uint32_t *ale_entry, const uint8_t *mac)
+int
+arswitch_readreg(device_t dev, int addr)
 {
-	ale_entry[0] = mac[2] << 24 | mac[3] << 16 | mac[4] << 8 | mac[5];
-	ale_entry[1] = mac[0] << 8 | mac[1];
+	uint16_t phy, reg;
+
+	arswitch_split_setpage(dev, addr, &phy, &reg);
+	return arswitch_reg_read32(dev, 0x10 | phy, reg);
 }
 
-static void
-cge_ale_entry_set_bcast_mac(uint32_t *ale_entry)
+int
+arswitch_writereg(device_t dev, int addr, int value)
 {
-	ale_entry[0] = 0xffffffff;
-	ale_entry[1] = 0x0000ffff;
+//	struct arswitch_softc *sc;
+	uint16_t phy, reg;
+
+//	sc = device_get_softc(dev);
+
+	arswitch_split_setpage(dev, addr, &phy, &reg);
+	return (arswitch_reg_write32(dev, 0x10 | phy, reg, value));
 }
-
-static void
-cge_ale_entry_set(uint32_t *ale_entry, ale_entry_field_t field, uint32_t val)
-{
-	/* Entry type[61:60] is addr entry(1), Mcast fwd state[63:62] is fw(3)*/
-	switch (field) {
-	case ALE_ENTRY_TYPE:
-		/* [61:60] */
-		ale_entry[1] |= (val & 0x3) << 28;
-		break;
-	case ALE_MCAST_FWD_STATE:
-		/* [63:62] */
-		ale_entry[1] |= (val & 0x3) << 30;
-		break;
-	case ALE_PORT_MASK:
-		/* [68:66] */
-		ale_entry[2] |= (val & 0x7) << 2;
-		break;
-	case ALE_PORT_NUMBER:
-		/* [67:66] */
-		ale_entry[2] |= (val & 0x3) << 2;
-		break;
-	default:
-		panic("Invalid ALE entry field: %d\n", field);
-	}
-
-	return;
-}
-
-static bool
-cge_ale_entry_mac_match(const uint32_t *ale_entry, const uint8_t *mac)
-{
-	return (((ale_entry[1] >> 8) & 0xff) == mac[0]) &&
-	    (((ale_entry[1] >> 0) & 0xff) == mac[1]) &&
-	    (((ale_entry[0] >>24) & 0xff) == mac[2]) &&
-	    (((ale_entry[0] >>16) & 0xff) == mac[3]) &&
-	    (((ale_entry[0] >> 8) & 0xff) == mac[4]) &&
-	    (((ale_entry[0] >> 0) & 0xff) == mac[5]);
-}
-
-static void
-cge_ale_set_outgoing_mac(struct cge_softc *sc, int port, const uint8_t *mac)
-{
-	cge_write_4(sc, CPSW_PORT_P_SA_HI(port),
-	    mac[3] << 24 | mac[2] << 16 | mac[1] << 8 | mac[0]);
-	cge_write_4(sc, CPSW_PORT_P_SA_LO(port),
-	    mac[5] << 8 | mac[4]);
-}
-
-static void
-cge_ale_read_entry(struct cge_softc *sc, uint16_t idx, uint32_t *ale_entry)
-{
-	cge_write_4(sc, CPSW_ALE_TBLCTL, idx & 1023);
-	ale_entry[0] = cge_read_4(sc, CPSW_ALE_TBLW0);
-	ale_entry[1] = cge_read_4(sc, CPSW_ALE_TBLW1);
-	ale_entry[2] = cge_read_4(sc, CPSW_ALE_TBLW2);
-}
-
-static void
-cge_ale_write_entry(struct cge_softc *sc, uint16_t idx,
-    const uint32_t *ale_entry)
-{
-	cge_write_4(sc, CPSW_ALE_TBLW0, ale_entry[0]);
-	cge_write_4(sc, CPSW_ALE_TBLW1, ale_entry[1]);
-	cge_write_4(sc, CPSW_ALE_TBLW2, ale_entry[2]);
-	cge_write_4(sc, CPSW_ALE_TBLCTL, 1 << 31 | (idx & 1023));
-}
-
-static int
-cge_ale_remove_all_mc_entries(struct cge_softc *sc)
-{
-	int i;
-	uint32_t ale_entry[3];
-
-	/* First two entries are link address and broadcast. */
-	for (i = 2; i < CPSW_MAX_ALE_ENTRIES; i++) {
-		cge_ale_read_entry(sc, i, ale_entry);
-		if (((ale_entry[1] >> 28) & 3) == 1 && /* Address entry */
-		    ((ale_entry[1] >> 8) & 1) == 1) { /* MCast link addr */
-			ale_entry[0] = ale_entry[1] = ale_entry[2] = 0;
-			cge_ale_write_entry(sc, i, ale_entry);
-		}
-	}
-	return CPSW_MAX_ALE_ENTRIES;
-}
-
-static int
-cge_ale_mc_entry_set(struct cge_softc *sc, uint8_t portmask, uint8_t *mac)
-{
-	int free_index = -1, matching_index = -1, i;
-	uint32_t ale_entry[3];
-
-	/* Find a matching entry or a free entry. */
-	for (i = 0; i < CPSW_MAX_ALE_ENTRIES; i++) {
-		cge_ale_read_entry(sc, i, ale_entry);
-
-		/* Entry Type[61:60] is 0 for free entry */
-		if (free_index < 0 && ((ale_entry[1] >> 28) & 3) == 0) {
-			free_index = i;
-		}
-
-		if (cge_ale_entry_mac_match(ale_entry, mac)) {
-			matching_index = i;
-			break;
-		}
-	}
-
-	if (matching_index < 0) {
-		if (free_index < 0)
-			return ENOMEM;
-		i = free_index;
-	}
-
-	cge_ale_entry_init(ale_entry);
-
-	cge_ale_entry_set_mac(ale_entry, mac);
-	cge_ale_entry_set(ale_entry, ALE_ENTRY_TYPE, ALE_TYPE_ADDRESS);
-	cge_ale_entry_set(ale_entry, ALE_MCAST_FWD_STATE, ALE_FWSTATE_FWONLY);
-	cge_ale_entry_set(ale_entry, ALE_PORT_MASK, portmask);
-
-	cge_ale_write_entry(sc, i, ale_entry);
-
-	return 0;
-}
-
-static int
-cge_ale_update_addresses(struct cge_softc *sc, int purge)
-{
-	uint8_t *mac = sc->sc_enaddr;
-	uint32_t ale_entry[3];
-	int i;
-	struct ethercom * const ec = &sc->sc_ec;
-	struct ether_multi *ifma;
-
-	cge_ale_entry_init(ale_entry);
-	/* Route incoming packets for our MAC address to Port 0 (host). */
-	/* For simplicity, keep this entry at table index 0 in the ALE. */
-	cge_ale_entry_set_mac(ale_entry, mac);
-	cge_ale_entry_set(ale_entry, ALE_ENTRY_TYPE, ALE_TYPE_ADDRESS);
-	cge_ale_entry_set(ale_entry, ALE_PORT_NUMBER, 0);
-	cge_ale_write_entry(sc, 0, ale_entry);
-
-	/* Set outgoing MAC Address for Ports 1 and 2. */
-	for (i = CPSW_CPPI_PORTS; i < (CPSW_ETH_PORTS + CPSW_CPPI_PORTS); ++i)
-		cge_ale_set_outgoing_mac(sc, i, mac);
-
-	/* Keep the broadcast address at table entry 1. */
-	cge_ale_entry_init(ale_entry);
-	cge_ale_entry_set_bcast_mac(ale_entry);
-	cge_ale_entry_set(ale_entry, ALE_ENTRY_TYPE, ALE_TYPE_ADDRESS);
-	cge_ale_entry_set(ale_entry, ALE_MCAST_FWD_STATE, ALE_FWSTATE_FWONLY);
-	cge_ale_entry_set(ale_entry, ALE_PORT_MASK, ALE_PORT_MASK_ALL);
-	cge_ale_write_entry(sc, 1, ale_entry);
-
-	/* SIOCDELMULTI doesn't specify the particular address
-	   being removed, so we have to remove all and rebuild. */
-	if (purge)
-		cge_ale_remove_all_mc_entries(sc);
-
-	/* Set other multicast addrs desired. */
-	ETHER_LOCK(ec);
-	LIST_FOREACH(ifma, &ec->ec_multiaddrs, enm_list) {
-		cge_ale_mc_entry_set(sc, ALE_PORT_MASK_ALL, ifma->enm_addrlo);
-	}
-	ETHER_UNLOCK(ec);
-
-	return 0;
-}
-#endif
