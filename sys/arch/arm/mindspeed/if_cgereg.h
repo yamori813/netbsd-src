@@ -30,9 +30,9 @@
 #define	__IF_CGEREG_H__
 
 struct tRXdesc {
-	uint32_t	data;
-	uint32_t	status;
-	uint32_t	extstatus;
+	uint32_t	rx_data;
+	uint32_t	rx_status;
+	uint32_t	rx_extstatus;
 	uint32_t	pad;
 };
 
@@ -43,6 +43,10 @@ struct tRXdesc {
 // Ownership flag - when 0 gem can use the descriptor
 // goes to the extended status word (offset 0x8)
 #define GEMRX_OWN               (1<<15)
+
+struct cge_cpdma_bd {
+	uint32_t word[4];
+} __packed __aligned(4);
 
 // gemac rx status
 
@@ -169,6 +173,7 @@ struct cge_chain_data {
 	uint32_t		*cge_sf_buff;
 };
 
+/*
 struct cge_ring_data {
 	struct tRXdesc		*cge_rx_ring;
 	struct tTXdesc		*cge_tx_ring;
@@ -176,8 +181,42 @@ struct cge_ring_data {
 	bus_addr_t		cge_tx_ring_paddr;
 	bus_addr_t		cge_sf_paddr;
 };
+*/
+
+struct cge_ring_data {
+	bus_dmamap_t		tx_dm[CGE_TX_RING_CNT];
+	struct mbuf		*tx_mb[CGE_TX_RING_CNT];
+	bus_dmamap_t		rx_dm[CGE_RX_RING_CNT];
+	struct mbuf		*rx_mb[CGE_RX_RING_CNT];
+};
 
 struct cge_softc {
+	device_t		sc_dev;
+	bus_space_tag_t		sc_bst;
+	bus_space_handle_t	sc_bsh;
+	bus_size_t		sc_bss;
+	bus_dma_tag_t		sc_bdt;
+	bus_space_handle_t	sc_bsh_txdescs;
+	bus_space_handle_t	sc_bsh_rxdescs;
+	bus_addr_t		sc_txdescs_pa;
+	bus_addr_t		sc_rxdescs_pa;
+	struct ethercom		sc_ec;
+	void			*sc_txpad;
+	bus_dmamap_t		sc_txpad_dm;
+#define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
+	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
+	bool			sc_attached;
+	struct cge_ring_data	*sc_rdp;
+	struct mii_data		sc_mii;
+	volatile u_int		sc_txnext;
+	volatile u_int		sc_txhead;
+	volatile u_int		sc_rxhead;
+
+	struct tRXdesc		*sc_rxdesc_ring;
+	bus_dmamap_t		sc_rxdesc_dmamap;
+ 
+
+	callout_t		sc_tick_ch;
 	struct ifnet		*cge_ifp;	/* interface info */
 	bus_space_handle_t	cge_bhandle;	/* bus space handle */
 	bus_space_tag_t		cge_btag;	/* bus space tag */
@@ -206,7 +245,7 @@ struct cge_softc {
 	struct callout		cge_stat_callout;
 //	struct task		cge_link_task;
 	struct cge_chain_data	cge_cdata;
-	struct cge_ring_data	cge_rdata;
+//	struct cge_ring_data	cge_rdata;
 	int			cge_link_status;
 	int			cge_detach;
 };
