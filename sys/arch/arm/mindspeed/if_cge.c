@@ -102,10 +102,13 @@ static int cge_new_rxbuf(struct cge_softc * const, const u_int);
 
 static int cge_intr(void *);
 static int cge_rxintr(void *);
-#if 0
 static int cge_txintr(void *);
+#if 0
 static int cge_miscintr(void *);
 #endif
+
+#define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
+#define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
 
 static int cge_alloc_dma(struct cge_softc *, size_t, void **,bus_dmamap_t *);
 
@@ -145,13 +148,17 @@ arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
 static inline u_int
 cge_txdesc_adjust(u_int x, int y)
 {
-	return (((x) + y) & (CGE_TX_RING_CNT - 1));
+//	return (((x) + y) & (CGE_TX_RING_CNT - 1));
+	int res = x + y;
+	return res % CGE_TX_RING_CNT;
 }
 
 static inline u_int
 cge_rxdesc_adjust(u_int x, int y)
 {
-	return (((x) + y) & (CGE_RX_RING_CNT - 1));
+//	return (((x) + y) & (CGE_RX_RING_CNT - 1));
+	int res = x + y;
+	return res % CGE_RX_RING_CNT;
 }
 
 static inline uint32_t
@@ -167,6 +174,7 @@ cge_write_4(struct cge_softc * const sc, bus_size_t const offset,
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
 
+#if 0
 static inline void
 cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
 {
@@ -200,6 +208,7 @@ cge_rxdesc_paddr(struct cge_softc * const sc, u_int x)
 	KASSERT(x < CGE_RX_RING_CNT);
 	return sc->sc_rxdescs_pa + sizeof(struct cge_cpdma_bd) * x;
 }
+#endif
 
 static int
 cge_match(device_t parent, cfdata_t cf, void *aux)
@@ -337,7 +346,22 @@ cge_attach(device_t parent, device_t self, void *aux)
 	    (void **)&(sc->sc_rxdesc_ring), &(sc->sc_rxdesc_dmamap)) != 0)
 		return;
 
+	if (cge_alloc_dma(sc, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	    (void **)&(sc->sc_txdesc_ring), &(sc->sc_txdesc_dmamap)) != 0)
+		return;
+
 	memset(sc->sc_rxdesc_ring, 0, sizeof(struct tRXdesc) * CGE_RX_RING_CNT);
+
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].tx_data = 0;
+		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
+		if (i == CGE_TX_RING_CNT - 1)
+			sc->sc_txdesc_ring[i - 1].tx_ctl |= GEMTX_WRAP;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct tTXdesc) * i,
+		    sizeof(struct tTXdesc),
+		    BUS_DMASYNC_PREWRITE);
+	}
 /*
 	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
 	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
@@ -409,11 +433,10 @@ cge_attach(device_t parent, device_t self, void *aux)
 static void
 cge_start(struct ifnet *ifp)
 {
-#if 0
 	struct cge_softc * const sc = ifp->if_softc;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
-	struct cge_cpdma_bd bd;
-	uint32_t * const dw = bd.word;
+//	struct cge_cpdma_bd bd;
+//	uint32_t * const dw = bd.word;
 	struct mbuf *m;
 	bus_dmamap_t dm;
 	u_int eopi __diagused = ~0;
@@ -421,8 +444,9 @@ cge_start(struct ifnet *ifp)
 	u_int txfree;
 	int txstart = -1;
 	int error;
-	bool pad;
-	u_int mlen;
+//	bool pad;
+//	u_int mlen;
+	int reg;
 
 	KERNHIST_FUNC(__func__);
 	CPSWHIST_CALLARGS(sc, 0, 0, 0);
@@ -435,12 +459,16 @@ cge_start(struct ifnet *ifp)
 	}
 
 	if (sc->sc_txnext >= sc->sc_txhead)
-		txfree = CPSW_NTXDESCS - 1 + sc->sc_txhead - sc->sc_txnext;
+		txfree = CGE_TX_RING_CNT - 1 + sc->sc_txhead - sc->sc_txnext;
 	else
 		txfree = sc->sc_txhead - sc->sc_txnext - 1;
 
 	KERNHIST_LOG(cgehist, "start txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
+
+	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg &
+	    ~(GEM_TX_START));
 
 	while (txfree > 0) {
 		IFQ_POLL(&ifp->if_snd, m);
@@ -448,7 +476,6 @@ cge_start(struct ifnet *ifp)
 			break;
 
 		dm = rdp->tx_dm[sc->sc_txnext];
-
 		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m, BUS_DMA_NOWAIT);
 		if (error == EFBIG) {
 			device_printf(sc->sc_dev, "won't fit\n");
@@ -460,62 +487,52 @@ cge_start(struct ifnet *ifp)
 			device_printf(sc->sc_dev, "error\n");
 			break;
 		}
-
 		if (dm->dm_nsegs + 1 >= txfree) {
 			sc->sc_txbusy = true;
 			bus_dmamap_unload(sc->sc_bdt, dm);
 			break;
 		}
 
-		mlen = m_length(m);
-		pad = mlen < CPSW_PAD_LEN;
+//		mlen = m_length(m);
+//		pad = mlen < CPSW_PAD_LEN;
 
 		KASSERT(rdp->tx_mb[sc->sc_txnext] == NULL);
 		rdp->tx_mb[sc->sc_txnext] = m;
 		IFQ_DEQUEUE(&ifp->if_snd, m);
 
-		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
-		    BUS_DMASYNC_PREWRITE);
+//		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
+//		    BUS_DMASYNC_PREWRITE);
 
 		if (txstart == -1)
 			txstart = sc->sc_txnext;
-		eopi = sc->sc_txnext;
 		for (seg = 0; seg < dm->dm_nsegs; seg++) {
-			dw[0] = cge_txdesc_paddr(sc,
-			    TXDESC_NEXT(sc->sc_txnext));
-			dw[1] = dm->dm_segs[seg].ds_addr;
-			dw[2] = dm->dm_segs[seg].ds_len;
-			dw[3] = 0;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			    dm->dm_segs[seg].ds_addr;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			    dm->dm_segs[seg].ds_len;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
+			if (sc->sc_txnext == CGE_TX_RING_CNT - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_WRAP;
 
-			if (seg == 0)
-				dw[3] |= CPDMA_BD_SOP | CPDMA_BD_OWNER |
-				    MAX(mlen, CPSW_PAD_LEN);
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+			    sizeof(struct tTXdesc) * (sc->sc_txnext),
+			    sizeof(struct tTXdesc),
+			    BUS_DMASYNC_PREWRITE);
 
-			if ((seg == dm->dm_nsegs - 1) && !pad)
-				dw[3] |= CPDMA_BD_EOP;
-
-			cge_set_txdesc(sc, sc->sc_txnext, &bd);
 			txfree--;
 			eopi = sc->sc_txnext;
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-		if (pad) {
-			dw[0] = cge_txdesc_paddr(sc,
-			    TXDESC_NEXT(sc->sc_txnext));
-			dw[1] = sc->sc_txpad_pa;
-			dw[2] = CPSW_PAD_LEN - mlen;
-			dw[3] = CPDMA_BD_EOP;
-
-			cge_set_txdesc(sc, sc->sc_txnext, &bd);
-			txfree--;
-			eopi = sc->sc_txnext;
-			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
-		}
-
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
 	if (txstart >= 0) {
+		reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+		cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
+		    (GEM_TX_START | GEM_TX_EN));
+#if 0
 		ifp->if_timer = 5;
 		/* terminate the new chain */
 		KASSERT(eopi == TXDESC_PREV(sc->sc_txnext));
@@ -532,10 +549,10 @@ cge_start(struct ifnet *ifp)
 			cge_write_4(sc, CPSW_CPDMA_TX_HDP(0),
 			    cge_txdesc_paddr(sc, txstart));
 		}
+#endif
 	}
 	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
-#endif
 }
 
 static int
@@ -703,6 +720,8 @@ cge_init(struct ifnet *ifp)
 	/*
 	 * Give the transmit and receive rings to the chip.
 	 */
+	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
+	cge_write_4(sc, GEM_IP + GEM_QUEUE_BASE0, paddr);
 	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
 	cge_write_4(sc, GEM_IP + GEM_RX_QPTR, paddr);
 
@@ -769,7 +788,6 @@ cge_init(struct ifnet *ifp)
 	reg |= 0x00000010; // Attempt to use INCR16 AHB bursts
 	reg |=  GEM_RX_SW_ALLOC;
 	cge_write_4(sc, GEM_IP + GEM_DMA_CONFIG, reg);
-printf("GEM_DMA_CONFIG %x %x\n", orgreg, reg);
 	/* Disabling GEM delay */
 	cge_write_4(sc, 0xf00c, 0);
 #endif
@@ -1018,9 +1036,11 @@ cge_intr(void *arg)
 	int reg;
 
 	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
-	printf("CGE intr %x,", reg);
 
-	if (reg & GEM_IRQ_RX_DONE)
+	if (reg & (GEM_IRQ_TX_DONE | GEM_IRQ_TX_USED))
+		cge_txintr(arg);
+
+	if (reg & (GEM_IRQ_RX_DONE | GEM_IRQ_RX_USED))
 		cge_rxintr(arg);
 
 	cge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
@@ -1050,13 +1070,13 @@ cge_rxintr(void *arg)
 	struct cge_softc * const sc = arg;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	u_int i, count;
-	int reg;
+//	int reg;
 	int length;
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
 	count = 0;
 
-	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+//	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
 	for (i = 0; i < CGE_RX_RING_CNT; i++) {
 		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
 			length = sc->sc_rxdesc_ring[i].rx_status &
@@ -1076,22 +1096,40 @@ cge_rxintr(void *arg)
 			++count;
 		}
 	}
-if (count != 0)
-printf("MORI %x %d,", reg, length);
 
 	return 1;
 }
 
-#if 0
 static int
 cge_txintr(void *arg)
 {
 	struct cge_softc * const sc = arg;
-	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
+	struct ifnet * const ifp = &sc->sc_ec.ec_if;
+	bool handled = false;
+
+	for (;;) {
+		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
+		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
+		    BUS_DMASYNC_POSTWRITE);
+		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
+
+		m_freem(rdp->tx_mb[sc->sc_txhead]);
+		rdp->tx_mb[sc->sc_txhead] = NULL;
+
+		if_statinc(ifp, if_opackets);
+
+		handled = true;
+
+		sc->sc_txbusy = false;
+
+		sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
+		if (sc->sc_txhead == sc->sc_txnext)
+			break;
+	}
+#if 0
 	struct cge_cpdma_bd bd;
 	const uint32_t * const dw = bd.word;
-	bool handled = false;
 	uint32_t tx0_cp;
 	u_int cpi;
 
@@ -1141,9 +1179,9 @@ cge_txintr(void *arg)
 			return 1;
 		}
 
-		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
-		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
-		    BUS_DMASYNC_POSTWRITE);
+//		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
+//		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
+//		    BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
 
 		m_freem(rdp->tx_mb[sc->sc_txhead]);
@@ -1187,16 +1225,16 @@ next:
 	KERNHIST_LOG(cgehist, "CP %x HDP %x\n",
 	    cge_read_4(sc, CPSW_CPDMA_TX_CP(0)),
 	    cge_read_4(sc, CPSW_CPDMA_TX_HDP(0)), 0, 0);
-
+#endif
 	if (handled && sc->sc_txnext == sc->sc_txhead)
 		ifp->if_timer = 0;
-
 	if (handled)
 		if_schedule_deferred_start(ifp);
 
 	return handled;
 }
 
+#if 0
 static int
 cge_miscintr(void *arg)
 {

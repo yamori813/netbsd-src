@@ -43,10 +43,11 @@ struct tRXdesc {
 // Ownership flag - when 0 gem can use the descriptor
 // goes to the extended status word (offset 0x8)
 #define GEMRX_OWN               (1<<15)
-
+/*
 struct cge_cpdma_bd {
 	uint32_t word[4];
 } __packed __aligned(4);
+*/
 
 // gemac rx status
 
@@ -96,10 +97,10 @@ struct cge_cpdma_bd {
 #define RX_STA_TYPEID_POS       0
 
 struct tTXdesc {
-	uint32_t	data;
+	uint32_t	tx_data;
 	union {
-		uint32_t	ctl;
-		uint32_t	status;
+		uint32_t	tx_ctl;
+		uint32_t	tx_status;
 	};
 };
 
@@ -122,7 +123,7 @@ struct tTXdesc {
 #define	CGE_PKTSIZE(len)	((len & 0xffff0000) >> 16)
 
 #define	CGE_RX_RING_CNT		128
-#define	CGE_TX_RING_CNT		128
+#define	CGE_TX_RING_CNT		32
 #define	CGE_TX_RING_SIZE	sizeof(struct tTXdesc) * CGE_TX_RING_CNT
 #define	CGE_RX_RING_SIZE	sizeof(struct tRXdesc) * CGE_RX_RING_CNT
 #define	CGE_RING_ALIGN		sizeof(struct tRXdesc)
@@ -214,7 +215,10 @@ struct cge_softc {
 
 	struct tRXdesc		*sc_rxdesc_ring;
 	bus_dmamap_t		sc_rxdesc_dmamap;
- 
+
+	struct tTXdesc		*sc_txdesc_ring;
+	bus_dmamap_t		sc_txdesc_dmamap;
+	bool			sc_txbusy;
 
 	callout_t		sc_tick_ch;
 	struct ifnet		*cge_ifp;	/* interface info */
@@ -492,6 +496,30 @@ sum */
 #define GEM_CONF_PHY_LINK_DOWN                          (0 << 16)
 #define GEM_CONF_PHY_LINK_UP                            (1 << 16)
 #define GEM_CONF_GEM_LOOPBACK                           (1 << 17)
+
+#define GEM_TX_CTRL					0xF004
+#define GEM_TX_COLL					0xF008
+#define GEM_RX_CTRL					0xF010
+#define GEM_RX_STAT_PKTSIZE				0xF014
+#define GEM_RX_STAT_FIFODEPTH				0xF018
+#define GEM_RX_STAT_FIFODATA				0xF01C
+
+#define GEM_TXCTRL_DMAIF_EN				(1 << 0)
+#define GEM_TXCTRL_CRC_EN				(1 << 1)
+#define GEM_TXCTRL_RETR_EN				(1 << 2)
+#define GEM_TXCTRL_TX_STATE				0xf0000
+
+
+#define GEM_RXCTRL_DMAIF_EN				(1 << 0)
+#define GEM_RXCTRL_RX_STATE				0xf0000
+
+
+// Host fifo control bits
+#define ARM_FIFO_RXDREQWE				(1 << 2)
+#define ARM_FIFO_TXDREQRE				(1 << 3)
+#define ARM_FIFO_TXFF_RES				(1 << 12)
+#define ARM_FIFO_RXFF_RES				(1 << 13)
+#define ARM_FIFO_RXCP_INH				(1 << 15)
 
 
 #endif /* __IF_CGEREG_H__ */
