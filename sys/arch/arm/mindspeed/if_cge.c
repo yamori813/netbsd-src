@@ -110,6 +110,9 @@ static int cge_miscintr(void *);
 #define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
 #define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
 
+#define RXDESC_NEXT(x) cge_rxdesc_adjust((x), 1)
+#define RXDESC_PREV(x) cge_rxdesc_adjust((x), -1)
+
 static int cge_alloc_dma(struct cge_softc *, size_t, void **,bus_dmamap_t *);
 
 CFATTACH_DECL_NEW(cge, sizeof(struct cge_softc),
@@ -149,7 +152,7 @@ static inline u_int
 cge_txdesc_adjust(u_int x, int y)
 {
 //	return (((x) + y) & (CGE_TX_RING_CNT - 1));
-	int res = x + y;
+	int res = x + y + CGE_TX_RING_CNT;
 	return res % CGE_TX_RING_CNT;
 }
 
@@ -157,7 +160,7 @@ static inline u_int
 cge_rxdesc_adjust(u_int x, int y)
 {
 //	return (((x) + y) & (CGE_RX_RING_CNT - 1));
-	int res = x + y;
+	int res = x + y + CGE_RX_RING_CNT;
 	return res % CGE_RX_RING_CNT;
 }
 
@@ -362,7 +365,7 @@ cge_attach(device_t parent, device_t self, void *aux)
 		    sizeof(struct tTXdesc),
 		    BUS_DMASYNC_PREWRITE);
 	}
-/*
+
 	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
 	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
 	    BUS_DMA_WAITOK, &sc->sc_txpad_dm);
@@ -370,7 +373,6 @@ cge_attach(device_t parent, device_t self, void *aux)
 	    ETHER_MIN_LEN, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
 	    BUS_DMASYNC_PREWRITE);
-*/
 
 	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
 	    ether_sprintf(sc->sc_enaddr));
@@ -446,6 +448,7 @@ cge_start(struct ifnet *ifp)
 	int error;
 //	bool pad;
 //	u_int mlen;
+	u_int len;
 	int reg;
 
 	KERNHIST_FUNC(__func__);
@@ -466,9 +469,6 @@ cge_start(struct ifnet *ifp)
 	KERNHIST_LOG(cgehist, "start txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
 
-	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg &
-	    ~(GEM_TX_START));
 
 	while (txfree > 0) {
 		IFQ_POLL(&ifp->if_snd, m);
@@ -476,7 +476,8 @@ cge_start(struct ifnet *ifp)
 			break;
 
 		dm = rdp->tx_dm[sc->sc_txnext];
-		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m, BUS_DMA_NOWAIT);
+		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m,
+		    BUS_DMA_WRITE | BUS_DMA_NOWAIT);
 		if (error == EFBIG) {
 			device_printf(sc->sc_dev, "won't fit\n");
 			IFQ_DEQUEUE(&ifp->if_snd, m);
@@ -494,14 +495,17 @@ cge_start(struct ifnet *ifp)
 		}
 
 //		mlen = m_length(m);
-//		pad = mlen < CPSW_PAD_LEN;
+//		pad = mlen < CGE_PAD_LEN;
+		len = 0;
 
 		KASSERT(rdp->tx_mb[sc->sc_txnext] == NULL);
 		rdp->tx_mb[sc->sc_txnext] = m;
 		IFQ_DEQUEUE(&ifp->if_snd, m);
 
-//		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
-//		    BUS_DMASYNC_PREWRITE);
+/*
+		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
+		    BUS_DMASYNC_PREWRITE);
+*/
 
 		if (txstart == -1)
 			txstart = sc->sc_txnext;
@@ -510,11 +514,32 @@ cge_start(struct ifnet *ifp)
 			    dm->dm_segs[seg].ds_addr;
 			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
 			    dm->dm_segs[seg].ds_len;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
+			len += dm->dm_segs[seg].ds_len;
+			if (seg == dm->dm_nsegs - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
+			else
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_FCS;
 			if (sc->sc_txnext == CGE_TX_RING_CNT - 1)
 				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
 				    GEMTX_WRAP;
+
+			txfree--;
+			eopi = sc->sc_txnext;
+			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
+		}
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+		    BUS_DMASYNC_PREWRITE);
+#if 0
+		if (pad) {
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			    sc->sc_txpad_pa;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			    CGE_PAD_LEN - mlen;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
 
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 			    sizeof(struct tTXdesc) * (sc->sc_txnext),
@@ -525,6 +550,7 @@ cge_start(struct ifnet *ifp)
 			eopi = sc->sc_txnext;
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
+#endif
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
@@ -532,6 +558,7 @@ cge_start(struct ifnet *ifp)
 		reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
 		cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
 		    (GEM_TX_START | GEM_TX_EN));
+		cge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
 #if 0
 		ifp->if_timer = 5;
 		/* terminate the new chain */
@@ -796,6 +823,8 @@ cge_init(struct ifnet *ifp)
 	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
 	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg | GEM_RX_EN);
 
+	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+
 	/*
 	 * Initialize the interrupt mask and enable interrupts.
 	 */
@@ -1040,7 +1069,8 @@ cge_intr(void *arg)
 	if (reg & (GEM_IRQ_TX_DONE | GEM_IRQ_TX_USED))
 		cge_txintr(arg);
 
-	if (reg & (GEM_IRQ_RX_DONE | GEM_IRQ_RX_USED))
+//	if (reg & (GEM_IRQ_RX_DONE | GEM_IRQ_RX_USED))
+	if (reg & GEM_IRQ_RX_DONE)
 		cge_rxintr(arg);
 
 	cge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
@@ -1069,31 +1099,35 @@ cge_rxintr(void *arg)
 {
 	struct cge_softc * const sc = arg;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
-	u_int i, count;
-//	int reg;
+	u_int i;
 	int length;
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
-	count = 0;
 
-//	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
-	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+	for (;;) {
+		i = sc->sc_rxhead;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+		    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+		    BUS_DMASYNC_PREREAD);
 		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
 			length = sc->sc_rxdesc_ring[i].rx_status &
 			    RX_STA_LEN_MASK;
 			m = rdp->rx_mb[i];
+			bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+			    0, rdp->rx_dm[i]->dm_mapsize,
+			    BUS_DMASYNC_POSTREAD);
+			cge_new_rxbuf(sc, i);
 			m_set_rcvif(m, ifp);
 			m->m_pkthdr.len = m->m_len = length;
 			if_percpuq_enqueue(ifp->if_percpuq, m);
-			cge_new_rxbuf(sc, i);
 			
-/*
 			sc->sc_rxdesc_ring[i].rx_extstatus &= ~GEMRX_OWN;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
        			    BUS_DMASYNC_PREWRITE);
-*/
-			++count;
+			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
+		} else {
+			break;
 		}
 	}
 
@@ -1107,6 +1141,7 @@ cge_txintr(void *arg)
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
+	int i;
 
 	for (;;) {
 		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
@@ -1127,6 +1162,12 @@ cge_txintr(void *arg)
 		if (sc->sc_txhead == sc->sc_txnext)
 			break;
 	}
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].tx_ctl = 0;
+	}
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	    BUS_DMASYNC_PREWRITE);
 #if 0
 	struct cge_cpdma_bd bd;
 	const uint32_t * const dw = bd.word;
