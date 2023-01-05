@@ -248,7 +248,7 @@ struct cge_softc {
 //	phandle_t		cge_ofw;
 	struct callout		cge_stat_callout;
 //	struct task		cge_link_task;
-	struct cge_chain_data	cge_cdata;
+//	struct cge_chain_data	cge_cdata;
 //	struct cge_ring_data	cge_rdata;
 	int			cge_link_status;
 	int			cge_detach;
