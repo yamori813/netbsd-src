@@ -7,5 +7,5 @@ include "arch/evbarm/conf/INSTALL"
 
 options BOOTHOWTO=RB_SINGLE
 #no makeoptions  DEBUG
-no config netbsd-sd0
-
+no config netbsd
+config netbsd root on ? type ?
