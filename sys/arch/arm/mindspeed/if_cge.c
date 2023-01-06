@@ -78,9 +78,6 @@ static int cge_new_rxbuf(struct cge_softc * const, const u_int);
 static int cge_intr(void *);
 static int cge_rxintr(void *);
 static int cge_txintr(void *);
-#if 0
-static int cge_miscintr(void *);
-#endif
 
 #define TXDESC_NEXT(x) cge_txdesc_adjust((x), 1)
 #define TXDESC_PREV(x) cge_txdesc_adjust((x), -1)
@@ -223,6 +220,7 @@ cge_attach(device_t parent, device_t self, void *aux)
 	aprint_normal(": GEMAC Interface\n");
 	aprint_naive("\n");
 
+	mutex_init(&sc->mtx, MUTEX_DEFAULT, IPL_NET);
 //	callout_init(&sc->sc_tick_ch, 0);
 //	callout_setfunc(&sc->sc_tick_ch, cge_tick, sc);
 
@@ -351,6 +349,8 @@ cge_start(struct ifnet *ifp)
 	KERNHIST_FUNC(__func__);
 	CPSWHIST_CALLARGS(sc, 0, 0, 0);
 
+	CGE_LOCK(sc);
+
 	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
 		return;
 	}
@@ -441,6 +441,8 @@ cge_start(struct ifnet *ifp)
 	}
 	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
+
+	CGE_UNLOCK(sc);
 }
 
 static int
@@ -557,22 +559,9 @@ cge_new_rxbuf(struct cge_softc * const sc, const u_int i)
 	error = 0;
 
 reuse:
-#if 0
-	/* (re-)setup the descriptor */
-	dw[0] = 0;
-	dw[1] = rdp->rx_dm[i]->dm_segs[0].ds_addr;
-	dw[2] = MIN(0x7ff, rdp->rx_dm[i]->dm_segs[0].ds_len);
-//	dw[3] = CPDMA_BD_OWNER;
-
-	cge_set_rxdesc(sc, i, &bd);
-	/* and link onto ring */
-	cge_set_rxdesc_next(sc, h, cge_rxdesc_paddr(sc, i));
-#endif
-
 	sc->sc_rxdesc_ring[i].rx_data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 	sc->sc_rxdesc_ring[i].rx_status = RX_INT;
 	sc->sc_rxdesc_ring[i].rx_extstatus = 0;
-//	sc->sc_rxdesc_ring[i].rx_extstatus = GEMRX_OWN;
 
 	if (i == CGE_RX_RING_CNT - 1)
 		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
@@ -665,7 +654,9 @@ cge_init(struct ifnet *ifp)
 	/*
 	 * Initialize the interrupt mask and enable interrupts.
 	 */
-	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
+//	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
+	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE,
+	    GEM_IRQ_RX_DONE | GEM_IRQ_TX_DONE);
 
 	ifp->if_flags |= IFF_RUNNING;
 
@@ -759,10 +750,9 @@ cge_intr(void *arg)
 
 	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
 
-	if (reg & (GEM_IRQ_TX_DONE | GEM_IRQ_TX_USED))
+	if (reg & GEM_IRQ_TX_DONE)
 		cge_txintr(arg);
 
-//	if (reg & (GEM_IRQ_RX_DONE | GEM_IRQ_RX_USED))
 	if (reg & GEM_IRQ_RX_DONE)
 		cge_rxintr(arg);
 
@@ -796,12 +786,15 @@ cge_rxintr(void *arg)
 	int length;
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	int count;
 
+	count = 0;
 	for (;;) {
 		i = sc->sc_rxhead;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 		    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
-		    BUS_DMASYNC_PREREAD);
+//		    BUS_DMASYNC_PREREAD);
+		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
 			length = sc->sc_rxdesc_ring[i].rx_status &
 			    RX_STA_LEN_MASK;
@@ -820,12 +813,15 @@ cge_rxintr(void *arg)
 			}
 			cge_new_rxbuf(sc, i);
 			
-			sc->sc_rxdesc_ring[i].rx_extstatus &= ~GEMRX_OWN;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
        			    BUS_DMASYNC_PREWRITE);
 			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
+			++count;
 		} else {
+			/* may be not happen */
+			if (count == 0)
+				panic("rxintr occur but no data\n");
 			break;
 		}
 	}
