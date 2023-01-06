@@ -117,7 +117,7 @@ struct tTXdesc {
 #define	CGE_DMASIZE(len)	((len)  & ((1 << 11)-1))		
 #define	CGE_PKTSIZE(len)	((len & 0xffff0000) >> 16)
 
-#define	CGE_RX_RING_CNT		128
+#define	CGE_RX_RING_CNT		32
 #define	CGE_TX_RING_CNT		32
 #define	CGE_TX_RING_SIZE	sizeof(struct tTXdesc) * CGE_TX_RING_CNT
 #define	CGE_RX_RING_SIZE	sizeof(struct tRXdesc) * CGE_RX_RING_CNT
@@ -166,7 +166,12 @@ struct cge_softc {
 	struct tTXdesc		*sc_txdesc_ring;
 	bus_dmamap_t		sc_txdesc_dmamap;
 	bool			sc_txbusy;
+
+	kmutex_t		mtx;
 };
+
+#define CGE_LOCK(sc)		mutex_enter(&(sc)->mtx)
+#define CGE_UNLOCK(sc)		mutex_exit(&(sc)->mtx)
 
 /*
  * register space access macros
