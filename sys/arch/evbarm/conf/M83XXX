@@ -25,7 +25,7 @@ options 	CPU_ARM1136	# Support the SA110 core
 options 	ARM11_COMPAT_MMU
 
 # Architecture options
-options        IMX31_IPGCLK_FREQ=66000000	# Fixme. bogus value
+#options        IMX31_IPGCLK_FREQ=66000000	# Fixme. bogus value
 
 # File systems
 
@@ -54,7 +54,7 @@ file-system	PTYFS		# /dev/pts/N support
 #options 	QUOTA2		# new, in-filesystem UFS quotas
 #options 	UFS_DIRHASH	# UFS Large Directory Hashing
 #options 	UFS_EXTATTR	# Extended attribute support for UFS1
-options 	WAPBL		# File system journaling support
+#options 	WAPBL		# File system journaling support
 #options 	DISKLABEL_EI	# disklabel Endian Independent support
 options 	NFSSERVER	# Network File System server
 
@@ -125,6 +125,7 @@ options 	DDB_HISTORY_SIZE=100	# Enable history editing in DDB
 makeoptions	COPY_SYMTAB=1
 
 config		netbsd		root on ? type ?
+config		netbsd-sd0	root on sd0a type ffs
 
 # The main bus device
 mainbus0	at root
@@ -157,7 +158,7 @@ m83gpio0	at apb? addr 0x10070000 intr 33
 gpio*		at m83gpio?
 
 cge0		at apb? addr 0x100d0000 intr 6
-cge1		at apb? addr 0x10090000 intr 7
+cge1		at apb? addr 0x10190000 intr 7
 
 ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
 
@@ -187,21 +188,21 @@ wskbd*	at ukbd? console ? mux 1
 #uthum*	at uhidev? reportid ?
 
 # USB serial adapter
-ucycom* at uhidev? reportid ?
+#ucycom* at uhidev? reportid ?
 
 # USB Generic HID devices
-uhid*	at uhidev? reportid ?
+#uhid*	at uhidev? reportid ?
 
 # USB LCDs and USB-VGA adaptors
 #udl*	at uhub? port ?		# DisplayLink DL-1x0/1x5
 #wsdisplay* at udl?
 
 # USB Printer
-ulpt*	at uhub? port ? configuration ? interface ?
+#ulpt*	at uhub? port ? configuration ? interface ?
 
 # USB Modem
-umodem* at uhub? port ? configuration ?
-ucom*	at umodem?
+#umodem* at uhub? port ? configuration ?
+#ucom*	at umodem?
 
 # Option N.V. Wireless WAN modems
 #uhso*	at uhub? port ? configuration ?
@@ -210,7 +211,7 @@ ucom*	at umodem?
 umass*	at uhub? port ? configuration ? interface ?
 scsibus* at scsi?
 sd*	at scsibus? target ? lun ?	# SCSI disk drives
-cd*	at scsibus? target ? lun ?	# SCSI CD-ROM drives
+#cd*	at scsibus? target ? lun ?	# SCSI CD-ROM drives
 
 # USB audio
 uaudio* at uhub? port ? configuration ?
@@ -243,35 +244,35 @@ ure*	at uhub? port ?		# Realtek RTL8152/RTL8153 based adapters
 url*	at uhub? port ?		# Realtek RTL8150L based adapters
 
 # USB 802.11 adapters
-atu*	at uhub? port ?		# Atmel AT76C50XX based adapters
-ural*	at uhub? port ?		# Ralink Technology RT2500USB 802.11a/b/g
-rum*	at uhub? port ?		# Ralink Technology RT2501/RT2601 802.11a/b/g
-zyd*	at uhub? port ?		# Zydas ZD1211
+#atu*	at uhub? port ?		# Atmel AT76C50XX based adapters
+#ural*	at uhub? port ?		# Ralink Technology RT2500USB 802.11a/b/g
+#rum*	at uhub? port ?		# Ralink Technology RT2501/RT2601 802.11a/b/g
+#zyd*	at uhub? port ?		# Zydas ZD1211
 
 # Prolific PL2301/PL2302 host-to-host adapter
-upl*	at uhub? port ?
+#upl*	at uhub? port ?
 
 # Serial adapters
-ubsa*	at uhub? port ?		# Belkin serial adapter
-ucom*	at ubsa? portno ?
+#ubsa*	at uhub? port ?		# Belkin serial adapter
+#ucom*	at ubsa? portno ?
 
-uchcom* at uhub? port ? 	# WinChipHead CH341/CH340 serial adapter
-ucom*	at uchcom? portno ?
+#uchcom* at uhub? port ? 	# WinChipHead CH341/CH340 serial adapter
+#ucom*	at uchcom? portno ?
 
-uftdi*	at uhub? port ?		# FTDI FT8U100AX serial adapter
-ucom*	at uftdi? portno ?
+#uftdi*	at uhub? port ?		# FTDI FT8U100AX serial adapter
+#ucom*	at uftdi? portno ?
 
 #uipaq*	at uhub? port ?		# iPAQ PDAs
 #ucom*	at uipaq? portno ?
 
-umct*	at uhub? port ?		# MCT USB-RS232 serial adapter
-ucom*	at umct? portno ?
+#umct*	at uhub? port ?		# MCT USB-RS232 serial adapter
+#ucom*	at umct? portno ?
 
-uplcom* at uhub? port ? 	# I/O DATA USB-RSAQ2 serial adapter
-ucom*	at uplcom? portno ?
+#uplcom* at uhub? port ? 	# I/O DATA USB-RSAQ2 serial adapter
+#ucom*	at uplcom? portno ?
 
-uslsa*	at uhub? port ?		# Silicon Labs USB-RS232 serial adapter
-ucom*	at uslsa? portno ?
+#uslsa*	at uhub? port ?		# Silicon Labs USB-RS232 serial adapter
+#ucom*	at uslsa? portno ?
 
 #uvscom* at uhub? port ? 	# SUNTAC Slipper U VS-10U serial adapter
 #ucom*	at uvscom? portno ?
@@ -291,7 +292,7 @@ ucom*	at uslsa? portno ?
 #usscanner* at uhub? port ?
 
 # Topfield TF5000PVR range of DVB recorders
-utoppy* at uhub? port ?
+#utoppy* at uhub? port ?
 
 # D-Link DSB-R100 USB radio
 #udsbr*	at uhub? port ?
@@ -301,13 +302,13 @@ utoppy* at uhub? port ?
 ugen*	at uhub? port ?
 
 # USB 3G datacards
-umodeswitch* at uhub? port ?
+#umodeswitch* at uhub? port ?
 #u3g*	at uhub? port ?
 #ucom*	at u3g?
 
 # USB generic serial port (e.g., data over cellular)
-ugensa* at uhub? port ?
-ucom*	at ugensa?
+#ugensa* at uhub? port ?
+#ucom*	at ugensa?
 
 # Pseudo-Devices
 
