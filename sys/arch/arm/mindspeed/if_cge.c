@@ -3,6 +3,7 @@
 /*
  * Copyright (c) 2022 Hiroki Mori
  * Copyright (c) 2013 Jonathan A. Kollasch
+ * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,32 +26,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/*-
- * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
  */
 
 /* Mindspeed Comcerto 1000 GEMAC Interface. based on ti/if_cpsw.c */
@@ -177,62 +152,12 @@ cge_write_4(struct cge_softc * const sc, bus_size_t const offset,
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
 
-#if 0
-static inline void
-cge_set_rxdesc_next(struct cge_softc * const sc, const u_int i, uint32_t n)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i + 0;
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, n, 0);
-
-	bus_space_write_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, n);
-}
-
-static inline void
-cge_set_rxdesc(struct cge_softc * const sc, const u_int i,
-    struct cge_cpdma_bd * const bdp)
-{
-	const bus_size_t o = sizeof(struct cge_cpdma_bd) * i;
-	uint32_t * const dp = bdp->word;
-	const bus_size_t c = __arraycount(bdp->word);
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, i, bdp, 0);
-	KERNHIST_LOG(cgehist, "%08x %08x %08x %08x\n",
-	    dp[0], dp[1], dp[2], dp[3]);
-
-	bus_space_write_region_4(sc->sc_bst, sc->sc_bsh_rxdescs, o, dp, c);
-}
-
-static inline bus_addr_t
-cge_rxdesc_paddr(struct cge_softc * const sc, u_int x)
-{
-	KASSERT(x < CGE_RX_RING_CNT);
-	return sc->sc_rxdescs_pa + sizeof(struct cge_cpdma_bd) * x;
-}
-#endif
-
 static int
 cge_match(device_t parent, cfdata_t cf, void *aux)
 {
 
 	return 1;
 }
-
-#if 0
-static bool
-cge_phy_has_1000t(struct cge_softc * const sc)
-{
-	struct ifmedia_entry *ifm;
-
-	TAILQ_FOREACH(ifm, &sc->sc_mii.mii_media.ifm_list, ifm_list) {
-		if (IFM_SUBTYPE(ifm->ifm_media) == IFM_1000_T)
-			return true;
-	}
-	return false;
-}
-#endif
 
 static int
 cge_detach(device_t self, int flags)
@@ -266,10 +191,6 @@ cge_detach(device_t self, int flags)
 
 	/* Delete all media. */
 	ifmedia_fini(&sc->sc_mii.mii_media);
-
-	/* Free the packet padding buffer */
-	kmem_free(sc->sc_txpad, ETHER_MIN_LEN);
-	bus_dmamap_destroy(sc->sc_bdt, sc->sc_txpad_dm);
 
 	/* Destroy all the descriptors */
 	for (i = 0; i < CGE_TX_RING_CNT; i++)
@@ -366,14 +287,6 @@ cge_attach(device_t parent, device_t self, void *aux)
 		    BUS_DMASYNC_PREWRITE);
 	}
 
-	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
-	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
-	    BUS_DMA_WAITOK, &sc->sc_txpad_dm);
-	bus_dmamap_load(sc->sc_bdt, sc->sc_txpad_dm, sc->sc_txpad,
-	    ETHER_MIN_LEN, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
-	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
-	    BUS_DMASYNC_PREWRITE);
-
 	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
 	    ether_sprintf(sc->sc_enaddr));
 
@@ -398,14 +311,6 @@ cge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
-/*
-	uint16_t val;
-	for (i = 0; i < 32; ++i) {
-	cge_mii_readreg(self, i, 3, &val);
-	printf("%04x ", val);
-	}
-	printf("\n");
-*/
 	if (device_unit(self) == 0) {
 		arswitch_writereg(self, 8, 0x81461bea);
 		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
@@ -413,14 +318,6 @@ cge_attach(device_t parent, device_t self, void *aux)
 		    arswitch_readreg(self, 8));
 //		arswitch_writereg(self, 0, (1 << 31));
 	}
-
-#if 0
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QFULLTHR, CGE_RX_RING_CNT - 2);
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QDROPMAXTHR,
-	    (CGE_RX_RING_CNT - 8 - 6) << 8);
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QDROPMINTHR,
-	    (CGE_RX_RING_CNT - 8 - 6 - 6) << 8);
-#endif
 
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
@@ -532,25 +429,6 @@ cge_start(struct ifnet *ifp)
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 		    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
 		    BUS_DMASYNC_PREWRITE);
-#if 0
-		if (pad) {
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
-			    sc->sc_txpad_pa;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
-			    CGE_PAD_LEN - mlen;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
-
-			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-			    sizeof(struct tTXdesc) * (sc->sc_txnext),
-			    sizeof(struct tTXdesc),
-			    BUS_DMASYNC_PREWRITE);
-
-			txfree--;
-			eopi = sc->sc_txnext;
-			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
-		}
-#endif
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
@@ -559,24 +437,7 @@ cge_start(struct ifnet *ifp)
 		cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
 		    (GEM_TX_START | GEM_TX_EN));
 		cge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
-#if 0
 		ifp->if_timer = 5;
-		/* terminate the new chain */
-		KASSERT(eopi == TXDESC_PREV(sc->sc_txnext));
-		cge_set_txdesc_next(sc, TXDESC_PREV(sc->sc_txnext), 0);
-		KERNHIST_LOG(cgehist, "CP %x HDP %x s %x e %x\n",
-		    cge_read_4(sc, CPSW_CPDMA_TX_CP(0)),
-		    cge_read_4(sc, CPSW_CPDMA_TX_HDP(0)), txstart, eopi);
-		/* link the new chain on */
-		cge_set_txdesc_next(sc, TXDESC_PREV(txstart),
-		    cge_txdesc_paddr(sc, txstart));
-		if (sc->sc_txeoq) {
-			/* kick the dma engine */
-			sc->sc_txeoq = false;
-			cge_write_4(sc, CPSW_CPDMA_TX_HDP(0),
-			    cge_txdesc_paddr(sc, txstart));
-		}
-#endif
 	}
 	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
@@ -760,30 +621,6 @@ cge_init(struct ifnet *ifp)
 
 	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
 
-#if 0
-	/* clean up queue */
-	while (cge_read_4(sc, GEM_ADM_BLOCK + ADM_QUEUEDEPTH))
-		cge_write_4(sc, GEM_ADM_BLOCK + ADM_PKTDQ, 0);
-
-	/* Start the controller */
-	cge_write_4(sc, GEM_IP + GEM_RX_OFFSET, 0);
-
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_QFULLTHR, CGE_RX_RING_CNT - 2);
-
-	/* setup Rx coalescing */
-#define DEFAULT_RX_COAL_TIME		500 // us
-#define DEFAULT_RX_COAL_PKTS		3
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRTIMERINIT,
-	    DEFAULT_RX_COAL_TIME * 125);
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRPKTTHRES,
-	    DEFAULT_RX_COAL_PKTS);
-
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CNFG, 0x84210030);
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_DECAYTIMER, 0x000000aa);
-
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRPKTCNT, 0);
-	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, 0x7F);
-#endif
 	reg = cge_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
 	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
 
@@ -831,151 +668,7 @@ cge_init(struct ifnet *ifp)
 	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
 
 	ifp->if_flags |= IFF_RUNNING;
-#if 0
-	struct cge_softc * const sc = ifp->if_softc;
-	struct mii_data * const mii = &sc->sc_mii;
-	int i;
 
-	cge_stop(ifp, 0);
-
-	sc->sc_txnext = 0;
-	sc->sc_txhead = 0;
-
-	/* Reset wrapper */
-	cge_write_4(sc, CPSW_WR_SOFT_RESET, 1);
-	while (cge_read_4(sc, CPSW_WR_SOFT_RESET) & 1)
-		;
-
-	/* Reset SS */
-	cge_write_4(sc, CPSW_SS_SOFT_RESET, 1);
-	while (cge_read_4(sc, CPSW_SS_SOFT_RESET) & 1)
-		;
-
-	/* Clear table and enable ALE */
-	cge_write_4(sc, CPSW_ALE_CONTROL,
-	    ALECTL_ENABLE_ALE | ALECTL_CLEAR_TABLE);
-
-	/* Reset and init Sliver port 1 and 2 */
-	for (i = 0; i < CPSW_ETH_PORTS; i++) {
-		uint32_t macctl;
-
-		/* Reset */
-		cge_write_4(sc, CPSW_SL_SOFT_RESET(i), 1);
-		while (cge_read_4(sc, CPSW_SL_SOFT_RESET(i)) & 1)
-			;
-		/* Set Slave Mapping */
-		cge_write_4(sc, CPSW_SL_RX_PRI_MAP(i), 0x76543210);
-		cge_write_4(sc, CPSW_PORT_P_TX_PRI_MAP(i+1), 0x33221100);
-		cge_write_4(sc, CPSW_SL_RX_MAXLEN(i), 0x5f2);
-		/* Set MAC Address */
-		cge_write_4(sc, CPSW_PORT_P_SA_HI(i+1),
-		    sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
-		    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24));
-		cge_write_4(sc, CPSW_PORT_P_SA_LO(i+1),
-		    sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8));
-
-		/* Set MACCONTROL for ports 0,1 */
-		macctl = SLMACCTL_FULLDUPLEX | SLMACCTL_GMII_EN |
-		    SLMACCTL_IFCTL_A;
-		if (sc->sc_phy_has_1000t)
-			macctl |= SLMACCTL_GIG;
-		cge_write_4(sc, CPSW_SL_MACCONTROL(i), macctl);
-
-		/* Set ALE port to forwarding(3) */
-		cge_write_4(sc, CPSW_ALE_PORTCTL(i+1), 3);
-	}
-
-	/* Set Host Port Mapping */
-	cge_write_4(sc, CPSW_PORT_P0_CPDMA_TX_PRI_MAP, 0x76543210);
-	cge_write_4(sc, CPSW_PORT_P0_CPDMA_RX_CH_MAP, 0);
-
-	/* Set ALE port to forwarding(3) */
-	cge_write_4(sc, CPSW_ALE_PORTCTL(0), 3);
-
-	/* Initialize addrs */
-	cge_ale_update_addresses(sc, 1);
-
-	cge_write_4(sc, CPSW_SS_PTYPE, 0);
-	cge_write_4(sc, CPSW_SS_STAT_PORT_EN, 7);
-
-	cge_write_4(sc, CPSW_CPDMA_SOFT_RESET, 1);
-	while (cge_read_4(sc, CPSW_CPDMA_SOFT_RESET) & 1)
-		;
-
-	for (i = 0; i < 8; i++) {
-		cge_write_4(sc, CPSW_CPDMA_TX_HDP(i), 0);
-		cge_write_4(sc, CPSW_CPDMA_RX_HDP(i), 0);
-		cge_write_4(sc, CPSW_CPDMA_TX_CP(i), 0);
-		cge_write_4(sc, CPSW_CPDMA_RX_CP(i), 0);
-	}
-
-	bus_space_set_region_4(sc->sc_bst, sc->sc_bsh_txdescs, 0, 0,
-	    CPSW_CPPI_RAM_TXDESCS_SIZE/4);
-
-	sc->sc_txhead = 0;
-	sc->sc_txnext = 0;
-
-	cge_write_4(sc, CPSW_CPDMA_RX_FREEBUFFER(0), 0);
-
-	bus_space_set_region_4(sc->sc_bst, sc->sc_bsh_rxdescs, 0, 0,
-	    CPSW_CPPI_RAM_RXDESCS_SIZE/4);
-	/* Initialize RX Buffer Descriptors */
-	cge_set_rxdesc_next(sc, RXDESC_PREV(0), 0);
-	for (i = 0; i < CPSW_NRXDESCS; i++) {
-		cge_new_rxbuf(sc, i);
-	}
-	sc->sc_rxhead = 0;
-
-	/* turn off flow control */
-	cge_write_4(sc, CPSW_SS_FLOW_CONTROL, 0);
-
-	/* align layer 3 header to 32-bit */
-	cge_write_4(sc, CPSW_CPDMA_RX_BUFFER_OFFSET, ETHER_ALIGN);
-
-	/* Clear all interrupt Masks */
-	cge_write_4(sc, CPSW_CPDMA_RX_INTMASK_CLEAR, 0xFFFFFFFF);
-	cge_write_4(sc, CPSW_CPDMA_TX_INTMASK_CLEAR, 0xFFFFFFFF);
-
-	/* Enable TX & RX DMA */
-	cge_write_4(sc, CPSW_CPDMA_TX_CONTROL, 1);
-	cge_write_4(sc, CPSW_CPDMA_RX_CONTROL, 1);
-
-	/* Enable TX and RX interrupt receive for core 0 */
-	cge_write_4(sc, CPSW_WR_C_TX_EN(0), 1);
-	cge_write_4(sc, CPSW_WR_C_RX_EN(0), 1);
-	cge_write_4(sc, CPSW_WR_C_MISC_EN(0), 0x1F);
-
-	/* Enable host Error Interrupt */
-	cge_write_4(sc, CPSW_CPDMA_DMA_INTMASK_SET, 2);
-
-	/* Enable interrupts for TX and RX Channel 0 */
-	cge_write_4(sc, CPSW_CPDMA_TX_INTMASK_SET, 1);
-	cge_write_4(sc, CPSW_CPDMA_RX_INTMASK_SET, 1);
-
-	/* Ack stalled irqs */
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_RXTH);
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_RX);
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_TX);
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_MISC);
-
-	/* Initialize MDIO - ENABLE, PREAMBLE=0, FAULTENB, CLKDIV=0xFF */
-	/* TODO Calculate MDCLK=CLK/(CLKDIV+1) */
-	cge_write_4(sc, MDIOCONTROL,
-	    MDIOCTL_ENABLE | MDIOCTL_FAULTENB | MDIOCTL_CLKDIV(0xff));
-
-	mii_mediachg(mii);
-
-	/* Write channel 0 RX HDP */
-	cge_write_4(sc, CPSW_CPDMA_RX_HDP(0), cge_rxdesc_paddr(sc, 0));
-	sc->sc_rxrun = true;
-	sc->sc_rxeoq = false;
-
-	sc->sc_txrun = true;
-	sc->sc_txeoq = true;
-	callout_schedule(&sc->sc_tick_ch, hz);
-	ifp->if_flags |= IFF_RUNNING;
-	sc->sc_txbusy = false;
-#endif
 	return 0;
 }
 
@@ -1174,105 +867,6 @@ cge_txintr(void *arg)
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
 	    BUS_DMASYNC_PREWRITE);
-#if 0
-	struct cge_cpdma_bd bd;
-	const uint32_t * const dw = bd.word;
-	uint32_t tx0_cp;
-	u_int cpi;
-
-	KERNHIST_FUNC(__func__);
-	CPSWHIST_CALLARGS(sc, 0, 0, 0);
-
-	KASSERT(sc->sc_txrun);
-
-	KERNHIST_LOG(cgehist, "before txnext %x txhead %x txrun %x\n",
-	    sc->sc_txnext, sc->sc_txhead, sc->sc_txrun, 0);
-
-	tx0_cp = cge_read_4(sc, CPSW_CPDMA_TX_CP(0));
-
-	if (tx0_cp == 0xfffffffc) {
-		/* Teardown, ack it */
-		cge_write_4(sc, CPSW_CPDMA_TX_CP(0), 0xfffffffc);
-		cge_write_4(sc, CPSW_CPDMA_TX_HDP(0), 0);
-		sc->sc_txrun = false;
-		return 0;
-	}
-
-	for (;;) {
-		tx0_cp = cge_read_4(sc, CPSW_CPDMA_TX_CP(0));
-		cpi = (tx0_cp - sc->sc_txdescs_pa) / sizeof(struct cge_cpdma_bd);
-		KASSERT(sc->sc_txhead < CPSW_NTXDESCS);
-
-		KERNHIST_LOG(cgehist, "txnext %x txhead %x txrun %x cpi %x\n",
-		    sc->sc_txnext, sc->sc_txhead, sc->sc_txrun, cpi);
-
-		cge_get_txdesc(sc, sc->sc_txhead, &bd);
-
-		if (dw[2] == 0) {
-			//Debugger();
-		}
-
-		if (ISSET(dw[3], CPDMA_BD_SOP) == 0)
-			goto next;
-
-		if (ISSET(dw[3], CPDMA_BD_OWNER)) {
-			printf("pwned %x %x %x\n", cpi, sc->sc_txhead,
-			    sc->sc_txnext);
-			break;
-		}
-
-		if (ISSET(dw[3], CPDMA_BD_TDOWNCMPLT)) {
-			sc->sc_txrun = false;
-			return 1;
-		}
-
-//		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
-//		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
-//		    BUS_DMASYNC_POSTWRITE);
-		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
-
-		m_freem(rdp->tx_mb[sc->sc_txhead]);
-		rdp->tx_mb[sc->sc_txhead] = NULL;
-
-		if_statinc(ifp, if_opackets);
-
-		handled = true;
-
-		sc->sc_txbusy = false;
-
-next:
-		if (ISSET(dw[3], CPDMA_BD_EOP) && ISSET(dw[3], CPDMA_BD_EOQ)) {
-			sc->sc_txeoq = true;
-		}
-		if (sc->sc_txhead == cpi) {
-			cge_write_4(sc, CPSW_CPDMA_TX_CP(0),
-			    cge_txdesc_paddr(sc, cpi));
-			sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
-			break;
-		}
-		sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
-		if (ISSET(dw[3], CPDMA_BD_EOP) && ISSET(dw[3], CPDMA_BD_EOQ)) {
-			sc->sc_txeoq = true;
-			break;
-		}
-	}
-
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_TX);
-
-	if ((sc->sc_txnext != sc->sc_txhead) && sc->sc_txeoq) {
-		if (cge_read_4(sc, CPSW_CPDMA_TX_HDP(0)) == 0) {
-			sc->sc_txeoq = false;
-			cge_write_4(sc, CPSW_CPDMA_TX_HDP(0),
-			    cge_txdesc_paddr(sc, sc->sc_txhead));
-		}
-	}
-
-	KERNHIST_LOG(cgehist, "after txnext %x txhead %x txrun %x\n",
-	    sc->sc_txnext, sc->sc_txhead, sc->sc_txrun, 0);
-	KERNHIST_LOG(cgehist, "CP %x HDP %x\n",
-	    cge_read_4(sc, CPSW_CPDMA_TX_CP(0)),
-	    cge_read_4(sc, CPSW_CPDMA_TX_HDP(0)), 0, 0);
-#endif
 	if (handled && sc->sc_txnext == sc->sc_txhead)
 		ifp->if_timer = 0;
 	if (handled)
@@ -1280,52 +874,6 @@ next:
 
 	return handled;
 }
-
-#if 0
-static int
-cge_miscintr(void *arg)
-{
-	struct cge_softc * const sc = arg;
-	uint32_t miscstat;
-	uint32_t dmastat;
-	uint32_t stat;
-
-	miscstat = cge_read_4(sc, CPSW_WR_C_MISC_STAT(0));
-	device_printf(sc->sc_dev, "%s %x FIRE\n", __func__, miscstat);
-
-#define CPSW_MISC_HOST_PEND __BIT32(2)
-#define CPSW_MISC_STAT_PEND __BIT32(3)
-
-	if (ISSET(miscstat, CPSW_MISC_HOST_PEND)) {
-		/* Host Error */
-		dmastat = cge_read_4(sc, CPSW_CPDMA_DMA_INTSTAT_MASKED);
-		printf("CPSW_CPDMA_DMA_INTSTAT_MASKED %x\n", dmastat);
-
-		printf("rxhead %02x\n", sc->sc_rxhead);
-
-		stat = cge_read_4(sc, CPSW_CPDMA_DMASTATUS);
-		printf("CPSW_CPDMA_DMASTATUS %x\n", stat);
-		stat = cge_read_4(sc, CPSW_CPDMA_TX_HDP(0));
-		printf("CPSW_CPDMA_TX0_HDP %x\n", stat);
-		stat = cge_read_4(sc, CPSW_CPDMA_TX_CP(0));
-		printf("CPSW_CPDMA_TX0_CP %x\n", stat);
-		stat = cge_read_4(sc, CPSW_CPDMA_RX_HDP(0));
-		printf("CPSW_CPDMA_RX0_HDP %x\n", stat);
-		stat = cge_read_4(sc, CPSW_CPDMA_RX_CP(0));
-		printf("CPSW_CPDMA_RX0_CP %x\n", stat);
-
-		//Debugger();
-
-		cge_write_4(sc, CPSW_CPDMA_DMA_INTMASK_CLEAR, dmastat);
-		dmastat = cge_read_4(sc, CPSW_CPDMA_DMA_INTSTAT_MASKED);
-		printf("CPSW_CPDMA_DMA_INTSTAT_MASKED %x\n", dmastat);
-	}
-
-	cge_write_4(sc, CPSW_CPDMA_CPDMA_EOI_VECTOR, CPSW_INTROFF_MISC);
-
-	return 1;
-}
-#endif
 
 static int
 cge_alloc_dma(struct cge_softc *sc, size_t size, void **addrp,

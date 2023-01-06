@@ -43,11 +43,6 @@ struct tRXdesc {
 // Ownership flag - when 0 gem can use the descriptor
 // goes to the extended status word (offset 0x8)
 #define GEMRX_OWN               (1<<15)
-/*
-struct cge_cpdma_bd {
-	uint32_t word[4];
-} __packed __aligned(4);
-*/
 
 // gemac rx status
 
@@ -139,51 +134,6 @@ struct tTXdesc {
     ((sc)->cge_rdata.cge_rx_ring_paddr + sizeof(struct tRXdesc) * (i))
 #define	CGE_INC(x,y)		(x) = (((x) + 1) % y)
 
-struct cge_txdesc {
-	struct mbuf	*tx_m;
-	bus_dmamap_t	tx_dmamap;
-};
-
-struct cge_rxdesc {
-	struct mbuf	*rx_m;
-	bus_dmamap_t	rx_dmamap;
-	struct tRXdesc	*desc;
-	/* Use this values on error instead of allocating new mbuf */
-	uint32_t	saved_ctl, saved_ca; 
-};
-
-struct cge_chain_data {
-	bus_dma_tag_t		cge_parent_tag;
-	bus_dma_tag_t		cge_tx_tag;
-	struct cge_txdesc	cge_txdesc[CGE_TX_RING_CNT];
-	bus_dma_tag_t		cge_rx_tag;
-	struct cge_rxdesc	cge_rxdesc[CGE_RX_RING_CNT];
-	bus_dma_tag_t		cge_tx_ring_tag;
-	bus_dma_tag_t		cge_rx_ring_tag;
-	bus_dmamap_t		cge_tx_ring_map;
-	bus_dmamap_t		cge_rx_ring_map;
-	bus_dmamap_t		cge_rx_sparemap;
-	int			cge_tx_pkts;
-	int			cge_tx_prod;
-	int			cge_tx_cons;
-	int			cge_tx_cnt;
-	int			cge_rx_cons;
-
-	bus_dma_tag_t		cge_sf_tag;
-	bus_dmamap_t		cge_sf_buff_map;
-	uint32_t		*cge_sf_buff;
-};
-
-/*
-struct cge_ring_data {
-	struct tRXdesc		*cge_rx_ring;
-	struct tTXdesc		*cge_tx_ring;
-	bus_addr_t		cge_rx_ring_paddr;
-	bus_addr_t		cge_tx_ring_paddr;
-	bus_addr_t		cge_sf_paddr;
-};
-*/
-
 struct cge_ring_data {
 	bus_dmamap_t		tx_dm[CGE_TX_RING_CNT];
 	struct mbuf		*tx_mb[CGE_TX_RING_CNT];
@@ -202,9 +152,6 @@ struct cge_softc {
 	bus_addr_t		sc_txdescs_pa;
 	bus_addr_t		sc_rxdescs_pa;
 	struct ethercom		sc_ec;
-	void			*sc_txpad;
-	bus_dmamap_t		sc_txpad_dm;
-#define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
 	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
 	bool			sc_attached;
 	struct cge_ring_data	*sc_rdp;
@@ -219,46 +166,7 @@ struct cge_softc {
 	struct tTXdesc		*sc_txdesc_ring;
 	bus_dmamap_t		sc_txdesc_dmamap;
 	bool			sc_txbusy;
-
-	callout_t		sc_tick_ch;
-	struct ifnet		*cge_ifp;	/* interface info */
-	bus_space_handle_t	cge_bhandle;	/* bus space handle */
-	bus_space_tag_t		cge_btag;	/* bus space tag */
-	device_t		cge_dev;
-	uint8_t			cge_eaddr[ETHER_ADDR_LEN];
-	struct resource		*cge_res[3];
-	int			cge_rid;
-	void			*cge_intrhand;
-	void			*cge_intrbatchhand;
-	u_int32_t		sc_inten;	/* copy of CSR_INTEN */
-	u_int32_t		sc_rxint_mask;	/* mask of Rx interrupts we want */
-	u_int32_t		sc_txint_mask;	/* mask of Tx interrupts we want */
-#ifdef MII
-	device_t		cge_miibus;
-#else
-	struct ifmedia		cge_ifmedia;
-#endif
-#ifdef CGE_MDIO
-	device_t		cge_miiproxy;
-#endif
-	int			cge_if_flags;
-	bus_dma_tag_t		cge_parent_tag;
-	bus_dma_tag_t		cge_tag;
-	kmutex_t		cge_mtx;
-//	phandle_t		cge_ofw;
-	struct callout		cge_stat_callout;
-//	struct task		cge_link_task;
-//	struct cge_chain_data	cge_cdata;
-//	struct cge_ring_data	cge_rdata;
-	int			cge_link_status;
-	int			cge_detach;
 };
-
-/*
-#define	CGE_LOCK(_sc)		mtx_lock(&(_sc)->cge_mtx)
-#define	CGE_UNLOCK(_sc)		mtx_unlock(&(_sc)->cge_mtx)
-#define	CGE_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->cge_mtx, MA_OWNED)
-*/
 
 /*
  * register space access macros
