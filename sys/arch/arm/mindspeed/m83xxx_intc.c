@@ -221,7 +221,7 @@ m83_irq_handler(void *frame)
 			INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
 			stat1 &= ~(1 << (irq & 0x1f));
 		}
-	} while ((stat0 & 1) && (stat1 & mask1));
+	} while ((stat0 & mask0) || (stat1 & mask1));
 }
 
 static int intc_match(device_t, cfdata_t, void *);

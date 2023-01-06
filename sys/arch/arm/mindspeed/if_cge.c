@@ -1113,13 +1113,19 @@ cge_rxintr(void *arg)
 			length = sc->sc_rxdesc_ring[i].rx_status &
 			    RX_STA_LEN_MASK;
 			m = rdp->rx_mb[i];
-			bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
-			    0, rdp->rx_dm[i]->dm_mapsize,
-			    BUS_DMASYNC_POSTREAD);
+			if (length < ETHER_HDR_LEN) {
+				aprint_error_dev(sc->sc_dev,
+				    "RX error packe length\n");
+				m_freem(m);
+			} else {
+				bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+				    0, rdp->rx_dm[i]->dm_mapsize,
+				    BUS_DMASYNC_POSTREAD);
+				m_set_rcvif(m, ifp);
+				m->m_pkthdr.len = m->m_len = length;
+				if_percpuq_enqueue(ifp->if_percpuq, m);
+			}
 			cge_new_rxbuf(sc, i);
-			m_set_rcvif(m, ifp);
-			m->m_pkthdr.len = m->m_len = length;
-			if_percpuq_enqueue(ifp->if_percpuq, m);
 			
 			sc->sc_rxdesc_ring[i].rx_extstatus &= ~GEMRX_OWN;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
