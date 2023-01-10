@@ -203,6 +203,7 @@ timer_attach(device_t parent, device_t self, void *aux)
 		aprint_normal(": stat clock\n");
 	}
 #endif
+	aprint_normal("\n");
 	return;
 }
 

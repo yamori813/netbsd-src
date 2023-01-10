@@ -230,7 +230,7 @@ static const struct {
 	bool required;
 } critical_devs[] = {
 	/* intc is on apb */
-	{ .name = "apb", .addr = 0x10000000, .required = true }
+//	{ .name = "apb", .addr = 0x1e800000, .required = true }
 };
 
 static void
