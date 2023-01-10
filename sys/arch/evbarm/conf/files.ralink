@@ -5,7 +5,7 @@
 
 file	arch/arm/arm32/arm32_boot.c
 file	arch/arm/arm32/arm32_kvminit.c
-file	arch/arm/arm32/arm32_reboot.c
+#file	arch/arm/arm32/arm32_reboot.c
 
 file	arch/evbarm/ralink/rt1310_machdep.c
 

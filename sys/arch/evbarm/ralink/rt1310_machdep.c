@@ -754,3 +754,22 @@ void
 delay(u_int n)
 {
 }
+
+void
+cpu_reboot(int howto, char *bootstr)
+{
+	bus_space_tag_t bst;
+	bus_space_handle_t bsh;
+
+	bst = &rt1310_bs_tag;
+
+	/* Enable WDT */
+	/* Instant assert of RESETOUT_N with pulse length 1ms */
+	bus_space_map(bst, 0x1e8c0000, 0x20000, 0, &bsh);
+	bus_space_write_4(bst, bsh, 0, 13000);
+	bus_space_write_4(bst, bsh, 8, (1<<3) | (1<<4) | 7);
+	bus_space_unmap(bst, bsh, 0x20000);
+
+	for (;;)
+		continue;
+}
