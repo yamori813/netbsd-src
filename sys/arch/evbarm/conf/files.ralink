@@ -1,0 +1,13 @@
+#	$NetBSD$
+#
+# Marvell Orion, Discovery Innovation and Kirkwood NASs configuration info
+#
+
+file	arch/arm/arm32/arm32_boot.c
+file	arch/arm/arm32/arm32_kvminit.c
+file	arch/arm/arm32/arm32_reboot.c
+
+file	arch/evbarm/ralink/rt1310_machdep.c
+
+# CPU support and integrated peripherals
+include	"arch/arm/ralink/files.ralink"
