@@ -1,5 +1,6 @@
-/*	$NetBSD: mvsoc_intr.h,v 1.8 2022/06/25 13:24:35 jmcneill Exp $	*/
+/*	$NetBSD$	*/
 /*
+ * Copyright (c) 2023 Hiroki Mori
  * Copyright (c) 2010 KIYOHARA Takashi
  * All rights reserved.
  *
@@ -25,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MVSOC_INTR_H_
-#define _MVSOC_INTR_H_
+#ifndef _ARM_RALINK_RT1310_INTR_H
+#define _ARM_RALINK_RT1310_INTR_H
 
 #ifdef _INTR_PRIVATE
 //#include "opt_mvsoc.h"
@@ -34,7 +35,7 @@
 #if defined(ARMADAXP)
 #define __HAVE_PIC_SET_PRIORITY
 #define __HAVE_PIC_PENDING_INTRS
-#define PIC_MAXMAXSOURCES 256
+#define PIC_MAXMAXSOURCES 32
 #endif
 #endif
 
@@ -56,4 +57,4 @@ rt1310_intr_establish(int irq, int ipl, int (*func)(void *), void *arg)
 
 #endif	/* _LOCORE */
 
-#endif	/* _MVSOC_INTR_H_ */
+#endif	/* _ARM_RALINK_RT1310_INTR_H */

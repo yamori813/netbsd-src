@@ -2,8 +2,8 @@
 
 #include <sys/bus.h>
 
-#ifndef _ARM_MINDSPEED_M83VAR_H
-#define _ARM_MINDSPEED_M83VAR_H
+#ifndef _ARM_RALINK_RT1310_VAR_H
+#define _ARM_RALINK_RT1310_VAR_H
 
 extern struct bus_space rt1310_bs_tag;
 
@@ -27,4 +27,4 @@ struct ahb_attach_args {
 	int		ahba_irqbase;
 };
 
-#endif	/* _ARM_MINDSPEED_M83VAR_H */
+#endif	/* _ARM_RALINK_RT1310_VAR_H */
