@@ -16,7 +16,7 @@ maxusers	32
 # Board Type
 makeoptions	BOARDTYPE="rt1310"
 options 	EVBARM_BOARDTYPE=rt1310
-options 	MEMSIZE=16
+options 	MEMSIZE=0x1000000
 
 # CPU options
 options 	CPU_ARM9E

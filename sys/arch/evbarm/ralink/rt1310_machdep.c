@@ -97,7 +97,8 @@ __KERNEL_RCSID(0, "$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp
 #define KERNEL_VM_SIZE		0x1e000000
 
 #define MEMSTART	0x40000000
-//#define MEMSIZE		0x01000000
+
+#define KERNEL_BASE_PHYS        0x40000000
 
 BootConfig bootconfig;		/* Boot config storage */
 static char bootargs[MAX_BOOT_STRING];
@@ -325,18 +326,11 @@ initarm(void *arg)
 	 */
 	if (set_cpufuncs())
 		panic("cpu not recognized!");
-/*
-	uint8_t* uart_base_addr=(uint8_t*)0x1e840000;
-	*(uart_base_addr) = 'D';
-*/
+
+	kern_vtopdiff = KERNEL_BASE - KERNEL_BASE_PHYS;
 
 	/* map some peripheral registers */
 	pmap_devmap_bootstrap((vaddr_t)read_ttb(), rt1310_devmap);
-/*
-	uint8_t* uart_base_addr=(uint8_t*)0xfe040000;
-	*(uart_base_addr) = '*';
-	for (;;) {}
-*/
 
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
 
@@ -348,9 +342,6 @@ initarm(void *arg)
 	consinit();
 
 	/* Talk to the user */
-#ifndef EVBARM_BOARDTYPE
-#define EVBARM_BOARDTYPE	Marvell
-#endif
 #define BDSTR(s)	_BDSTR(s)
 #define _BDSTR(s)	#s
 	printf("\nNetBSD/evbarm (" BDSTR(EVBARM_BOARDTYPE) ") booting ...\n");
