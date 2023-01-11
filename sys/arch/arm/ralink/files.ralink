@@ -3,21 +3,20 @@
 # Configuration info for Marvell System on Chip support
 #
 
-include "arch/arm/pic/files.pic"
-
 file	arch/arm/ralink/rt1310_space.c
 file	arch/arm/ralink/rt1310_dma.c
 
-file	arch/arm/arm32/irq_dispatch.S
-
-#device	cfi : norbus
-#attach	cfi at mainbus with mainbus_cfi
-#file	arch/arm/mainbus/mainbus_cfi.c  mainbus_cfi
-
 # AHB
-device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic, pic, pic_splfuncs
+device	ahb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	ahb at mainbus
 file	arch/arm/ralink/rt1310_ahb.c	ahb
+
+# Interrupt Controller
+include "arch/arm/pic/files.pic"
+device  intc: pic, pic_splfuncs
+attach  intc at ahb
+file    arch/arm/ralink/rt1310_intr.c		intc	needs-flag
+file    arch/arm/arm32/irq_dispatch.S
 
 # APB
 device	apb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
@@ -32,13 +31,16 @@ file	arch/arm/ralink/rt1310_timer.c	timer	needs-flag
 attach  com at apb with rt1310_com
 file    arch/arm/ralink/rt1310_com.c      rt1310_com
 
+#device	cfi : norbus
+#attach	cfi at mainbus with mainbus_cfi
+#file	arch/arm/mainbus/mainbus_cfi.c  mainbus_cfi
+
 # Some SoC(ARMADAXP) reports false DeviceID. 
 #defflag opt_mvsoc.h				ORION KIRKWOOD MV78XX0 DOVE
 #						ARMADAXP
 #						MVSOC_CONSOLE_EARLY
 #defparam opt_mvsoc.h				MVSOC_INTERREGS_PBASE
 #						MVSOC_FIXUP_DEVID MEMSIZE
-file	arch/arm/ralink/rt1310_intr.c
 #file	arch/arm/marvell/orion.c		orion
 #file	arch/arm/marvell/kirkwood.c		kirkwood
 #file	arch/arm/marvell/mv78xx0.c		mv78xx0

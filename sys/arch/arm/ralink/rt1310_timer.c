@@ -39,7 +39,7 @@
 
 #include <arm/pic/picvar.h>
 
-//#include <arm/indspeed/rt1310_reg.h>
+#include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
 
 extern int hz;
@@ -56,10 +56,8 @@ static void	timer_reset(void);
 /*
  * Timer IRQ handler definitions.
  */
-/*
 static int	systimer_irq(void *);
 static int	stattimer_irq(void *);
-*/
 
 void	cpu_initclocks(void);
 void 	setstatclockrate(int);
@@ -68,9 +66,9 @@ void 	setstatclockrate(int);
 struct timer_softc {
 	device_t sc_dev;
 	bus_space_tag_t sc_iot;
-	bus_space_handle_t sc_hdl;
+	bus_space_handle_t sc_bsh0;
+	bus_space_handle_t sc_bsh1;
 	int8_t sc_irq;
-	int (*irq_handler)(void *);
 	int freq;
 };
 
@@ -101,7 +99,7 @@ CFATTACH_DECL3_NEW(timer,
 #define STAT_TIMER	1	
 #define SCHED_TIMER	2
 
-struct timer_softc *timer_sc[MAX_TIMERS];
+struct timer_softc *timer_sc;
 
 static void	timer_init(struct timer_softc *);
 
@@ -119,12 +117,14 @@ static void	timer_init(struct timer_softc *);
 #define TIMER_CTRL_TOG	0x0C
 #define TIMER_COUNT	0x10
 
-#define TIMER_READ(sc, reg)						\
-	bus_space_read_4(sc->sc_iot, sc->sc_hdl, (reg))
-#define TIMER_WRITE(sc, reg, val)					\
-	bus_space_write_4(sc->sc_iot, sc->sc_hdl, (reg), (val))
-#define TIMER_WRITE_2(sc, reg, val)					\
-	bus_space_write_2(sc->sc_iot, sc->sc_hdl, (reg), (val))
+#define TIMER0_READ(sc, reg)						\
+	bus_space_read_4(sc->sc_iot, sc->sc_bsh0, (reg))
+#define TIMER0_WRITE(sc, reg, val)					\
+	bus_space_write_4(sc->sc_iot, sc->sc_bsh0, (reg), (val))
+#define TIMER1_READ(sc, reg)						\
+	bus_space_read_4(sc->sc_iot, sc->sc_bsh1, (reg))
+#define TIMER1_WRITE(sc, reg, val)					\
+	bus_space_write_4(sc->sc_iot, sc->sc_bsh1, (reg), (val))
 
 #define SELECT_32KHZ	0x8	/* Use 32kHz clock source. */
 #define SOURCE_32KHZ_HZ	32000	/* Above source in Hz. */
@@ -152,7 +152,7 @@ timer_attach(device_t parent, device_t self, void *aux)
 
 	if (!timer_attached) {
 		timer_iot = aa->apba_memt;
-		if (bus_space_map(timer_iot, aa->apba_addr, 0x100,
+		if (bus_space_map(timer_iot, aa->apba_addr, RT_TIMER_SIZE,
 		    0, &timer_hdl)) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to map bus space\n");
@@ -161,48 +161,31 @@ timer_attach(device_t parent, device_t self, void *aux)
 		timer_reset();
 		timer_attached = 1;
 	}
-#if 0
 /*
 	if (aa->aa_addr == HW_TIMROT_BASE + HW_TIMROT_TIMCTRL0
 	    && aa->aa_size == TIMER_REGS_SIZE
 	    && timer_sc[SYS_TIMER] == NULL) {
 */
-	 if(timer_sc[SYS_TIMER] == NULL) {
-		if (bus_space_subregion(timer_iot, timer_hdl, 
-		    0, 0x100,
-		    &sc->sc_hdl)) {
-			aprint_error_dev(sc->sc_dev,
-			    "unable to map subregion\n");
-			return;
-		}
+	sc->sc_iot = timer_iot;
+	sc->sc_irq = aa->apba_intr;
 
-		sc->sc_iot = aa->apba_memt;
-		sc->sc_irq = aa->apba_intr;
-		sc->irq_handler = &systimer_irq;
-		sc->freq = hz;
-
-		timer_sc[SYS_TIMER] = sc;
-
-		aprint_normal(": sys clock\n");
-	} else {
-		if (bus_space_subregion(timer_iot, timer_hdl, 
-		    0, 0x100,
-		    &sc->sc_hdl)) {
-			aprint_error_dev(sc->sc_dev,
-			    "unable to map subregion\n");
-			return;
-		}
-
-		sc->sc_iot = aa->apba_memt;
-		sc->sc_irq = aa->apba_intr;
-		sc->irq_handler = &stattimer_irq;
-		sc->freq = stathz;
-
-		timer_sc[STAT_TIMER] = sc;
-
-		aprint_normal(": stat clock\n");
+	if (bus_space_subregion(timer_iot, timer_hdl,
+	    0, 0x10,
+	    &sc->sc_bsh0)) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map subregion\n");
+		return;
 	}
-#endif
+
+	if (bus_space_subregion(timer_iot, timer_hdl,
+	    0x10, 0x10,
+	    &sc->sc_bsh1)) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map subregion\n");
+		return;
+	}
+
+	timer_sc = sc;
 	aprint_normal("\n");
 	return;
 }
@@ -219,11 +202,8 @@ timer_activate(device_t self, enum devact act)
 void
 cpu_initclocks(void)
 {
-	if (timer_sc[SYS_TIMER] != NULL)
-		timer_init(timer_sc[SYS_TIMER]);
 
-	if (timer_sc[STAT_TIMER] != NULL)
-		timer_init(timer_sc[STAT_TIMER]);
+	timer_init(timer_sc);
 
 	return;
 }
@@ -256,11 +236,18 @@ setstatclockrate(int newhz)
 static void
 timer_init(struct timer_softc *sc)
 {
+//	uint32_t reg;
+
+	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, systimer_irq, NULL);
+	intr_establish(sc->sc_irq + 1, IPL_SCHED, IST_LEVEL, stattimer_irq,
+	    NULL);
+
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 #if 0
-	uint32_t reg;
-
-	intr_establish(sc->sc_irq, IPL_SCHED, IST_LEVEL, sc->irq_handler, NULL);
-
 	if (sc->sc_irq == 31) {
 		/* 100 Hz */
 		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 2048000);
@@ -295,6 +282,7 @@ rt1310tmr_get_timecount(struct timecounter *tc)
 //	return TIMER_READ(sc, TIMER2_CURRENT_COUNT);
 	return 0;
 }
+#endif
 
 /*
  * Timer IRQ handlers.
@@ -302,6 +290,13 @@ rt1310tmr_get_timecount(struct timecounter *tc)
 static int
 systimer_irq(void *frame)
 {
+	struct timer_softc *sc = timer_sc;
+
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	hardclock(frame);
 
@@ -316,7 +311,6 @@ stattimer_irq(void *frame)
 
 	return 1;
 }
-#endif
 
 /*
  * Reset the TIMROT block.

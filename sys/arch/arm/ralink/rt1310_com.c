@@ -55,7 +55,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/comreg.h>
 #include <dev/ic/comvar.h>
 
-//#include <arm/mindspeed/rt1310_reg.h>
+#include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
 
 #include "locators.h"
@@ -77,8 +77,7 @@ rt1310_com_match(device_t parent, cfdata_t cf, void *aux)
 	    panic("rt1310_com must have addr and intr specified in config.");
 
 	if (apba->apba_size == 0)
-//		apba->apba_size = COMCERTO_UART_SIZE;
-		apba->apba_size = 0x1000;
+		apba->apba_size = RT_UART_SIZE;
 
 	if (com_is_console(apba->apba_memt, apba->apba_addr, NULL))
 		return (1);
@@ -106,10 +105,7 @@ rt1310_com_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	memt = apba->apba_memt;
 	iobase = apba->apba_addr;
-//	sc->sc_frequency = COMCERTO_APB_FREQ;
-	sc->sc_frequency = 6758400;
-//	sc->sc_type = COM_TYPE_16550_NOERS;
-//	sc->sc_type = COM_TYPE_TEGRA;
+	sc->sc_frequency = RT_APB_FREQ;
 	sc->sc_type = COM_TYPE_NORMAL;
 
 	if (com_is_console(memt, iobase, &ioh) == 0 &&
