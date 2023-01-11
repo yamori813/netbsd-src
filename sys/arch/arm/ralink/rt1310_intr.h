@@ -29,31 +29,13 @@
 #ifndef _ARM_RALINK_RT1310_INTR_H
 #define _ARM_RALINK_RT1310_INTR_H
 
-#ifdef _INTR_PRIVATE
-//#include "opt_mvsoc.h"
-
-#if defined(ARMADAXP)
-#define __HAVE_PIC_SET_PRIORITY
-#define __HAVE_PIC_PENDING_INTRS
-#define PIC_MAXMAXSOURCES 32
-#endif
-#endif
-
 #define ARM_IRQ_HANDLER	_C_LABEL(rt1310_irq_handler)
 
 #ifndef _LOCORE
-extern int (*find_pending_irqs)(void);
 
 void rt1310_irq_handler(void *);
 
 #include <arm/pic/picvar.h>
-
-static __inline void *
-rt1310_intr_establish(int irq, int ipl, int (*func)(void *), void *arg)
-{
-
-	return intr_establish(irq, ipl, IST_LEVEL_HIGH, func, arg);
-}
 
 #endif	/* _LOCORE */
 
