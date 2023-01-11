@@ -76,4 +76,15 @@
 #define	RT_GPIO_OFF_PBDR	(0x8)
 #define	RT_GPIO_OFF_PBDIR	(0xC)
 
+
+/*
+ * Misc
+ */
+
+#define	RT_APB_FREQ		6758400
+#define RT_UART_SIZE		0x1000
+#define RT_TIMER_SIZE		0x100
+#define RT_NIRQ			10
+#define AHB_INTC_SIZE		0x200
+
 #endif	/* _ARM_RALINK_RT1310_REG_H */

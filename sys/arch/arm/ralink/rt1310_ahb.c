@@ -118,7 +118,7 @@ __KERNEL_RCSID(0, "$Id$");
 
 #include <machine/intr.h>
 
-//#include <arm/mindspeed/rt1310xxx_reg.h>
+#include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
 
 extern struct arm32_bus_dma_tag rt1310_bus_dma_tag;
@@ -230,7 +230,7 @@ static const struct {
 	bool required;
 } critical_devs[] = {
 	/* intc is on apb */
-//	{ .name = "apb", .addr = 0x1e800000, .required = true }
+	{ .name = "intc", .addr = 0x19c40000, .required = true }
 };
 
 static void
