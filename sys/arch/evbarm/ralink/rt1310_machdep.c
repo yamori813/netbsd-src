@@ -63,20 +63,7 @@ __KERNEL_RCSID(0, "$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp
 #include <arm/undefined.h>
 #include <arm/arm32/machdep.h>
 
-#if 0
-#include <arm/marvell/mvsocreg.h>
-#include <arm/marvell/mvsocvar.h>
-#include <arm/marvell/orionreg.h>
-#include <arm/marvell/kirkwoodreg.h>
-#include <arm/marvell/mv78xx0reg.h>
-#include <arm/marvell/dovereg.h>
-#include <arm/marvell/armadaxpreg.h>
-#include <arm/marvell/armadaxpvar.h>
-#include <arm/marvell/mvsocgppvar.h>
-
-#include <evbarm/marvell/marvellreg.h>
-#include <evbarm/marvell/marvellvar.h>
-#endif
+#include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
 
 #include <ddb/db_extern.h>
@@ -412,7 +399,7 @@ consinit(void)
 
 	/* initialize the console functions */
 	if (rtcomcnattach(&rt1310_bs_tag, 0x1e840000, consrate,
-		6758400, COM_TYPE_16550_NOERS, consmode))
+		RT_APB_FREQ, COM_TYPE_16550_NOERS, consmode))
 			panic("Serial console can not be initialized.");
 }
 
