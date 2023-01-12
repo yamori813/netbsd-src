@@ -737,10 +737,6 @@ marvell_startend_by_tag(int tag, uint64_t *start, uint64_t *end)
 }
 #endif
 #endif
-void
-delay(u_int n)
-{
-}
 
 void
 cpu_reboot(int howto, char *bootstr)

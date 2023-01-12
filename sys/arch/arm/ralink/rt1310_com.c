@@ -107,7 +107,8 @@ rt1310_com_attach(device_t parent, device_t self, void *aux)
 	iobase = apba->apba_addr;
 	sc->sc_frequency = RT_APB_FREQ;
 //	sc->sc_type = COM_TYPE_NORMAL;
-	sc->sc_type = COM_TYPE_16550_NOERS;
+//	sc->sc_type = COM_TYPE_16550_NOERS;
+	sc->sc_type = COM_TYPE_TEGRA;
 
 	if (com_is_console(memt, iobase, &ioh) == 0 &&
 	    bus_space_map(memt, iobase, apba->apba_size, 0, &ioh)) {

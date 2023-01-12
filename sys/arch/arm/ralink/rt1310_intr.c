@@ -60,6 +60,48 @@ static void rt1310_pic_establish_irq(struct pic_softc *,
 static void rt1310_pic_source_name(struct pic_softc *, int, char *,
 					 size_t);
 
+#define	INTC_NIRQS	32
+
+struct rt1310_irqdef {
+	u_int                   ri_trig;
+	u_int                   ri_prio;
+};
+
+struct rt1310_irqdef irqdef[INTC_NIRQS] = {
+	{RT_INTC_TRIG_HIGH_LVL, 2},	/* 0 */
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 1},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 1},
+	{RT_INTC_TRIG_HIGH_LVL, 1},
+	{RT_INTC_TRIG_HIGH_LVL, 1},
+	{RT_INTC_TRIG_HIGH_LVL, 1},	/* 8 */
+	{RT_INTC_TRIG_HIGH_LVL, 1},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 4},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 2},	/* 16 */
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_LOW_LVL, 2},
+	{RT_INTC_TRIG_NEG_EDGE, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 3},
+	{RT_INTC_TRIG_HIGH_LVL, 2},	/* 24 */
+	{RT_INTC_TRIG_POS_EDGE, 2},
+	{RT_INTC_TRIG_POS_EDGE, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_HIGH_LVL, 2},
+	{RT_INTC_TRIG_POS_EDGE, 2},
+	{RT_INTC_TRIG_POS_EDGE, 3},
+	{RT_INTC_TRIG_POS_EDGE, 3},
+};
+
 static const char * const sources[] = {
     "CPUSelfInt",      "CPUTimer0IntReq", "CPUTimer1IntReq", "CPUWDTimerIntReq",
     "AccessErr",       "Bit64Err",
@@ -158,7 +200,7 @@ intc_attach(device_t parent, device_t self, void *aux)
 	struct intc_softc * const intc = device_private(self);
 	struct ahb_attach_args * const aa = aux;
 	int error;
-//	int i;
+	int i;
 
 //	KASSERT(aa->ahba_irqbase != AHBCF_IRQBASE_DEFAULT);
 //	KASSERT(device_unit(self) == 0);
@@ -182,30 +224,12 @@ intc_attach(device_t parent, device_t self, void *aux)
 	pic_add(&intc->intc_pic, aa->ahba_irqbase);
 	aprint_normal(": interrupts %d..%d\n",
 	    aa->ahba_irqbase, aa->ahba_irqbase + RT_NIRQ - 1);
+	for (i = 0; i < INTC_NIRQS; ++i) {
+		INTC_WRITE(intc, RT_INTC_SCR0+i*4,
+			(irqdef[i].ri_trig << RT_INTC_TRIG_SHIF) |
+			irqdef[i].ri_prio);
+		INTC_WRITE(intc, RT_INTC_SVR0+i*4, i);
+	}
 	INTC_WRITE(intc, RT_INTC_ICCR, ~0);
 	INTC_WRITE(intc, RT_INTC_IMR, 0);
-#if 0
-
-	aprint_normal(": interrupts %d..%d\n",
-	    apba->apba_irqbase, apba->apba_irqbase + 63);
-
-	INTC_WRITE(intc, INTC_ARM0_IRQMASK_0, 0);
-	INTC_WRITE(intc, INTC_ARM0_IRQMASK_1, 0);
-	INTC_WRITE(intc, INTC_ARM1_IRQMASK_0, 0);
-	INTC_WRITE(intc, INTC_ARM1_IRQMASK_1, 0);
-
-	for (i = 0; i < 22; ++i)
-		set_intc_priority(intc, comcerto_irq_table[i].num,
-		    comcerto_irq_table[i].prio);
-
-/*
-	for (i = 0; i < 8; ++i)
-		printf("REG %d %x\n", i, INTC_READ(intc, i * 4));
-	for (i = 0; i < 8; ++i)
-		printf("PRTY %d %x\n", i, INTC_READ(intc, INTC_ARM0_PRTY_0 + i * 4));
-*/
-#if 0
-	softintr_init();
-#endif
-#endif
 }
