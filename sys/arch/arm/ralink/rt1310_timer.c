@@ -78,7 +78,7 @@ static struct timecounter rt1310tmr_timecounter = {
 	.tc_get_timecount = rt1310tmr_get_timecount,
 	.tc_counter_mask = ~0u,
 	.tc_name = "rt1310tmr",
-	.tc_quality = 1000,
+	.tc_quality = 100,
 };
 
 static bus_space_tag_t timer_iot;
@@ -126,9 +126,7 @@ static void	timer_init(struct timer_softc *);
 static int
 timer_match(device_t parent, cfdata_t match, void *aux)
 {
-//	struct apb_attach_args *aa = aux;
 
-//	if (aa->apba_addr == APB_TIMER_BASE)
 	return 1;
 }
 
@@ -235,8 +233,8 @@ timer_init(struct timer_softc *sc)
 	    NULL);
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ / 100);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ / 100);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
@@ -269,8 +267,8 @@ systimer_irq(void *frame)
 	struct timer_softc *sc = timer_sc;
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-//	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
+//	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ / 100);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ / 100);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 

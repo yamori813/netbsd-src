@@ -86,7 +86,8 @@
  * Misc
  */
 
-#define	RT_APB_FREQ		6758400
+#define	RT_APB_FREQ		75000000
+#define	RT_BASE_BAUD		6758400
 #define RT_UART_SIZE		0x1000
 #define RT_TIMER_SIZE		0x100
 #define RT_NIRQ			32
