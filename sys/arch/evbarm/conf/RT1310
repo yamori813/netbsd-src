@@ -22,9 +22,6 @@ options 	MEMSIZE=0x1000000
 options 	CPU_ARM9E
 makeoptions	CPUFLAGS="-mcpu=arm926ej-s -mtune=arm926ej-s -Os"
 
-# Marvell SoC options
-#options 	ORION
-
 # Standard system options
 
 options 	MSGBUFSIZE=32768
@@ -52,7 +49,7 @@ file-system 	FFS		# UFS
 #file-system 	UNION		# union file system
 #file-system 	CODA		# Coda File System; also needs vcoda (below)
 #file-system 	PTYFS		# /dev/ptm support
-#file-system 	TMPFS		# Efficient memory file-system
+file-system 	TMPFS		# Efficient memory file-system
 #file-system 	UDF		# experimental - OSTA UDF CD/DVD file-system
 #file-system 	HFS		# experimental - Apple HFS+ (read-only)
 
