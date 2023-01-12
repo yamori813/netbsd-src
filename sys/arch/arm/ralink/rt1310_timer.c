@@ -49,7 +49,7 @@ static int	timer_match(device_t, cfdata_t, void *);
 static void	timer_attach(device_t, device_t, void *);
 static int	timer_activate(device_t, enum devact);
 
-//static u_int	rt1310tmr_get_timecount(struct timecounter *);
+static u_int	rt1310tmr_get_timecount(struct timecounter *);
 
 static void	timer_reset(void);
 
@@ -68,18 +68,17 @@ struct timer_softc {
 	bus_space_tag_t sc_iot;
 	bus_space_handle_t sc_bsh0;
 	bus_space_handle_t sc_bsh1;
+	bus_space_handle_t sc_bsh2;
 	int8_t sc_irq;
 	int freq;
 };
 
-#if 0
 static struct timecounter rt1310tmr_timecounter = {
 	.tc_get_timecount = rt1310tmr_get_timecount,
 	.tc_counter_mask = ~0u,
 	.tc_name = "rt1310tmr",
 	.tc_quality = 100,
 };
-#endif
 
 static bus_space_tag_t timer_iot;
 static bus_space_handle_t timer_hdl;
@@ -125,6 +124,10 @@ static void	timer_init(struct timer_softc *);
 	bus_space_read_4(sc->sc_iot, sc->sc_bsh1, (reg))
 #define TIMER1_WRITE(sc, reg, val)					\
 	bus_space_write_4(sc->sc_iot, sc->sc_bsh1, (reg), (val))
+#define TIMER2_READ(sc, reg)						\
+	bus_space_read_4(sc->sc_iot, sc->sc_bsh2, (reg))
+#define TIMER2_WRITE(sc, reg, val)					\
+	bus_space_write_4(sc->sc_iot, sc->sc_bsh2, (reg), (val))
 
 #define SELECT_32KHZ	0x8	/* Use 32kHz clock source. */
 #define SOURCE_32KHZ_HZ	32000	/* Above source in Hz. */
@@ -180,6 +183,14 @@ timer_attach(device_t parent, device_t self, void *aux)
 	if (bus_space_subregion(timer_iot, timer_hdl,
 	    0x10, 0x10,
 	    &sc->sc_bsh1)) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map subregion\n");
+		return;
+	}
+
+	if (bus_space_subregion(timer_iot, timer_hdl,
+	    0x20, 0x10,
+	    &sc->sc_bsh2)) {
 		aprint_error_dev(sc->sc_dev,
 		    "unable to map subregion\n");
 		return;
@@ -247,6 +258,15 @@ timer_init(struct timer_softc *sc)
 	TIMER0_WRITE(sc, RT_TIMER_VALUE, 0xfffff);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
+
+	TIMER2_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER2_WRITE(sc, RT_TIMER_LOAD, 0xfffffff);
+	TIMER2_WRITE(sc, RT_TIMER_VALUE, 0xfffffff);
+	TIMER2_WRITE(sc, RT_TIMER_CONTROL,
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_PERIODCAL);
+	rt1310tmr_timecounter.tc_priv = sc;
+	rt1310tmr_timecounter.tc_frequency = RT_APB_FREQ;
+	tc_init(&rt1310tmr_timecounter);
 #if 0
 	if (sc->sc_irq == 31) {
 		/* 100 Hz */
@@ -273,16 +293,13 @@ timer_init(struct timer_softc *sc)
 	return;
 }
 
-#if 0
 static u_int
 rt1310tmr_get_timecount(struct timecounter *tc)
 {
-//struct timer_softc *sc = tc->tc_priv;
+struct timer_softc *sc = tc->tc_priv;
 
-//	return TIMER_READ(sc, TIMER2_CURRENT_COUNT);
-	return 0;
+	return TIMER2_READ(sc, RT_TIMER_VALUE);
 }
-#endif
 
 /*
  * Timer IRQ handlers.
