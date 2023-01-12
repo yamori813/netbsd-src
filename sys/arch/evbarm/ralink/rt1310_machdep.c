@@ -399,7 +399,7 @@ consinit(void)
 
 	/* initialize the console functions */
 	if (rtcomcnattach(&rt1310_bs_tag, 0x1e840000, consrate,
-		RT_APB_FREQ, COM_TYPE_16550_NOERS, consmode))
+		RT_BASE_BAUD, COM_TYPE_16550_NOERS, consmode))
 			panic("Serial console can not be initialized.");
 }
 

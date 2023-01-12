@@ -105,7 +105,7 @@ rt1310_com_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	memt = apba->apba_memt;
 	iobase = apba->apba_addr;
-	sc->sc_frequency = RT_APB_FREQ;
+	sc->sc_frequency = RT_BASE_BAUD;
 //	sc->sc_type = COM_TYPE_NORMAL;
 //	sc->sc_type = COM_TYPE_16550_NOERS;
 	sc->sc_type = COM_TYPE_TEGRA;
