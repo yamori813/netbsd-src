@@ -122,7 +122,7 @@ extern char _end[];
 #endif
 
 #ifndef CONSPEED
-#define CONSPEED	B115200	/* It's a setting of the default of u-boot */
+#define CONSPEED	B38400	/* It's a setting of the default of u-boot */
 #endif
 #ifndef CONMODE
 #define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
@@ -279,7 +279,7 @@ read_ttb(void)
 #define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
 #endif
 #ifndef CONSPEED
-#define CONSPEED        115200
+#define CONSPEED        38400
 #endif
 
 int consmode = CONMODE;
