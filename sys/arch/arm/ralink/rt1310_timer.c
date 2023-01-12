@@ -53,6 +53,8 @@ static u_int	rt1310tmr_get_timecount(struct timecounter *);
 
 static void	timer_reset(void);
 
+extern struct cfdriver timer_cd;
+
 /*
  * Timer IRQ handler definitions.
  */
@@ -77,7 +79,7 @@ static struct timecounter rt1310tmr_timecounter = {
 	.tc_get_timecount = rt1310tmr_get_timecount,
 	.tc_counter_mask = ~0u,
 	.tc_name = "rt1310tmr",
-	.tc_quality = 100,
+	.tc_quality = 1000,
 };
 
 static bus_space_tag_t timer_iot;
@@ -101,20 +103,6 @@ CFATTACH_DECL3_NEW(timer,
 struct timer_softc *timer_sc;
 
 static void	timer_init(struct timer_softc *);
-
-#define TIMROT_SOFT_RST_LOOP 455 /* At least 1 us ... */
-#define TIMROT_READ(reg)						\
-	bus_space_read_4(timer_iot, timer_hdl, (reg))
-#define TIMROT_WRITE(reg, val)						\
-	bus_space_write_4(timer_iot, timer_hdl, (reg), (val))
-
-#define TIMER_REGS_SIZE 0x20
-
-#define TIMER_CTRL	0x00
-#define TIMER_CTRL_SET	0x04
-#define TIMER_CTRL_CLR	0x08
-#define TIMER_CTRL_TOG	0x0C
-#define TIMER_COUNT	0x10
 
 #define TIMER0_READ(sc, reg)						\
 	bus_space_read_4(sc->sc_iot, sc->sc_bsh0, (reg))
@@ -225,18 +213,6 @@ cpu_initclocks(void)
 void
 setstatclockrate(int newhz)
 {
-#if 0
-	struct timer_softc *sc = timer_sc[STAT_TIMER];
-	uint32_t reg;
-	sc->freq = newhz;
-
-	if (sc->freq != 0) {
-		TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 204800000 / sc->freq);
-		TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
-		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
-		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
-	}
-#endif
 
 	return;
 }
@@ -254,15 +230,15 @@ timer_init(struct timer_softc *sc)
 	    NULL);
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER0_WRITE(sc, RT_TIMER_LOAD, 0xfffff);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	TIMER2_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER2_WRITE(sc, RT_TIMER_LOAD, 0xfffffff);
-	TIMER2_WRITE(sc, RT_TIMER_VALUE, 0xfffffff);
-	TIMER2_WRITE(sc, RT_TIMER_CONTROL,
+	TIMER2_WRITE(sc, RT_TIMER_LOAD, ~0u);
+	TIMER2_WRITE(sc, RT_TIMER_VALUE, ~0u);
+	TIMER2_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_DIV16 |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_PERIODCAL);
 	rt1310tmr_timecounter.tc_priv = sc;
 	rt1310tmr_timecounter.tc_frequency = RT_APB_FREQ;
@@ -310,8 +286,8 @@ systimer_irq(void *frame)
 	struct timer_softc *sc = timer_sc;
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER0_WRITE(sc, RT_TIMER_LOAD, 0xfffff);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, 0xfffff);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
@@ -338,4 +314,23 @@ static void
 timer_reset(void)
 {
 	return;
+}
+
+void
+delay(u_int n)
+{
+	struct timer_softc * const sc = device_lookup_private(&timer_cd, 0);
+	uint32_t start, now;
+
+	start = TIMER2_READ(sc, RT_TIMER_VALUE);
+	while(1) {
+		now = TIMER2_READ(sc, RT_TIMER_VALUE);
+		if (now < start) {
+			if(start - now > n * 100)
+				break;
+		} else {
+			if(start + (~0u - now) > n * 100)
+				break;
+		}
+	}
 }

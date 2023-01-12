@@ -84,7 +84,7 @@
 #define	RT_APB_FREQ		6758400
 #define RT_UART_SIZE		0x1000
 #define RT_TIMER_SIZE		0x100
-#define RT_NIRQ			10
+#define RT_NIRQ			32
 #define AHB_INTC_SIZE		0x200
 
 #endif	/* _ARM_RALINK_RT1310_REG_H */
