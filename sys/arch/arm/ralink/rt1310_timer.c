@@ -51,8 +51,6 @@ static int	timer_activate(device_t, enum devact);
 
 static u_int	rt1310tmr_get_timecount(struct timecounter *);
 
-static void	timer_reset(void);
-
 extern struct cfdriver timer_cd;
 
 /*
@@ -68,9 +66,10 @@ void 	setstatclockrate(int);
 struct timer_softc {
 	device_t sc_dev;
 	bus_space_tag_t sc_iot;
-	bus_space_handle_t sc_bsh0;
-	bus_space_handle_t sc_bsh1;
-	bus_space_handle_t sc_bsh2;
+	bus_space_handle_t sc_bsh0;		/* systimer */
+	bus_space_handle_t sc_bsh1;		/* stattiemr */
+	bus_space_handle_t sc_bsh2;		/* timecounter */
+	bus_space_handle_t sc_bsh3;		/* delay */
 	int8_t sc_irq;
 	int freq;
 };
@@ -95,11 +94,6 @@ CFATTACH_DECL3_NEW(timer,
 	NULL,
 	0);
 
-#define MAX_TIMERS	4
-#define SYS_TIMER	0
-#define STAT_TIMER	1	
-#define SCHED_TIMER	2
-
 struct timer_softc *timer_sc;
 
 static void	timer_init(struct timer_softc *);
@@ -116,6 +110,10 @@ static void	timer_init(struct timer_softc *);
 	bus_space_read_4(sc->sc_iot, sc->sc_bsh2, (reg))
 #define TIMER2_WRITE(sc, reg, val)					\
 	bus_space_write_4(sc->sc_iot, sc->sc_bsh2, (reg), (val))
+#define TIMER3_READ(sc, reg)						\
+	bus_space_read_4(sc->sc_iot, sc->sc_bsh3, (reg))
+#define TIMER3_WRITE(sc, reg, val)					\
+	bus_space_write_4(sc->sc_iot, sc->sc_bsh3, (reg), (val))
 
 #define SELECT_32KHZ	0x8	/* Use 32kHz clock source. */
 #define SOURCE_32KHZ_HZ	32000	/* Above source in Hz. */
@@ -149,7 +147,6 @@ timer_attach(device_t parent, device_t self, void *aux)
 			    "unable to map bus space\n");
 			return;
 		}
-		timer_reset();
 		timer_attached = 1;
 	}
 /*
@@ -179,6 +176,14 @@ timer_attach(device_t parent, device_t self, void *aux)
 	if (bus_space_subregion(timer_iot, timer_hdl,
 	    0x20, 0x10,
 	    &sc->sc_bsh2)) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map subregion\n");
+		return;
+	}
+
+	if (bus_space_subregion(timer_iot, timer_hdl,
+	    0x30, 0x10,
+	    &sc->sc_bsh3)) {
 		aprint_error_dev(sc->sc_dev,
 		    "unable to map subregion\n");
 		return;
@@ -232,39 +237,17 @@ timer_init(struct timer_softc *sc)
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
 	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
 	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
-	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	TIMER2_WRITE(sc, RT_TIMER_CONTROL, 0);
 	TIMER2_WRITE(sc, RT_TIMER_LOAD, ~0u);
 	TIMER2_WRITE(sc, RT_TIMER_VALUE, ~0u);
-	TIMER2_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_DIV16 |
-	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_PERIODCAL);
+	/* start by free-runnig */
+	TIMER2_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_ENABLE);
 	rt1310tmr_timecounter.tc_priv = sc;
 	rt1310tmr_timecounter.tc_frequency = RT_APB_FREQ;
 	tc_init(&rt1310tmr_timecounter);
-#if 0
-	if (sc->sc_irq == 31) {
-		/* 100 Hz */
-		TIMER_WRITE(sc, TIMER0_HIGH_BOUND, 2048000);
-		TIMER_WRITE(sc, TIMER0_CURRENT_COUNT, 0);
-		reg = TIMER_READ(sc, TIMER_IRQ_MASK);
-		TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | 1);
-
-		TIMER_WRITE(sc, TIMER2_HIGH_BOUND, ~0u);
-		TIMER_WRITE(sc, TIMER2_CURRENT_COUNT, 0);
-		rt1310tmr_timecounter.tc_priv = sc;
-		rt1310tmr_timecounter.tc_frequency = COMCERTO_APB_FREQ;
-		tc_init(&rt1310tmr_timecounter);
-	} else {
-		if (sc->freq != 0) {
-			TIMER_WRITE(sc, TIMER1_HIGH_BOUND, 2048000);
-			TIMER_WRITE(sc, TIMER1_CURRENT_COUNT, 0);
-			reg = TIMER_READ(sc, TIMER_IRQ_MASK);
-			TIMER_WRITE(sc, TIMER_IRQ_MASK, reg | (1 << 1));
-		}
-	}
-#endif
 
 	return;
 }
@@ -286,9 +269,9 @@ systimer_irq(void *frame)
 	struct timer_softc *sc = timer_sc;
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
+//	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ);
 	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ);
-	TIMER0_WRITE(sc, RT_TIMER_CONTROL,
+	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	hardclock(frame);
@@ -305,32 +288,17 @@ stattimer_irq(void *frame)
 	return 1;
 }
 
-/*
- * Reset the TIMROT block.
- *
- * Inspired by i.MX23 RM "39.3.10 Correct Way to Soft Reset a Block"
- */
-static void
-timer_reset(void)
-{
-	return;
-}
-
 void
 delay(u_int n)
 {
 	struct timer_softc * const sc = device_lookup_private(&timer_cd, 0);
-	uint32_t start, now;
 
-	start = TIMER2_READ(sc, RT_TIMER_VALUE);
-	while(1) {
-		now = TIMER2_READ(sc, RT_TIMER_VALUE);
-		if (now < start) {
-			if(start - now > n * 100)
-				break;
-		} else {
-			if(start + (~0u - now) > n * 100)
-				break;
-		}
-	}
+	TIMER3_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER3_WRITE(sc, RT_TIMER_LOAD, n);
+	TIMER3_WRITE(sc, RT_TIMER_VALUE, n);
+	/* start by periodical */
+	TIMER3_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_DIV256 |
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_PERIODCAL);
+
+	while (TIMER3_READ(sc, RT_TIMER_VALUE) != 0) ;
 }
