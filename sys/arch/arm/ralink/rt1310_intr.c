@@ -130,11 +130,20 @@ rt1310_irq_handler(void *frame)
 {
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
 	struct pic_softc * const pic = &intc->intc_pic;
-	uint32_t irq;
+	uint32_t reg, irq;
 
-	irq = ffs(INTC_READ(intc, RT_INTC_IPR)) - 1;
+	reg = INTC_READ(intc, RT_INTC_IPR);
+	while (reg != 0) {
+		irq = ffs(reg) - 1;
 
-	pic_dispatch(pic->pic_sources[irq], frame);
+		pic_dispatch(pic->pic_sources[irq], frame);
+
+		reg &= ~(1 << irq);
+	}
+
+#ifdef __HAVE_FAST_SOFTINTS
+        cpu_dosoftints();
+#endif
 }
 
 static void

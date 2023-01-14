@@ -72,6 +72,7 @@ struct timer_softc {
 	bus_space_handle_t sc_bsh3;		/* delay */
 	int8_t sc_irq;
 	int freq;
+	int statfreq;
 };
 
 static struct timecounter rt1310tmr_timecounter = {
@@ -216,6 +217,15 @@ cpu_initclocks(void)
 void
 setstatclockrate(int newhz)
 {
+	struct timer_softc *sc = timer_sc;
+
+	sc->statfreq = RT_APB_FREQ / 100;
+
+	TIMER1_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER1_WRITE(sc, RT_TIMER_LOAD, sc->statfreq);
+	TIMER1_WRITE(sc, RT_TIMER_VALUE, sc->statfreq);
+	TIMER1_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	return;
 }
@@ -232,9 +242,11 @@ timer_init(struct timer_softc *sc)
 	intr_establish(sc->sc_irq + 1, IPL_SCHED, IST_LEVEL, stattimer_irq,
 	    NULL);
 
+	sc->freq = RT_APB_FREQ / 100;
+
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ / 100);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ / 100);
+	TIMER0_WRITE(sc, RT_TIMER_LOAD, sc->freq);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, sc->freq);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
@@ -267,8 +279,7 @@ systimer_irq(void *frame)
 	struct timer_softc *sc = timer_sc;
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
-//	TIMER0_WRITE(sc, RT_TIMER_LOAD, RT_APB_FREQ / 100);
-	TIMER0_WRITE(sc, RT_TIMER_VALUE, RT_APB_FREQ / 100);
+	TIMER0_WRITE(sc, RT_TIMER_VALUE, sc->freq);
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
 	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
@@ -280,6 +291,12 @@ systimer_irq(void *frame)
 static int
 stattimer_irq(void *frame)
 {
+	struct timer_softc *sc = timer_sc;
+
+	TIMER1_WRITE(sc, RT_TIMER_CONTROL, 0);
+	TIMER1_WRITE(sc, RT_TIMER_VALUE, sc->statfreq);
+	TIMER1_WRITE(sc, RT_TIMER_CONTROL, RT_TIMER_CTRL_PERIODCAL |
+	    RT_TIMER_CTRL_ENABLE | RT_TIMER_CTRL_INTCTL);
 
 	statclock(frame);
 
