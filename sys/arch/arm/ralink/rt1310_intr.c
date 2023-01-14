@@ -125,25 +125,40 @@ struct intc_softc {
 	bus_space_handle_t intc_memh;
 };
 
+/*
+ * Called with interrupts disabled
+ */
+static int find_pending_irqs(struct intc_softc *sc);
+static int
+find_pending_irqs(struct intc_softc *sc)
+{
+	uint32_t pending = INTC_READ(sc, RT_INTC_IPR);
+
+	if (pending == 0)
+		return 0;
+
+	return pic_mark_pending_sources(&sc->intc_pic, 0, pending);
+}
+
+
 void
 rt1310_irq_handler(void *frame)
 {
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
-	struct pic_softc * const pic = &intc->intc_pic;
-	uint32_t reg, irq;
+	struct cpu_info * const ci = curcpu();
+	const int oldipl = ci->ci_cpl;
+	const uint32_t oldipl_mask = __BIT(oldipl);
+	int ipl_mask = 0;
 
-	reg = INTC_READ(intc, RT_INTC_IPR);
-	while (reg != 0) {
-		irq = ffs(reg) - 1;
+	ci->ci_data.cpu_nintr++;
 
-		pic_dispatch(pic->pic_sources[irq], frame);
+	ipl_mask = find_pending_irqs(intc);
 
-		reg &= ~(1 << irq);
-	}
-
-#ifdef __HAVE_FAST_SOFTINTS
-        cpu_dosoftints();
-#endif
+	/*
+	 * Record the pending_ipls and deliver them if we can.
+	 */
+	if ((ipl_mask & ~oldipl_mask) > oldipl_mask)
+		pic_do_pending_ints(I32_bit, oldipl, frame);
 }
 
 static void
