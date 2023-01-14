@@ -18,6 +18,10 @@ attach  intc at ahb
 file    arch/arm/ralink/rt1310_intr.c		intc	needs-flag
 file    arch/arm/arm32/irq_dispatch.S
 
+device  cfi : norbus
+attach  cfi at mainbus with mainbus_cfi
+file    arch/arm/mainbus/mainbus_cfi.c  mainbus_cfi
+
 # APB
 device	apb  { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	apb at ahb
