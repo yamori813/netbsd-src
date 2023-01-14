@@ -35,9 +35,10 @@ file	arch/arm/ralink/rt1310_timer.c	timer	needs-flag
 attach  com at apb with rt1310_com
 file    arch/arm/ralink/rt1310_com.c      rt1310_com
 
-#device	cfi : norbus
-#attach	cfi at mainbus with mainbus_cfi
-#file	arch/arm/mainbus/mainbus_cfi.c  mainbus_cfi
+# GPIO
+device	rtgpio: gpiobus
+attach	rtgpio at apb
+file	arch/arm/ralink/rt1310_gpio.c	rtgpio		needs-flag
 
 # Some SoC(ARMADAXP) reports false DeviceID. 
 #defflag opt_mvsoc.h				ORION KIRKWOOD MV78XX0 DOVE
