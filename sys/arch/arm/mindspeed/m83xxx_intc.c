@@ -187,41 +187,64 @@ intc_source_name(struct pic_softc *pic, int irq, char *buf, size_t len)
 	strlcpy(buf, intc_intr_source_names[irq], len);
 }
 
+/*
+ * Called with interrupts disabled
+ */
+static int find_pending_irqs(struct intc_softc *intc);
+static int
+find_pending_irqs(struct intc_softc *intc)
+{
+	uint32_t pending;
+	int32_t stat, mask;
+	int ipl;
+
+	ipl = 0;
+
+	stat = INTC_READ(intc, INTC_STATUS_REG_0);
+	mask = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
+
+	pending = stat & mask;
+
+	if (pending != 0) {
+		ipl = pic_mark_pending_sources(&intc->intc_pic, 0, pending);
+		INTC_WRITE(intc, INTC_STATUS_REG_0, pending);
+	}
+
+	if (stat & 1) {
+		stat = INTC_READ(intc, INTC_STATUS_REG_1);
+		mask = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
+
+		pending = stat & mask;
+
+		if (pending != 0) {
+			ipl |= pic_mark_pending_sources(&intc->intc_pic, 32, 
+			    pending);
+			INTC_WRITE(intc, INTC_STATUS_REG_1, pending);
+		}
+	}
+
+	return ipl;
+}
+
 void
 m83_irq_handler(void *frame)
 {
 	struct cpu_info * const ci = curcpu();
 	struct intc_softc * const intc = device_lookup_private(&intc_cd, 0);
-	struct pic_softc * const pic = &intc->intc_pic;
-	int32_t stat0, mask0;
-	int32_t stat1, mask1;
-	int32_t irq;
+//	struct pic_softc * const pic = &intc->intc_pic;
+	const int oldipl = ci->ci_cpl;
+	const uint32_t oldipl_mask = __BIT(oldipl);
+	int ipl_mask;
 
         ci->ci_data.cpu_nintr++;
 
-	stat0 = INTC_READ(intc, INTC_STATUS_REG_0);
-	mask0 = INTC_READ(intc, INTC_ARM0_IRQMASK_0);
-	stat1 = INTC_READ(intc, INTC_STATUS_REG_1);
-	mask1 = INTC_READ(intc, INTC_ARM0_IRQMASK_1);
+	ipl_mask = find_pending_irqs(intc);
 
-	do {
-		if (stat0 & mask0) {
-			irq = ffs(stat0 & mask0) - 1;
-		} else {
-			irq = ffs(stat1 & mask1) - 1 + 32;
-		}
-
-		pic_dispatch(pic->pic_sources[irq], frame);
-
-		/* ack */
-		if (irq < 32) {
-			INTC_WRITE(intc, INTC_STATUS_REG_0, 1 << irq);
-			stat0 &= ~(1 << irq);
-		} else {
-			INTC_WRITE(intc, INTC_STATUS_REG_1, 1 << (irq & 0x1f));
-			stat1 &= ~(1 << (irq & 0x1f));
-		}
-	} while ((stat0 & mask0) || (stat1 & mask1));
+	/*
+	 * Record the pending_ipls and deliver them if we can.
+	 */
+	if ((ipl_mask & ~oldipl_mask) > oldipl_mask)
+		pic_do_pending_ints(I32_bit, oldipl, frame);
 }
 
 static int intc_match(device_t, cfdata_t, void *);
