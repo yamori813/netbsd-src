@@ -31,7 +31,6 @@
 
 #ifdef _LOCORE
 
-//#define ARM_IRQ_HANDLER	_C_LABEL(star_intr_dispatch)
 #define ARM_IRQ_HANDLER	_C_LABEL(star_intr_handler)
 
 #else
@@ -52,78 +51,7 @@ extern volatile uint32_t star_intr_enabled;
 extern volatile uint32_t star_intr_pending;
 extern void (*star_set_intrmask)(void);
 
-#if 0
-static inline void __attribute__((__unused__))
-star_splx(int ipl)
-{
-	int oldirqstate, hwpend;
-
-	/* Don't let the compiler re-order this code with preceding code */
-	__insn_barrier();
-
-	set_curcpl(ipl);
-
-	hwpend = (star_intr_pending) & ~star_intr_mask[ipl];
-	if (hwpend != 0) {
-		oldirqstate = disable_interrupts(I32_bit);
-		star_intr_enabled |= hwpend;
-		star_set_intrmask();
-		restore_interrupts(oldirqstate);
-	}
-
-#ifdef __HAVE_FAST_SOFTINTS
-	cpu_dosoftints();
-#endif
-}
-
-static inline int __attribute__((__unused__))
-star_splraise(int ipl)
-{
-	int old;
-
-	old = curcpl();
-	set_curcpl(ipl);
-
-	/* Don't let the compiler re-order this code with subsequent code */
-	__insn_barrier();
-
-	return old;
-}
-
-static inline int __attribute__((__unused__))
-star_spllower(int ipl)
-{
-	int old;
-
-	old = curcpl();
-	star_splx(ipl);
-
-	return old;
-}
-#endif
-
 void star_intr_calculate_masks(void);
-void splx(int);
-int _spllower(int);
-int _splraise(int);
-void _setsoftintr(int);
-
-#if 0
-#if !defined(EVBARM_SPL_NOINLINE)
-#define splx(ipl)		star_splx(ipl)
-#define _spllower(ipl)		star_spllower(ipl)
-#define _splraise(ipl)		star_splraise(ipl)
-#define _setsoftintr(ipl)	star_setsoftintr(ipl)
-#endif /* EVBARM_SPL_NOINLINE */
-#endif
-
-#if 0
-/* same as intr.h */
-#define STAR_INTR_HIGHLEVEL_TRIGGER	4
-#define STAR_INTR_LOWLEVEL_TRIGGER	3
-#define STAR_INTR_RISING_EDGE		5
-#define STAR_INTR_FALLING_EDGE		2
-#endif
 
 void star_intr_init(void);
 void star_intr_disestablish(void *);
