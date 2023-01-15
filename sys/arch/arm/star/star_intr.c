@@ -34,9 +34,9 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <sys/systm.h>
 //#include <sys/malloc.h>
 #include <sys/kmem.h>
-//#include <uvm/uvm_extern.h>
+#include <uvm/uvm_extern.h>
 
-//#include <machine/intr.h>
+#include <machine/intr.h>
 //#include <machine/lock.h>
 #include <sys/bus.h>
 #include <sys/intr.h>
@@ -212,7 +212,7 @@ star_intr_init(void)
 	pic_add(&pic_sc, 0);
 
 	/* Enable IRQs (don't yet use FIQs). */
-	enable_interrupts(I32_bit);
+//	enable_interrupts(I32_bit);
 }
 
 #if 0
@@ -237,11 +237,11 @@ _splraise(int s)
 	return star_splraise(s);
 }
 #endif
-int star_timer1_intr(void *);
-void
-star_intr_handler(void *frame)
+
+static int
+find_pending_irqs(struct pic_softc *sc)
 {
-	uint32_t irq, pending;
+	uint32_t pending;
 
 	/* read interrupt status, and clear */
 	if (CPU_IS_STR8100()) {
@@ -254,127 +254,30 @@ star_intr_handler(void *frame)
 
 	pending &= star_intr_enabled;
 
-	while(pending) {
-		irq = ffs(pending) - 1;
+	if (pending == 0)
+		return 0;
 
-		pic_dispatch(pic_sc.pic_sources[irq], frame);
-
-		pending &= ~(1 << irq);
-	}
+	return pic_mark_pending_sources(sc, 0, pending);
 }
-/*
- * called from irq_entry.
- */
+
 void
-star_intr_dispatch(void *arg)
+star_intr_handler(void *frame)
 {
-	struct intrhand *ih;
-	struct intrq* iq;
-	uint32_t irq, ibit, pending, s;
-	int ipl;
+	struct cpu_info * const ci = curcpu();
+	const int oldipl = ci->ci_cpl;
+	const uint32_t oldipl_mask = __BIT(oldipl);
+	int ipl_mask = 0;
 
-	ipl = curcpl();
+	ci->ci_data.cpu_nintr++;
 
-	/* read interrupt status, and clear */
-	if (CPU_IS_STR8100()) {
-		pending = STAR_REG_READ32(EQUULEUS_INT_IRQSTATUS);
-		star_intr_enabled &= ~pending;
-		star_set_intrmask();
-		STAR_REG_WRITE32(EQUULEUS_INT_CLEAR, pending);
-	} else {
-		pending = STAR_REG_READ32(ORION_INT_IRQSTATUS);
-		star_intr_enabled &= ~pending;
-		star_set_intrmask();
-		STAR_REG_WRITE32(ORION_INT_CLEAR, pending);
-	}
+	ipl_mask = find_pending_irqs(&pic_sc);
 
-	while (pending != 0) {
-		irq = 31 - __builtin_clz(pending);
-		ibit = (1U << irq);
-		pending &= ~ibit;
-
-		if (ibit & star_intr_mask[ipl]) {
-			/*
-			 * IRQ is masked; mark it as pending and check
-			 * the next one.  Note: the IRQ is already disabled.
-			 */
-			star_intr_pending |= ibit;
-			continue;
-		}
-		star_intr_pending &= ~ibit;
-
-		/* increment counters */
-		irqhandler[irq].iq_evcnt.ev_count++;
-//		uvmexp.intrs++;
-		curcpu()->ci_data.cpu_nintr++;
-
-		/* dispatch handlers */
-//		TAILQ_FOREACH(ih, &irqhandler[irq].iq_list, ih_list) {
-		iq = &irqhandler[irq];
-		TAILQ_FOREACH(ih, &iq->iq_list, ih_list) {
-			set_curcpl(ih->ih_ipl);
-			s = enable_interrupts(I32_bit);
-
-			(void)(*ih->ih_func)(ih->ih_arg ? ih->ih_arg : arg);
-			restore_interrupts(s);
-		}
-		set_curcpl(ipl);
-
-		/* Re-enable this interrupt now that's it's cleared. */
-		star_intr_enabled |= ibit;
-		star_set_intrmask();
-
-		/*
-		 * Don't forget to include interrupts which may have
-		 * arrived in the meantime.
-		 */
-		pending |= (star_intr_pending & ~star_intr_mask[ipl]);
-	}
-
-#ifdef __HAVE_FAST_SOFTINTS
-	cpu_dosoftints();
-#endif
+	/*
+	 * Record the pending_ipls and deliver them if we can.
+	 */
+	if ((ipl_mask & ~oldipl_mask) > oldipl_mask)
+		pic_do_pending_ints(I32_bit, oldipl, frame);
 }
-
-#if 0
-void *
-star_intr_establish(int irq, int ipl, int scheme, int (*func)(void *), void *arg)
-{
-	struct intrhand *ih;
-	int s;
-
-	if (irq < 0 || irq >= STAR_NIRQ)
-		panic("%s: bogus irq number %d", __func__, irq);
-	if (ipl < 0 || ipl >= NIPL)
-		panic("%s: bogus ipl number %d", __func__, ipl);
-
-//	ih = malloc(sizeof(*ih), M_DEVBUF, M_NOWAIT);
-	ih = kmem_alloc(sizeof(*ih), KM_SLEEP);
-	if (ih == NULL)
-		return NULL;
-	ih->ih_func = func;
-	ih->ih_arg = arg;
-	ih->ih_irq = irq;
-	ih->ih_ipl = ipl;
-
-	s = disable_interrupts(I32_bit);
-//	{
-		if (CPU_IS_STR8100())
-			star_equuleus_set_intrmode(irq, scheme);
-		else
-			star_orion_set_intrmode(irq, scheme);
-
-//		TAILQ_INSERT_TAIL(&irqhandler[irq].iq_list, ih, ih_list);
-		struct intrq*           iq;
-		iq = &irqhandler[irq];
-		TAILQ_INSERT_TAIL(&iq->iq_list, ih, ih_list);
-		star_intr_calculate_masks();
-//	}
-	restore_interrupts(s);
-
-	return ih;
-}
-#endif
 
 void
 star_intr_disestablish(void *cookie)

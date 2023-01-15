@@ -126,8 +126,6 @@ void _setsoftintr(int);
 #endif
 
 void star_intr_init(void);
-void star_intr_dispatch(void *);
-//void *star_intr_establish(int, int, int, int (*)(void *), void *);
 void star_intr_disestablish(void *);
 
 void star_intr_handler(void *frame);
