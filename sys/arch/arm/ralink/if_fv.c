@@ -1,0 +1,904 @@
+/*	$NetBSD$	*/
+
+/*
+ * Copyright (c) 2022 Hiroki Mori
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <sys/cdefs.h>
+__KERNEL_RCSID(1, "$NetBSD$");
+
+#include <sys/param.h>
+#include <sys/bus.h>
+#include <sys/device.h>
+#include <sys/ioctl.h>
+#include <sys/intr.h>
+#include <sys/kmem.h>
+#include <sys/mutex.h>
+#include <sys/systm.h>
+#include <sys/kernel.h>
+
+#include <net/if.h>
+#include <net/if_ether.h>
+#include <net/if_media.h>
+#include <net/bpf.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
+
+#include <arm/ralink/rt1310_reg.h>
+#include <arm/ralink/rt1310_var.h>
+//#include <arm/mindspeed/m83xxx_intc.h>
+//#include <arm/mindspeed/if_cgereg.h>
+
+#define CGE_TXFRAGS	16
+
+static int fv_match(device_t, cfdata_t, void *);
+static void fv_attach(device_t, device_t, void *);
+static int fv_detach(device_t, int);
+
+#if 0 
+static void fv_start(struct ifnet *);
+static int fv_ioctl(struct ifnet *, u_long, void *);
+static void fv_watchdog(struct ifnet *);
+static int fv_init(struct ifnet *);
+static void fv_stop(struct ifnet *, int);
+
+static int fv_mii_readreg(device_t, int, int, uint16_t *);
+static int fv_mii_writereg(device_t, int, int, uint16_t);
+static void fv_mii_statchg(struct ifnet *);
+
+static int fv_new_rxbuf(struct fv_softc * const, const u_int);
+//static void fv_tick(void *);
+
+static int fv_intr(void *);
+static int fv_rxintr(void *);
+static int fv_txintr(void *);
+
+#define TXDESC_NEXT(x) fv_txdesc_adjust((x), 1)
+#define TXDESC_PREV(x) fv_txdesc_adjust((x), -1)
+
+#define RXDESC_NEXT(x) fv_rxdesc_adjust((x), 1)
+#define RXDESC_PREV(x) fv_rxdesc_adjust((x), -1)
+
+static int fv_alloc_dma(struct fv_softc *, size_t, void **,bus_dmamap_t *);
+
+#include <sys/kernhist.h>
+KERNHIST_DEFINE(cgehist);
+
+#define CPSWHIST_CALLARGS(A,B,C,D)	do {					\
+	    KERNHIST_CALLARGS(cgehist, "%jx %jx %jx %jx",			\
+		(uintptr_t)(A), (uintptr_t)(B), (uintptr_t)(C), (uintptr_t)(D));\
+	} while (0)
+
+static inline u_int
+fv_txdesc_adjust(u_int x, int y)
+{
+//	return (((x) + y) & (CGE_TX_RING_CNT - 1));
+	int res = x + y + CGE_TX_RING_CNT;
+	return res % CGE_TX_RING_CNT;
+}
+
+static inline u_int
+fv_rxdesc_adjust(u_int x, int y)
+{
+//	return (((x) + y) & (CGE_RX_RING_CNT - 1));
+	int res = x + y + CGE_RX_RING_CNT;
+	return res % CGE_RX_RING_CNT;
+}
+
+static inline uint32_t
+fv_read_4(struct fv_softc * const sc, bus_size_t const offset)
+{
+	return bus_space_read_4(sc->sc_bst, sc->sc_bsh, offset);
+}
+
+static inline void
+fv_write_4(struct fv_softc * const sc, bus_size_t const offset,
+    uint32_t const value)
+{
+	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
+}
+#endif
+
+struct fv_softc {
+};
+
+CFATTACH_DECL_NEW(fv, sizeof(struct fv_softc),
+    fv_match, fv_attach, fv_detach, NULL);
+
+static int
+fv_match(device_t parent, cfdata_t cf, void *aux)
+{
+
+	return 1;
+}
+
+static int
+fv_detach(device_t self, int flags)
+{
+#if 0
+	struct fv_softc * const sc = device_private(self);
+	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	u_int i;
+
+	/* Succeed now if there's no work to do. */
+	if (!sc->sc_attached)
+		return 0;
+
+	sc->sc_attached = false;
+
+	/* Stop the interface. Callouts are stopped in it. */
+	fv_stop(ifp, 1);
+
+#if 0
+	/* Destroy our callout. */
+	callout_destroy(&sc->sc_tick_ch);
+
+	/* Let go of the interrupts */
+	intr_disestablish(sc->sc_rxthih);
+	intr_disestablish(sc->sc_rxih);
+	intr_disestablish(sc->sc_txih);
+	intr_disestablish(sc->sc_miscih);
+#endif
+
+	ether_ifdetach(ifp);
+	if_detach(ifp);
+
+	/* Delete all media. */
+	ifmedia_fini(&sc->sc_mii.mii_media);
+
+	/* Destroy all the descriptors */
+	for (i = 0; i < CGE_TX_RING_CNT; i++)
+		bus_dmamap_destroy(sc->sc_bdt, sc->sc_rdp->tx_dm[i]);
+	for (i = 0; i < CGE_RX_RING_CNT; i++)
+		bus_dmamap_destroy(sc->sc_bdt, sc->sc_rdp->rx_dm[i]);
+	kmem_free(sc->sc_rdp, sizeof(*sc->sc_rdp));
+
+	/* Unmap */
+	bus_space_unmap(sc->sc_bst, sc->sc_bsh, sc->sc_bss);
+
+#endif
+	return 0;
+}
+
+static void
+fv_attach(device_t parent, device_t self, void *aux)
+{
+#if 0
+	struct apb_attach_args * const aa = aux;
+	struct fv_softc * const sc = device_private(self);
+	int i, error;
+	struct ethercom * const ec = &sc->sc_ec;
+	struct ifnet * const ifp = &ec->ec_if;
+	struct mii_data * const mii = &sc->sc_mii;
+
+	sc->sc_dev = self;
+	sc->sc_bst = aa->apba_memt;
+	sc->sc_bdt = aa->apba_dmat;
+	sc->sc_bss = 0x10000;
+
+	aprint_normal(": GEMAC Interface\n");
+	aprint_naive("\n");
+
+	mutex_init(&sc->mtx, MUTEX_DEFAULT, IPL_NET);
+//	callout_init(&sc->sc_tick_ch, 0);
+//	callout_setfunc(&sc->sc_tick_ch, fv_tick, sc);
+
+//	error = bus_space_map(aa->apba_memt, aa->apba_addr, aa->apba_size,
+	error = bus_space_map(aa->apba_memt, aa->apba_addr, sc->sc_bss,
+	    0, &sc->sc_bsh);
+	if (error) {
+		aprint_error_dev(sc->sc_dev,
+			"can't map registers: %d\n", error);
+		return;
+	}
+
+	intr_establish(aa->apba_intr, IPL_NET, IST_LEVEL,
+	    fv_intr, sc);
+
+	sc->sc_enaddr[0] = 0xd4;
+	sc->sc_enaddr[1] = 0x94;
+	sc->sc_enaddr[2] = 0xa1;
+	sc->sc_enaddr[3] = 0x97;
+	sc->sc_enaddr[4] = 0x03;
+	sc->sc_enaddr[5] = 0x94;
+
+	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
+
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES,
+		    CGE_TXFRAGS, MCLBYTES, 0, 0,
+		    &sc->sc_rdp->tx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create tx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->tx_mb[i] = NULL;
+	}
+
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES, 1,
+		    MCLBYTES, 0, 0, &sc->sc_rdp->rx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create rx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->rx_mb[i] = NULL;
+	}
+
+	if (fv_alloc_dma(sc, sizeof(struct tRXdesc) * CGE_RX_RING_CNT,
+	    (void **)&(sc->sc_rxdesc_ring), &(sc->sc_rxdesc_dmamap)) != 0)
+		return;
+
+	if (fv_alloc_dma(sc, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	    (void **)&(sc->sc_txdesc_ring), &(sc->sc_txdesc_dmamap)) != 0)
+		return;
+
+	memset(sc->sc_rxdesc_ring, 0, sizeof(struct tRXdesc) * CGE_RX_RING_CNT);
+
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].tx_data = 0;
+		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
+		if (i == CGE_TX_RING_CNT - 1)
+			sc->sc_txdesc_ring[i - 1].tx_ctl |= GEMTX_WRAP;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct tTXdesc) * i,
+		    sizeof(struct tTXdesc),
+		    BUS_DMASYNC_PREWRITE);
+	}
+
+	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
+	    ether_sprintf(sc->sc_enaddr));
+
+	strlcpy(ifp->if_xname, device_xname(sc->sc_dev), IFNAMSIZ);
+	ifp->if_softc = sc;
+	ifp->if_capabilities = 0;
+	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+	ifp->if_start = fv_start;
+	ifp->if_ioctl = fv_ioctl;
+	ifp->if_init = fv_init;
+	ifp->if_stop = fv_stop;
+	ifp->if_watchdog = fv_watchdog;
+	IFQ_SET_READY(&ifp->if_snd);
+
+	fv_stop(ifp, 0);
+
+	mii->mii_ifp = ifp;
+	mii->mii_readreg = fv_mii_readreg;
+	mii->mii_writereg = fv_mii_writereg;
+	mii->mii_statchg = fv_mii_statchg;
+
+	sc->sc_ec.ec_mii = mii;
+	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
+
+	if (device_unit(self) == 0) {
+		arswitch_writereg(self, 8, 0x81461bea);
+		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, 0),
+		    arswitch_readreg(self, 8));
+//		arswitch_writereg(self, 0, (1 << 31));
+	}
+
+	if_attach(ifp);
+	if_deferred_start_init(ifp, NULL);
+	ether_ifattach(ifp, sc->sc_enaddr);
+
+	/* The attach is successful. */
+	sc->sc_attached = true;
+#endif
+	return;
+}
+
+#if 0
+static void
+fv_start(struct ifnet *ifp)
+{
+	struct fv_softc * const sc = ifp->if_softc;
+	struct fv_ring_data * const rdp = sc->sc_rdp;
+//	struct fv_cpdma_bd bd;
+//	uint32_t * const dw = bd.word;
+	struct mbuf *m;
+	bus_dmamap_t dm;
+	u_int eopi __diagused = ~0;
+	u_int seg;
+	u_int txfree;
+	int txstart = -1;
+	int error;
+//	bool pad;
+//	u_int mlen;
+	u_int len;
+	int reg;
+
+	KERNHIST_FUNC(__func__);
+	CPSWHIST_CALLARGS(sc, 0, 0, 0);
+
+	CGE_LOCK(sc);
+
+	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
+		return;
+	}
+	if (__predict_false(sc->sc_txbusy)) {
+		return;
+	}
+
+	if (sc->sc_txnext >= sc->sc_txhead)
+		txfree = CGE_TX_RING_CNT - 1 + sc->sc_txhead - sc->sc_txnext;
+	else
+		txfree = sc->sc_txhead - sc->sc_txnext - 1;
+
+	KERNHIST_LOG(cgehist, "start txf %x txh %x txn %x txr %x\n",
+	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
+
+
+	while (txfree > 0) {
+		IFQ_POLL(&ifp->if_snd, m);
+		if (m == NULL)
+			break;
+
+		dm = rdp->tx_dm[sc->sc_txnext];
+		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m,
+		    BUS_DMA_WRITE | BUS_DMA_NOWAIT);
+		if (error == EFBIG) {
+			device_printf(sc->sc_dev, "won't fit\n");
+			IFQ_DEQUEUE(&ifp->if_snd, m);
+			m_freem(m);
+			if_statinc(ifp, if_oerrors);
+			continue;
+		} else if (error != 0) {
+			device_printf(sc->sc_dev, "error\n");
+			break;
+		}
+		if (dm->dm_nsegs + 1 >= txfree) {
+			sc->sc_txbusy = true;
+			bus_dmamap_unload(sc->sc_bdt, dm);
+			break;
+		}
+
+//		mlen = m_length(m);
+//		pad = mlen < CGE_PAD_LEN;
+		len = 0;
+
+		KASSERT(rdp->tx_mb[sc->sc_txnext] == NULL);
+		rdp->tx_mb[sc->sc_txnext] = m;
+		IFQ_DEQUEUE(&ifp->if_snd, m);
+
+/*
+		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
+		    BUS_DMASYNC_PREWRITE);
+*/
+
+		if (txstart == -1)
+			txstart = sc->sc_txnext;
+		for (seg = 0; seg < dm->dm_nsegs; seg++) {
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			    dm->dm_segs[seg].ds_addr;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			    dm->dm_segs[seg].ds_len;
+			len += dm->dm_segs[seg].ds_len;
+			if (seg == dm->dm_nsegs - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
+			else
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_FCS;
+			if (sc->sc_txnext == CGE_TX_RING_CNT - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_WRAP;
+
+			txfree--;
+			eopi = sc->sc_txnext;
+			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
+		}
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+		    BUS_DMASYNC_PREWRITE);
+		bpf_mtap(ifp, m, BPF_D_OUT);
+	}
+
+	if (txstart >= 0) {
+		reg = fv_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+		fv_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
+		    (GEM_TX_START | GEM_TX_EN));
+		fv_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
+		ifp->if_timer = 5;
+	}
+	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
+	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
+
+	CGE_UNLOCK(sc);
+}
+
+static int
+fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
+{
+	const int s = splnet();
+	int error = 0;
+
+	switch (cmd) {
+	default:
+		error = ether_ioctl(ifp, cmd, data);
+		if (error == ENETRESET) {
+			error = 0;
+		}
+		break;
+	}
+
+	splx(s);
+
+	return error;
+}
+
+static void
+fv_watchdog(struct ifnet *ifp)
+{
+#if 0
+	struct fv_softc *sc = ifp->if_softc;
+
+	device_printf(sc->sc_dev, "device timeout\n");
+
+	if_statinc(ifp, if_oerrors);
+	fv_init(ifp);
+	fv_start(ifp);
+#endif
+}
+
+static int
+fv_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
+{
+	struct fv_softc * const sc = device_private(dev);
+	int result, wdata;
+
+	wdata = 0x60020000;
+	wdata |= ((phy << 23) | (reg << 18));
+	fv_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(fv_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
+	result = fv_read_4(sc, GEM_IP + GEM_PHY_MAN);
+
+	*val = (uint16_t)result;
+	return 0;
+}
+
+static int
+fv_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
+{
+	struct fv_softc * const sc = device_private(dev);
+	int wdata;
+
+	wdata = 0x50020000;
+	wdata |= ((phy << 23) | (reg << 18) | val);
+	fv_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(fv_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
+	return 0;
+}
+
+static void
+fv_mii_statchg(struct ifnet *ifp)
+{
+	return;
+}
+
+static int
+fv_new_rxbuf(struct fv_softc * const sc, const u_int i)
+{
+	struct fv_ring_data * const rdp = sc->sc_rdp;
+//	const u_int h = RXDESC_PREV(i);
+//	struct fv_cpdma_bd bd;
+//	uint32_t * const dw = bd.word;
+	struct mbuf *m;
+	int error = ENOBUFS;
+
+	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	if (m == NULL) {
+		goto reuse;
+	}
+
+	MCLGET(m, M_DONTWAIT);
+	if ((m->m_flags & M_EXT) == 0) {
+		m_freem(m);
+		goto reuse;
+	}
+
+	/* We have a new buffer, prepare it for the ring. */
+
+	if (rdp->rx_mb[i] != NULL)
+		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+
+	m->m_len = m->m_pkthdr.len = MCLBYTES;
+
+	rdp->rx_mb[i] = m;
+
+	error = bus_dmamap_load_mbuf(sc->sc_bdt, rdp->rx_dm[i], rdp->rx_mb[i],
+	    BUS_DMA_READ | BUS_DMA_NOWAIT);
+	if (error) {
+		device_printf(sc->sc_dev, "can't load rx DMA map %d: %d\n",
+		    i, error);
+	}
+
+	bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+	    0, rdp->rx_dm[i]->dm_mapsize, BUS_DMASYNC_PREREAD);
+
+	error = 0;
+
+reuse:
+	sc->sc_rxdesc_ring[i].rx_data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
+	sc->sc_rxdesc_ring[i].rx_status = RX_INT;
+	sc->sc_rxdesc_ring[i].rx_extstatus = 0;
+
+	if (i == CGE_RX_RING_CNT - 1)
+		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
+
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+	    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+            BUS_DMASYNC_PREWRITE);
+
+	return error;
+}
+
+static int
+fv_init(struct ifnet *ifp)
+{
+	struct fv_softc * const sc = ifp->if_softc;
+	int i;
+	int reg;
+//	int orgreg;
+	int mac;
+	paddr_t paddr;
+
+	fv_stop(ifp, 0);
+
+	sc->sc_txnext = 0;
+	sc->sc_txhead = 0;
+
+	/* Init circular RX list. */
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+		fv_new_rxbuf(sc, i);
+	}
+	sc->sc_rxhead = 0;
+
+	/*
+	 * Give the transmit and receive rings to the chip.
+	 */
+	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
+	fv_write_4(sc, GEM_IP + GEM_QUEUE_BASE0, paddr);
+	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
+	fv_write_4(sc, GEM_IP + GEM_RX_QPTR, paddr);
+
+	mac = sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
+	    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24);
+	fv_write_4(sc, GEM_IP + GEM_LADDR1_BOT, mac);
+	mac = sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8);
+	fv_write_4(sc, GEM_IP + GEM_LADDR1_TOP, mac);
+
+	fv_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+
+	reg = fv_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
+	fv_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
+
+#if 0
+	delay(1000);
+
+	reg = fv_read_4(sc, GEM_IP + GEM_NET_CONFIG);
+	reg |= GEM_COPY_ALL;
+	fv_write_4(sc, GEM_IP + GEM_NET_CONFIG, reg);
+
+	reg = fv_read_4(sc, GEM_CFG);
+	reg &= ~GEM_CONF_SPEED_MASK;
+	reg |= GEM_CONF_SPEED_GEM_1G;
+	reg &= ~GEM_CONF_MODE_GEM_MASK;
+	reg |= GEM_CONF_MODE_GEM_RGMII;
+	reg |= GEM_CONF_MODE_SEL_GEM;
+	fv_write_4(sc, GEM_CFG, reg);
+
+	/*
+	 * Initialize DMA
+	 */
+
+	orgreg = reg = fv_read_4(sc, GEM_IP + GEM_DMA_CONFIG);
+	reg |=(1UL<<31); //enable scheduler
+	reg &= ~((1UL<<26) | (1UL<<25)); //hardware buffer allocation
+	reg |=(1UL<<12); //enable scheduler
+	reg &= ~(0x00FF001F); // enable admittance manager
+	reg |= 0x00200000; // set buffer size to 2048 bytes
+	reg |= 0x00000010; // Attempt to use INCR16 AHB bursts
+	reg |=  GEM_RX_SW_ALLOC;
+	fv_write_4(sc, GEM_IP + GEM_DMA_CONFIG, reg);
+	/* Disabling GEM delay */
+	fv_write_4(sc, 0xf00c, 0);
+#endif
+ 
+	/* Enable the receive circuitry */
+	reg = fv_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+	fv_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg | GEM_RX_EN);
+
+	fv_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+
+	/*
+	 * Initialize the interrupt mask and enable interrupts.
+	 */
+//	fv_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
+	fv_write_4(sc, GEM_IP + GEM_IRQ_ENABLE,
+	    GEM_IRQ_RX_DONE | GEM_IRQ_TX_DONE);
+
+	ifp->if_flags |= IFF_RUNNING;
+
+	return 0;
+}
+
+static void
+fv_stop(struct ifnet *ifp, int disable)
+{
+#if 0
+	struct fv_softc * const sc = ifp->if_softc;
+	struct fv_ring_data * const rdp = sc->sc_rdp;
+	u_int i;
+
+	aprint_debug_dev(sc->sc_dev, "%s: ifp %p disable %d\n", __func__,
+	    ifp, disable);
+
+	if ((ifp->if_flags & IFF_RUNNING) == 0)
+		return;
+
+	callout_stop(&sc->sc_tick_ch);
+	mii_down(&sc->sc_mii);
+
+	fv_write_4(sc, CPSW_CPDMA_TX_INTMASK_CLEAR, 1);
+	fv_write_4(sc, CPSW_CPDMA_RX_INTMASK_CLEAR, 1);
+	fv_write_4(sc, CPSW_WR_C_TX_EN(0), 0x0);
+	fv_write_4(sc, CPSW_WR_C_RX_EN(0), 0x0);
+	fv_write_4(sc, CPSW_WR_C_MISC_EN(0), 0x0);
+
+	fv_write_4(sc, CPSW_CPDMA_TX_TEARDOWN, 0);
+	fv_write_4(sc, CPSW_CPDMA_RX_TEARDOWN, 0);
+	i = 0;
+	while ((sc->sc_txrun || sc->sc_rxrun) && i < 10000) {
+		delay(10);
+		if ((sc->sc_txrun == true) && fv_txintr(sc) == 0)
+			sc->sc_txrun = false;
+		if ((sc->sc_rxrun == true) && fv_rxintr(sc) == 0)
+			sc->sc_rxrun = false;
+		i++;
+	}
+	//printf("%s toredown complete in %u\n", __func__, i);
+
+	/* Reset wrapper */
+	fv_write_4(sc, CPSW_WR_SOFT_RESET, 1);
+	while (fv_read_4(sc, CPSW_WR_SOFT_RESET) & 1)
+		;
+
+	/* Reset SS */
+	fv_write_4(sc, CPSW_SS_SOFT_RESET, 1);
+	while (fv_read_4(sc, CPSW_SS_SOFT_RESET) & 1)
+		;
+
+	for (i = 0; i < CPSW_ETH_PORTS; i++) {
+		fv_write_4(sc, CPSW_SL_SOFT_RESET(i), 1);
+		while (fv_read_4(sc, CPSW_SL_SOFT_RESET(i)) & 1)
+			;
+	}
+
+	/* Reset CPDMA */
+	fv_write_4(sc, CPSW_CPDMA_SOFT_RESET, 1);
+	while (fv_read_4(sc, CPSW_CPDMA_SOFT_RESET) & 1)
+		;
+
+	/* Release any queued transmit buffers. */
+	for (i = 0; i < CPSW_NTXDESCS; i++) {
+		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
+		m_freem(rdp->tx_mb[i]);
+		rdp->tx_mb[i] = NULL;
+	}
+
+	ifp->if_flags &= ~IFF_RUNNING;
+	ifp->if_timer = 0;
+	sc->sc_txbusy = false;
+
+	if (!disable)
+		return;
+
+	for (i = 0; i < CPSW_NRXDESCS; i++) {
+		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+		m_freem(rdp->rx_mb[i]);
+		rdp->rx_mb[i] = NULL;
+	}
+#endif
+}
+
+static int
+fv_intr(void *arg)
+{
+	struct fv_softc * const sc = arg;
+	int reg;
+
+	reg = fv_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+
+	if (reg & GEM_IRQ_TX_DONE)
+		fv_txintr(arg);
+
+	if (reg & GEM_IRQ_RX_DONE)
+		fv_rxintr(arg);
+
+	fv_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
+
+	return 1;
+}
+
+#if 0
+static void
+fv_tick(void *arg)
+{
+	struct fv_softc * const sc = arg;
+	struct mii_data * const mii = &sc->sc_mii;
+	const int s = splnet();
+
+	mii_tick(mii);
+
+	splx(s);
+
+	callout_schedule(&sc->sc_tick_ch, hz);
+}
+#endif
+
+static int
+fv_rxintr(void *arg)
+{
+	struct fv_softc * const sc = arg;
+	struct fv_ring_data * const rdp = sc->sc_rdp;
+	u_int i;
+	int length;
+	struct mbuf *m;
+	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	int count;
+
+	count = 0;
+	for (;;) {
+		i = sc->sc_rxhead;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+		    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+//		    BUS_DMASYNC_PREREAD);
+		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
+			length = sc->sc_rxdesc_ring[i].rx_status &
+			    RX_STA_LEN_MASK;
+			m = rdp->rx_mb[i];
+			if (length < ETHER_HDR_LEN) {
+				aprint_error_dev(sc->sc_dev,
+				    "RX error packe length\n");
+				m_freem(m);
+			} else {
+				bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+				    0, rdp->rx_dm[i]->dm_mapsize,
+				    BUS_DMASYNC_POSTREAD);
+				m_set_rcvif(m, ifp);
+				m->m_pkthdr.len = m->m_len = length;
+				if_percpuq_enqueue(ifp->if_percpuq, m);
+			}
+			fv_new_rxbuf(sc, i);
+			
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+			    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+       			    BUS_DMASYNC_PREWRITE);
+			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
+			++count;
+		} else {
+			/* may be not happen */
+			if (count == 0)
+				panic("rxintr occur but no data\n");
+			break;
+		}
+	}
+
+	return 1;
+}
+
+static int
+fv_txintr(void *arg)
+{
+	struct fv_softc * const sc = arg;
+	struct fv_ring_data * const rdp = sc->sc_rdp;
+	struct ifnet * const ifp = &sc->sc_ec.ec_if;
+	bool handled = false;
+	int i;
+
+	for (;;) {
+		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
+		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
+		    BUS_DMASYNC_POSTWRITE);
+		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
+
+		m_freem(rdp->tx_mb[sc->sc_txhead]);
+		rdp->tx_mb[sc->sc_txhead] = NULL;
+
+		if_statinc(ifp, if_opackets);
+
+		handled = true;
+
+		sc->sc_txbusy = false;
+
+		sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
+		if (sc->sc_txhead == sc->sc_txnext)
+			break;
+	}
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].tx_ctl = 0;
+	}
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	    BUS_DMASYNC_PREWRITE);
+	if (handled && sc->sc_txnext == sc->sc_txhead)
+		ifp->if_timer = 0;
+	if (handled)
+		if_schedule_deferred_start(ifp);
+
+	return handled;
+}
+
+static int
+fv_alloc_dma(struct fv_softc *sc, size_t size, void **addrp,
+              bus_dmamap_t *mapp)
+{
+	bus_dma_segment_t seglist[1];
+	int nsegs, error;
+
+	if ((error = bus_dmamem_alloc(sc->sc_bdt, size, PAGE_SIZE, 0, seglist,
+	    1, &nsegs, M_WAITOK)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to allocate DMA buffer, error=%d\n", error);
+		goto fail_alloc;
+	}
+
+	if ((error = bus_dmamem_map(sc->sc_bdt, seglist, 1, size, addrp,
+	    BUS_DMA_NOWAIT | BUS_DMA_COHERENT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map DMA buffer, error=%d\n",
+		    error);
+		goto fail_map;
+	}
+
+	if ((error = bus_dmamap_create(sc->sc_bdt, size, 1, size, 0,
+	    BUS_DMA_NOWAIT, mapp)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to create DMA map, error=%d\n", error);
+		goto fail_create;
+	}
+
+	if ((error = bus_dmamap_load(sc->sc_bdt, *mapp, *addrp, size, NULL,
+	    BUS_DMA_NOWAIT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to load DMA map, error=%d\n", error);
+		goto fail_load;
+	}
+
+	return 0;
+
+ fail_load:
+	bus_dmamap_destroy(sc->sc_bdt, *mapp);
+ fail_create:
+	bus_dmamem_unmap(sc->sc_bdt, *addrp, size);
+ fail_map:
+	bus_dmamem_free(sc->sc_bdt, seglist, 1);
+ fail_alloc:
+	return error;
+}
+#endif

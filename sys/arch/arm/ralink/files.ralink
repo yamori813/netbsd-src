@@ -40,6 +40,11 @@ device	rtgpio: gpiobus
 attach	rtgpio at apb
 file	arch/arm/ralink/rt1310_gpio.c	rtgpio		needs-flag
 
+# Ethernet
+device  fv: ether, ifnet, arp, mii, mii_phy
+attach  fv at ahb
+file    arch/arm/ralink/if_fv.c             fv
+
 # Some SoC(ARMADAXP) reports false DeviceID. 
 #defflag opt_mvsoc.h				ORION KIRKWOOD MV78XX0 DOVE
 #						ARMADAXP
