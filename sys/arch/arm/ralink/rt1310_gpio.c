@@ -28,6 +28,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+ * GPIO on RT1310A consist of 2 ports:
+ * - PortA with 8 input/output pins
+ * - PortB with 4 input/output pins
+ *
+ * Pins are mapped to logical pin number as follows:
+ * [0..7] -> GPI_00..GPI_07             (port A)
+ * [8..11] -> GPI_08..GPI_11            (port B)
+ *
+ */
+
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
@@ -62,6 +74,29 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #define GPIN(n)			(1 << n)
 #define RESET_BIT		17
+
+struct rt1310_gpio_pinmap
+{
+	int			lp_start_idx;
+	int			lp_pin_count;
+	int			lp_port;
+	int			lp_start_bit;
+	int			lp_flags;
+};
+
+static const struct rt1310_gpio_pinmap rt1310_gpio_pins[] = {
+	{ 0,	8,	RT_GPIO_PORTA,	0,	GPIO_PIN_INPUT | GPIO_PIN_OUTPUT },
+	{ 8,	4,	RT_GPIO_PORTB,	0,	GPIO_PIN_INPUT | GPIO_PIN_OUTPUT },
+	{ -1,	-1,	-1,	-1,	-1 },
+};
+
+#define	RT_GPIO_NPINS				12
+
+#define	RT_GPIO_PIN_IDX(_map, _idx)	\
+    (_idx - _map->lp_start_idx)
+
+#define	RT_GPIO_PIN_BIT(_map, _idx)	\
+    (_map->lp_start_bit + RT_GPIO_PIN_IDX(_map, _idx))
 
 static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
 static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
@@ -103,6 +138,21 @@ struct gpio_softc {
 	bus_space_read_4((gpio)->gpio_memt, (gpio)->gpio_memh, (reg))
 #define	GPIO_WRITE(gpio, reg, val) \
 	bus_space_write_4((gpio)->gpio_memt, (gpio)->gpio_memh, (reg), (val))
+
+static const struct rt1310_gpio_pinmap * rt1310_gpio_get_pinmap(int pin);
+static const struct rt1310_gpio_pinmap *
+rt1310_gpio_get_pinmap(int pin)
+{
+	const struct rt1310_gpio_pinmap *map;
+
+	for (map = &rt1310_gpio_pins[0]; map->lp_start_idx != -1; map++) {
+		if (pin >= map->lp_start_idx &&
+		    pin < map->lp_start_idx + map->lp_pin_count)
+			return map;
+	}
+
+	panic("pin number %d out of range", pin);
+}
 
 void
 gpio_pic_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
@@ -259,13 +309,44 @@ int
 rtgpio_pin_read(void *arg, int pin)
 {
 	struct gpio_softc * const gpio = device_private(arg);
+	const struct rt1310_gpio_pinmap *map;
+//	uint32_t state, flags, value;
+	uint32_t state, value;
+//	int dir;
 
-	return (GPIO_READ(gpio, GPIO_INPUT_REG) >> pin) & 1;
+	map = rt1310_gpio_get_pinmap(pin);
+
+	value = 0;
+
+/*
+	if (rt1310_gpio_pin_getflags(dev, pin, &flags))
+		return (ENXIO);
+
+	if (flags & GPIO_PIN_OUTPUT)
+		dir = 1;
+
+	if (flags & GPIO_PIN_INPUT)
+		dir = 0;
+*/
+
+	switch (map->lp_port) {
+	case RT_GPIO_PORTA:
+		state = GPIO_READ(gpio, RT_GPIO_OFF_PADR);
+		value = !!(state & (1 << RT_GPIO_PIN_BIT(map, pin)));
+		break;
+	case RT_GPIO_PORTB:
+		state = GPIO_READ(gpio, RT_GPIO_OFF_PBDR);
+		value = !!(state & (1 << RT_GPIO_PIN_BIT(map, pin)));
+		break;
+	}
+
+	return value;
 }
 
 void
 rtgpio_pin_write(void *arg, int pin, int value)
 {
+#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 	uint32_t mask = 1 << pin;
 	uint32_t old, new;
@@ -278,11 +359,13 @@ rtgpio_pin_write(void *arg, int pin, int value)
 		new |= mask;
 
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
+#endif
 }
 
 void
 rtgpio_pin_ctl(void *arg, int pin, int flags)
 {
+#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 	uint32_t mask = 1 << pin;
 	uint32_t old, new;
@@ -296,11 +379,13 @@ rtgpio_pin_ctl(void *arg, int pin, int flags)
 	}
 	if (old != new)
 		GPIO_WRITE(gpio, GPIO_OE_REG, new);
+#endif
 }
 
 static void
 gpio_defer(device_t self)
 {
+#if 0
 	struct gpio_softc * const gpio = device_private(self);
 	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
 	struct gpiobus_attach_args gba;
@@ -354,6 +439,7 @@ gpio_defer(device_t self)
 
 #endif
 	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
+#endif
 }
 #endif /* NGPIO > 0 */
 
