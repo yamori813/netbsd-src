@@ -141,6 +141,9 @@ apb0		at ahb0 addr 0x1e800000
 timer0		at apb? addr 0x1e800000 intr 3
 com0		at apb? addr 0x1e840000 intr 1
 rtgpio0		at apb? addr 0x1e8a0000
+gpio*		at rtgpio?
+
+fv0		at ahb? addr 0x19C80000 intr 7
 
 # NOR Flash
 #options	NOR_VERBOSE
