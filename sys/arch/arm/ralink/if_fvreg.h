@@ -26,11 +26,24 @@
 #ifndef __IF_FVREG_H__
 #define	__IF_FVREG_H__
 
+#define FV_TX_RING_CNT	64
+#define FV_RX_RING_CNT	64
+
+#define FV_TXFRAGS	16
+
 struct fv_desc {
 	uint32_t	fv_stat;
 	uint32_t	fv_devcs;
 	uint32_t	fv_addr;
 	uint32_t	fv_link;
 };
+
+struct fv_ring_data {
+	bus_dmamap_t		tx_dm[FV_TX_RING_CNT];
+	struct mbuf		*tx_mb[FV_TX_RING_CNT];
+	bus_dmamap_t		rx_dm[FV_RX_RING_CNT];
+	struct mbuf		*rx_mb[FV_RX_RING_CNT];
+};
+
 
 #endif /* __IF_FVREG_H__ */

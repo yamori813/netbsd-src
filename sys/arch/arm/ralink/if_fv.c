@@ -50,19 +50,41 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
 //#include <arm/mindspeed/m83xxx_intc.h>
-//#include <arm/mindspeed/if_cgereg.h>
+#include <arm/ralink/if_fvreg.h>
 
-#define CGE_TXFRAGS	16
+struct fv_softc {
+	device_t		sc_dev;
+	bus_space_tag_t		sc_bst;
+	bus_space_handle_t	sc_bsh;
+	bus_size_t		sc_bss;
+	bus_dma_tag_t		sc_bdt;
+	kmutex_t		mtx;
+	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
+	struct fv_ring_data	*sc_rdp;
+	struct fv_desc		*sc_rxdesc_ring;
+	bus_dmamap_t		sc_rxdesc_dmamap;
+	struct fv_desc		*sc_txdesc_ring;
+	bus_dmamap_t		sc_txdesc_dmamap;
+	bool			sc_attached;
+	volatile u_int		sc_txnext;
+	volatile u_int		sc_txhead;
+	volatile u_int		sc_rxhead;
+	struct ethercom		sc_ec;
+	struct mii_data		sc_mii;
+};
 
 static int fv_match(device_t, cfdata_t, void *);
 static void fv_attach(device_t, device_t, void *);
 static int fv_detach(device_t, int);
 
-#if 0 
+static int fv_intr(void *);
+
+static int fv_alloc_dma(struct fv_softc *, size_t, void **,bus_dmamap_t *);
+
+static int fv_init(struct ifnet *);
 static void fv_start(struct ifnet *);
 static int fv_ioctl(struct ifnet *, u_long, void *);
 static void fv_watchdog(struct ifnet *);
-static int fv_init(struct ifnet *);
 static void fv_stop(struct ifnet *, int);
 
 static int fv_mii_readreg(device_t, int, int, uint16_t *);
@@ -72,17 +94,14 @@ static void fv_mii_statchg(struct ifnet *);
 static int fv_new_rxbuf(struct fv_softc * const, const u_int);
 //static void fv_tick(void *);
 
-static int fv_intr(void *);
-static int fv_rxintr(void *);
-static int fv_txintr(void *);
+//static int fv_rxintr(void *);
+//static int fv_txintr(void *);
 
 #define TXDESC_NEXT(x) fv_txdesc_adjust((x), 1)
 #define TXDESC_PREV(x) fv_txdesc_adjust((x), -1)
 
 #define RXDESC_NEXT(x) fv_rxdesc_adjust((x), 1)
 #define RXDESC_PREV(x) fv_rxdesc_adjust((x), -1)
-
-static int fv_alloc_dma(struct fv_softc *, size_t, void **,bus_dmamap_t *);
 
 #include <sys/kernhist.h>
 KERNHIST_DEFINE(cgehist);
@@ -96,16 +115,16 @@ static inline u_int
 fv_txdesc_adjust(u_int x, int y)
 {
 //	return (((x) + y) & (CGE_TX_RING_CNT - 1));
-	int res = x + y + CGE_TX_RING_CNT;
-	return res % CGE_TX_RING_CNT;
+	int res = x + y + FV_TX_RING_CNT;
+	return res % FV_TX_RING_CNT;
 }
 
 static inline u_int
 fv_rxdesc_adjust(u_int x, int y)
 {
 //	return (((x) + y) & (CGE_RX_RING_CNT - 1));
-	int res = x + y + CGE_RX_RING_CNT;
-	return res % CGE_RX_RING_CNT;
+	int res = x + y + FV_RX_RING_CNT;
+	return res % FV_RX_RING_CNT;
 }
 
 static inline uint32_t
@@ -120,10 +139,6 @@ fv_write_4(struct fv_softc * const sc, bus_size_t const offset,
 {
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
-#endif
-
-struct fv_softc {
-};
 
 CFATTACH_DECL_NEW(fv, sizeof(struct fv_softc),
     fv_match, fv_attach, fv_detach, NULL);
@@ -186,8 +201,7 @@ fv_detach(device_t self, int flags)
 static void
 fv_attach(device_t parent, device_t self, void *aux)
 {
-#if 0
-	struct apb_attach_args * const aa = aux;
+	struct ahb_attach_args * const aa = aux;
 	struct fv_softc * const sc = device_private(self);
 	int i, error;
 	struct ethercom * const ec = &sc->sc_ec;
@@ -195,19 +209,18 @@ fv_attach(device_t parent, device_t self, void *aux)
 	struct mii_data * const mii = &sc->sc_mii;
 
 	sc->sc_dev = self;
-	sc->sc_bst = aa->apba_memt;
-	sc->sc_bdt = aa->apba_dmat;
+	sc->sc_bst = aa->ahba_memt;
+	sc->sc_bdt = aa->ahba_dmat;
 	sc->sc_bss = 0x10000;
 
-	aprint_normal(": GEMAC Interface\n");
+	aprint_normal(": MAC Interface\n");
 	aprint_naive("\n");
 
 	mutex_init(&sc->mtx, MUTEX_DEFAULT, IPL_NET);
 //	callout_init(&sc->sc_tick_ch, 0);
 //	callout_setfunc(&sc->sc_tick_ch, fv_tick, sc);
 
-//	error = bus_space_map(aa->apba_memt, aa->apba_addr, aa->apba_size,
-	error = bus_space_map(aa->apba_memt, aa->apba_addr, sc->sc_bss,
+	error = bus_space_map(aa->ahba_memt, aa->ahba_addr, sc->sc_bss,
 	    0, &sc->sc_bsh);
 	if (error) {
 		aprint_error_dev(sc->sc_dev,
@@ -215,7 +228,7 @@ fv_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 
-	intr_establish(aa->apba_intr, IPL_NET, IST_LEVEL,
+	intr_establish(aa->ahba_intr, IPL_NET, IST_LEVEL,
 	    fv_intr, sc);
 
 	sc->sc_enaddr[0] = 0xd4;
@@ -227,9 +240,9 @@ fv_attach(device_t parent, device_t self, void *aux)
 
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
-	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+	for (i = 0; i < FV_TX_RING_CNT; i++) {
 		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES,
-		    CGE_TXFRAGS, MCLBYTES, 0, 0,
+		    FV_TXFRAGS, MCLBYTES, 0, 0,
 		    &sc->sc_rdp->tx_dm[i])) != 0) {
 			aprint_error_dev(sc->sc_dev,
 			    "unable to create tx DMA map: %d\n", error);
@@ -237,7 +250,7 @@ fv_attach(device_t parent, device_t self, void *aux)
 		sc->sc_rdp->tx_mb[i] = NULL;
 	}
 
-	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+	for (i = 0; i < FV_RX_RING_CNT; i++) {
 		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES, 1,
 		    MCLBYTES, 0, 0, &sc->sc_rdp->rx_dm[i])) != 0) {
 			aprint_error_dev(sc->sc_dev,
@@ -246,24 +259,27 @@ fv_attach(device_t parent, device_t self, void *aux)
 		sc->sc_rdp->rx_mb[i] = NULL;
 	}
 
-	if (fv_alloc_dma(sc, sizeof(struct tRXdesc) * CGE_RX_RING_CNT,
+	if (fv_alloc_dma(sc, sizeof(struct fv_desc) * FV_RX_RING_CNT,
 	    (void **)&(sc->sc_rxdesc_ring), &(sc->sc_rxdesc_dmamap)) != 0)
 		return;
 
-	if (fv_alloc_dma(sc, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	if (fv_alloc_dma(sc, sizeof(struct fv_desc) * FV_TX_RING_CNT,
 	    (void **)&(sc->sc_txdesc_ring), &(sc->sc_txdesc_dmamap)) != 0)
 		return;
 
-	memset(sc->sc_rxdesc_ring, 0, sizeof(struct tRXdesc) * CGE_RX_RING_CNT);
+	memset(sc->sc_rxdesc_ring, 0, sizeof(struct fv_desc) * FV_RX_RING_CNT);
 
-	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+	for (i = 0; i < FV_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].fv_stat = 0;
+/*
 		sc->sc_txdesc_ring[i].tx_data = 0;
 		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
 		if (i == CGE_TX_RING_CNT - 1)
 			sc->sc_txdesc_ring[i - 1].tx_ctl |= GEMTX_WRAP;
+*/
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-		    sizeof(struct tTXdesc) * i,
-		    sizeof(struct tTXdesc),
+		    sizeof(struct fv_desc) * i,
+		    sizeof(struct fv_desc),
 		    BUS_DMASYNC_PREWRITE);
 	}
 
@@ -291,28 +307,20 @@ fv_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
-	if (device_unit(self) == 0) {
-		arswitch_writereg(self, 8, 0x81461bea);
-		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-		    arswitch_readreg(self, 0),
-		    arswitch_readreg(self, 8));
-//		arswitch_writereg(self, 0, (1 << 31));
-	}
-
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
 	ether_ifattach(ifp, sc->sc_enaddr);
 
 	/* The attach is successful. */
 	sc->sc_attached = true;
-#endif
+
 	return;
 }
 
-#if 0
 static void
 fv_start(struct ifnet *ifp)
 {
+#if 0
 	struct fv_softc * const sc = ifp->if_softc;
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 //	struct fv_cpdma_bd bd;
@@ -426,11 +434,13 @@ fv_start(struct ifnet *ifp)
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
 
 	CGE_UNLOCK(sc);
+#endif
 }
 
 static int
 fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 {
+#if 0
 	const int s = splnet();
 	int error = 0;
 
@@ -446,6 +456,8 @@ fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 	splx(s);
 
 	return error;
+#endif
+	return 0;
 }
 
 static void
@@ -465,6 +477,7 @@ fv_watchdog(struct ifnet *ifp)
 static int
 fv_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
 {
+#if 0
 	struct fv_softc * const sc = device_private(dev);
 	int result, wdata;
 
@@ -476,12 +489,14 @@ fv_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
 	result = fv_read_4(sc, GEM_IP + GEM_PHY_MAN);
 
 	*val = (uint16_t)result;
+#endif
 	return 0;
 }
 
 static int
 fv_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
 {
+#if 0
 	struct fv_softc * const sc = device_private(dev);
 	int wdata;
 
@@ -490,6 +505,7 @@ fv_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
 	fv_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
 	while(!(fv_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
 		;
+#endif
 	return 0;
 }
 
@@ -542,15 +558,17 @@ fv_new_rxbuf(struct fv_softc * const sc, const u_int i)
 	error = 0;
 
 reuse:
+/*
 	sc->sc_rxdesc_ring[i].rx_data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 	sc->sc_rxdesc_ring[i].rx_status = RX_INT;
 	sc->sc_rxdesc_ring[i].rx_extstatus = 0;
+*/
 
-	if (i == CGE_RX_RING_CNT - 1)
-		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
+//	if (i == CGE_RX_RING_CNT - 1)
+//		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
 
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
-	    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
+	    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
             BUS_DMASYNC_PREWRITE);
 
 	return error;
@@ -561,10 +579,10 @@ fv_init(struct ifnet *ifp)
 {
 	struct fv_softc * const sc = ifp->if_softc;
 	int i;
-	int reg;
+//	int reg;
 //	int orgreg;
-	int mac;
-	paddr_t paddr;
+//	int mac;
+//	paddr_t paddr;
 
 	fv_stop(ifp, 0);
 
@@ -572,10 +590,11 @@ fv_init(struct ifnet *ifp)
 	sc->sc_txhead = 0;
 
 	/* Init circular RX list. */
-	for (i = 0; i < CGE_RX_RING_CNT; i++) {
+	for (i = 0; i < FV_RX_RING_CNT; i++) {
 		fv_new_rxbuf(sc, i);
 	}
 	sc->sc_rxhead = 0;
+#if 0
 
 	/*
 	 * Give the transmit and receive rings to the chip.
@@ -642,7 +661,7 @@ fv_init(struct ifnet *ifp)
 	    GEM_IRQ_RX_DONE | GEM_IRQ_TX_DONE);
 
 	ifp->if_flags |= IFF_RUNNING;
-
+#endif
 	return 0;
 }
 
@@ -728,6 +747,7 @@ fv_stop(struct ifnet *ifp, int disable)
 static int
 fv_intr(void *arg)
 {
+#if 0
 	struct fv_softc * const sc = arg;
 	int reg;
 
@@ -740,6 +760,7 @@ fv_intr(void *arg)
 		fv_rxintr(arg);
 
 	fv_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
+#endif
 
 	return 1;
 }
@@ -760,6 +781,7 @@ fv_tick(void *arg)
 }
 #endif
 
+#if 0
 static int
 fv_rxintr(void *arg)
 {
@@ -853,6 +875,7 @@ fv_txintr(void *arg)
 
 	return handled;
 }
+#endif
 
 static int
 fv_alloc_dma(struct fv_softc *sc, size_t size, void **addrp,
@@ -901,4 +924,3 @@ fv_alloc_dma(struct fv_softc *sc, size_t size, void **addrp,
  fail_alloc:
 	return error;
 }
-#endif
