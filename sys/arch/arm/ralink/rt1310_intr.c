@@ -103,8 +103,9 @@ struct rt1310_irqdef irqdef[INTC_NIRQS] = {
 };
 
 static const char * const sources[] = {
-    "CPUSelfInt",      "CPUTimer0IntReq", "CPUTimer1IntReq", "CPUWDTimerIntReq",
-    "AccessErr",       "Bit64Err",
+	"SPI",		"UART0", 	"UART1", 	"TIMER0",
+	"TIMER1",	"TIMER2",	"RT",		"MAC0",
+	"MAC1", 	"UDC"
 };
 
 static struct pic_ops rt1310_picops = {
