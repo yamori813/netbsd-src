@@ -1,5 +1,6 @@
-/*	$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp $ */
+/*	$NetBSD$ */
 /*
+ * Copyright (c) 2023 Hiroki Mori
  * Copyright (c) 2007, 2008, 2010 KIYOHARA Takashi
  * All rights reserved.
  *
@@ -25,17 +26,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_arm_debug.h"
 #include "opt_console.h"
 #include "opt_evbarm_boardtype.h"
 #include "opt_ddb.h"
 #include "opt_pci.h"
-//#include "opt_mvsoc.h"
 #include "com.h"
-//#include "gtpci.h"
-//#include "mvpex.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -48,14 +46,8 @@ __KERNEL_RCSID(0, "$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp
 #include <dev/cons.h>
 #include <dev/md.h>
 
-#include <dev/marvell/marvellreg.h>
-#include <dev/marvell/marvellvar.h>
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
-
 #include <machine/autoconf.h>
 #include <machine/bootconfig.h>
-#include <machine/pci_machdep.h>
 
 #include <uvm/uvm_extern.h>
 
@@ -70,7 +62,6 @@ __KERNEL_RCSID(0, "$NetBSD: marvell_machdep.c,v 1.37 2021/08/30 00:04:30 rin Exp
 #include <ddb/db_sym.h>
 
 #include "ksyms.h"
-
 
 /*
  * The range 0xc2000000 - 0xdfffffff is available for kernel VM space
@@ -94,14 +85,6 @@ char *boot_args = NULL;
 extern int KERNEL_BASE_phys[];
 extern char _end[];
 
-#if 0
-/*
- * Macros to translate between physical and virtual for a subset of the
- * kernel address space.  *Not* for general use.
- */
-#define KERNEL_BASE_PHYS	physical_start
-
-
 #include "com.h"
 #if NCOM > 0
 #include <dev/ic/comreg.h>
@@ -111,6 +94,7 @@ extern char _end[];
 #ifndef CONSPEED
 #define CONSPEED	B38400	/* It's a setting of the default of u-boot */
 #endif
+
 #ifndef CONMODE
 #define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
 
@@ -123,127 +107,12 @@ int comcnmode = CONMODE;
 #include <sys/kgdb.h>
 #endif
 
-static void marvell_device_register(device_t, void *);
-#if NGTPCI > 0 || NMVPEX > 0
-static void marvell_startend_by_tag(int, uint64_t *, uint64_t *);
-#endif
-
-static void
-marvell_fixup_mbus_pex(int memtag, int iotag)
-{
-	uint32_t target, attr;
-	int window;
-
-	/* Reset PCI-Express space to window register. */
-	window = mvsoc_target(memtag, &target, &attr, NULL, NULL);
-	write_mlmbreg(MVSOC_MLMB_WCR(window),
-	    MVSOC_MLMB_WCR_WINEN |
-	    MVSOC_MLMB_WCR_TARGET(target) |
-	    MVSOC_MLMB_WCR_ATTR(attr) |
-	    MVSOC_MLMB_WCR_SIZE(MARVELL_PEXMEM_SIZE));
-	write_mlmbreg(MVSOC_MLMB_WBR(window),
-	    MARVELL_PEXMEM_PBASE & MVSOC_MLMB_WBR_BASE_MASK);
-#ifdef PCI_NETBSD_CONFIGURE
-	if (window < nremap) {
-		write_mlmbreg(MVSOC_MLMB_WRLR(window),
-		    MARVELL_PEXMEM_PBASE & MVSOC_MLMB_WRLR_REMAP_MASK);
-		write_mlmbreg(MVSOC_MLMB_WRHR(window), 0);
-	}
-#endif
-	window = mvsoc_target(iotag, &target, &attr, NULL, NULL);
-	write_mlmbreg(MVSOC_MLMB_WCR(window),
-	    MVSOC_MLMB_WCR_WINEN |
-	    MVSOC_MLMB_WCR_TARGET(target) |
-	    MVSOC_MLMB_WCR_ATTR(attr) |
-	    MVSOC_MLMB_WCR_SIZE(MARVELL_PEXIO_SIZE));
-	write_mlmbreg(MVSOC_MLMB_WBR(window),
-	    MARVELL_PEXIO_PBASE & MVSOC_MLMB_WBR_BASE_MASK);
-#ifdef PCI_NETBSD_CONFIGURE
-	if (window < nremap) {
-		write_mlmbreg(MVSOC_MLMB_WRLR(window),
-		    MARVELL_PEXIO_PBASE & MVSOC_MLMB_WRLR_REMAP_MASK);
-		write_mlmbreg(MVSOC_MLMB_WRHR(window), 0);
-	}
-#endif
-}
-
-#if defined(ORION) || defined(KIRKWOOD) || defined(MV78XX0) || defined(DOVE)
-static void
-marvell_system_reset(void)
-{
-	/* unmask soft reset */
-	write_mlmbreg(MVSOC_MLMB_RSTOUTNMASKR,
-	    MVSOC_MLMB_RSTOUTNMASKR_SOFTRSTOUTEN);
-	/* assert soft reset */
-	write_mlmbreg(MVSOC_MLMB_SSRR, MVSOC_MLMB_SSRR_SYSTEMSOFTRST);
-
-	/* if we're still running, jump to the reset address */
-	cpu_reset_address = 0;
-	cpu_reset_address_paddr = 0xffff0000;
-	cpu_reset();
-	/*NOTREACHED*/
-}
-
-static void
-marvell_fixup_mbus(int memtag, int iotag)
-{
-	/* assume u-boot initializes mbus registers correctly */
-
-	/* set marvell common PEX params */
-	marvell_fixup_mbus_pex(memtag, iotag);
-
-	/* other configurations? */
-}
-#endif
-
-
-#if defined(ARMADAXP)
-static void
-armadaxp_system_reset(void)
-{
-	extern vaddr_t misc_base;
-
-#define	write_miscreg(r, v)	\
-    (*(volatile uint32_t *)(misc_base + (r)) = htole32(v))
-
-	/* Unmask soft reset */
-	write_miscreg(ARMADAXP_MISC_RSTOUTNMASKR,
-	    ARMADAXP_MISC_RSTOUTNMASKR_GLOBALSOFTRSTOUTEN);
-	/* Assert soft reset */
-	write_miscreg(ARMADAXP_MISC_SSRR, ARMADAXP_MISC_SSRR_GLOBALSOFTRST);
-
-	while (1);
-
-	/*NOTREACHED*/
-}
-
-static void
-armadaxp_fixup_mbus(int memtag, int iotag)
-{
-	/* force set SoC default parameters */
-	armadaxp_init_mbus();
-
-	/* set marvell common PEX params */
-	marvell_fixup_mbus_pex(memtag, iotag);
-
-	/* other configurations? */
-}
-#endif
-#endif
-
-
 static inline pd_entry_t *
 read_ttb(void)
 {
 
 	return (pd_entry_t *)(armreg_ttbr_read() & ~((1<<14)-1));
 }
-
-#include "com.h"
-#if NCOM > 0
-#include <dev/ic/comreg.h>
-#include <dev/ic/comvar.h>
-#endif
 
 /*
  * Static device mappings. These peripheral registers are mapped at
@@ -383,7 +252,6 @@ rtcomcnattach(bus_space_tag_t iot, bus_addr_t iobase, int rate,
 	com_init_regs_stride(&regs, iot, dummy_bsh/*XXX*/, iobase,
 		2);
 
-
 	return comcnattach1(&regs, rate, frequency, type, cflag);
 }
 
@@ -402,341 +270,6 @@ consinit(void)
 		RT_BASE_BAUD, COM_TYPE_16550_NOERS, consmode))
 			panic("Serial console can not be initialized.");
 }
-
-#if 0
-static void
-marvell_device_register(device_t dev, void *aux)
-{
-	prop_dictionary_t dict = device_properties(dev);
-
-#if NCOM > 0
-	if (device_is_a(dev, "com") &&
-	    device_is_a(device_parent(dev), "mvsoc"))
-		prop_dictionary_set_uint32(dict, "frequency", mvTclk);
-#endif
-
-	if (device_is_a(dev, "gtidmac"))
-		prop_dictionary_set_uint32(dict,
-		    "dmb_speed", mvTclk * sizeof(uint32_t));	/* XXXXXX */
-
-#if NGTPCI > 0 && defined(ORION)
-	if (device_is_a(dev, "gtpci")) {
-		extern struct bus_space
-		    orion_pci_io_bs_tag, orion_pci_mem_bs_tag;
-		extern struct arm32_pci_chipset arm32_gtpci_chipset;
-
-		prop_data_t io_bs_tag, mem_bs_tag, pc;
-		prop_array_t int2gpp;
-		prop_number_t gpp;
-		uint64_t start, end;
-		int i, j;
-		static struct {
-			const char *boardtype;
-			int pin[PCI_INTERRUPT_PIN_MAX];
-		} hints[] = {
-			{ "kuronas_x4",
-			    { 11, PCI_INTERRUPT_PIN_NONE } },
-
-			{ NULL,
-			    { PCI_INTERRUPT_PIN_NONE } },
-		};
-
-		arm32_gtpci_chipset.pc_conf_v = device_private(dev);
-		arm32_gtpci_chipset.pc_intr_v = device_private(dev);
-
-		io_bs_tag = prop_data_create_data_nocopy(
-		    &orion_pci_io_bs_tag, sizeof(struct bus_space));
-		KASSERT(io_bs_tag != NULL);
-		prop_dictionary_set(dict, "io-bus-tag", io_bs_tag);
-		prop_object_release(io_bs_tag);
-		mem_bs_tag = prop_data_create_data_nocopy(
-		    &orion_pci_mem_bs_tag, sizeof(struct bus_space));
-		KASSERT(mem_bs_tag != NULL);
-		prop_dictionary_set(dict, "mem-bus-tag", mem_bs_tag);
-		prop_object_release(mem_bs_tag);
-
-		pc = prop_data_create_data_nocopy(&arm32_gtpci_chipset,
-		    sizeof(struct arm32_pci_chipset));
-		KASSERT(pc != NULL);
-		prop_dictionary_set(dict, "pci-chipset", pc);
-		prop_object_release(pc);
-
-		marvell_startend_by_tag(ORION_TAG_PCI_IO, &start, &end);
-		prop_dictionary_set_uint64(dict, "iostart", start);
-		prop_dictionary_set_uint64(dict, "ioend", end);
-		marvell_startend_by_tag(ORION_TAG_PCI_MEM, &start, &end);
-		prop_dictionary_set_uint64(dict, "memstart", start);
-		prop_dictionary_set_uint64(dict, "memend", end);
-		prop_dictionary_set_uint32(dict,
-		    "cache-line-size", arm_dcache_align);
-
-		/* Setup the hint for interrupt-pin. */
-#define BDSTR(s)		_BDSTR(s)
-#define _BDSTR(s)		#s
-#define THIS_BOARD(str)		(strcmp(str, BDSTR(EVBARM_BOARDTYPE)) == 0)
-		for (i = 0; hints[i].boardtype != NULL; i++)
-			if (THIS_BOARD(hints[i].boardtype))
-				break;
-		if (hints[i].boardtype == NULL)
-			return;
-
-		int2gpp =
-		    prop_array_create_with_capacity(PCI_INTERRUPT_PIN_MAX + 1);
-
-		/* first set dummy */
-		gpp = prop_number_create_integer(0);
-		prop_array_add(int2gpp, gpp);
-		prop_object_release(gpp);
-
-		for (j = 0; hints[i].pin[j] != PCI_INTERRUPT_PIN_NONE; j++) {
-			gpp = prop_number_create_integer(hints[i].pin[j]);
-			prop_array_add(int2gpp, gpp);
-			prop_object_release(gpp);
-		}
-		prop_dictionary_set(dict, "int2gpp", int2gpp);
-	}
-#endif	/* NGTPCI > 0 && defined(ORION) */
-
-#if NMVPEX > 0
-	if (device_is_a(dev, "mvpex")) {
-#ifdef ORION
-		extern struct bus_space
-		    orion_pex0_io_bs_tag, orion_pex0_mem_bs_tag,
-		    orion_pex1_io_bs_tag, orion_pex1_mem_bs_tag;
-#endif
-#ifdef KIRKWOOD
-		extern struct bus_space
-		    kirkwood_pex_io_bs_tag, kirkwood_pex_mem_bs_tag,
-		    kirkwood_pex1_io_bs_tag, kirkwood_pex1_mem_bs_tag;
-#endif
-#ifdef DOVE
-		extern struct bus_space
-		    dove_pex0_io_bs_tag, dove_pex0_mem_bs_tag,
-		    dove_pex1_io_bs_tag, dove_pex1_mem_bs_tag;
-#endif
-#ifdef ARMADAXP
-		extern struct bus_space
-		    armadaxp_pex00_io_bs_tag, armadaxp_pex00_mem_bs_tag,
-		    armadaxp_pex01_io_bs_tag, armadaxp_pex01_mem_bs_tag,
-		    armadaxp_pex02_io_bs_tag, armadaxp_pex02_mem_bs_tag,
-		    armadaxp_pex03_io_bs_tag, armadaxp_pex03_mem_bs_tag,
-		    armadaxp_pex2_io_bs_tag, armadaxp_pex2_mem_bs_tag,
-		    armadaxp_pex3_io_bs_tag, armadaxp_pex3_mem_bs_tag;
-		int i;
-#endif
-		extern struct arm32_pci_chipset
-		    arm32_mvpex0_chipset, arm32_mvpex1_chipset;
-
-		struct marvell_attach_args *mva = aux;
-		struct bus_space *mvpex_io_bs_tag, *mvpex_mem_bs_tag;
-		struct arm32_pci_chipset *arm32_mvpex_chipset;
-		prop_data_t io_bs_tag, mem_bs_tag, pc;
-		uint64_t start, end;
-		int iotag, memtag;
-
-		switch (mvsoc_model()) {
-#ifdef ORION
-		case MARVELL_ORION_1_88F5180N:
-		case MARVELL_ORION_1_88F5181:
-		case MARVELL_ORION_1_88F5182:
-		case MARVELL_ORION_1_88W8660:
-		case MARVELL_ORION_2_88F5281:
-			if (mva->mva_offset == MVSOC_PEX_BASE) {
-				mvpex_io_bs_tag = &orion_pex0_io_bs_tag;
-				mvpex_mem_bs_tag = &orion_pex0_mem_bs_tag;
-				arm32_mvpex_chipset = &arm32_mvpex0_chipset;
-				iotag = ORION_TAG_PEX0_IO;
-				memtag = ORION_TAG_PEX0_MEM;
-			} else {
-				mvpex_io_bs_tag = &orion_pex1_io_bs_tag;
-				mvpex_mem_bs_tag = &orion_pex1_mem_bs_tag;
-				arm32_mvpex_chipset = &arm32_mvpex1_chipset;
-				iotag = ORION_TAG_PEX1_IO;
-				memtag = ORION_TAG_PEX1_MEM;
-			}
-			break;
-#endif
-
-#ifdef KIRKWOOD
-		case MARVELL_KIRKWOOD_88F6282:
-			if (mva->mva_offset != MVSOC_PEX_BASE) {
-				mvpex_io_bs_tag = &kirkwood_pex1_io_bs_tag;
-				mvpex_mem_bs_tag = &kirkwood_pex1_mem_bs_tag;
-				arm32_mvpex_chipset = &arm32_mvpex1_chipset;
-				iotag = KIRKWOOD_TAG_PEX1_IO;
-				memtag = KIRKWOOD_TAG_PEX1_MEM;
-				break;
-			}
-
-			/* FALLTHROUGH */
-
-		case MARVELL_KIRKWOOD_88F6180:
-		case MARVELL_KIRKWOOD_88F6192:
-		case MARVELL_KIRKWOOD_88F6281:
-			mvpex_io_bs_tag = &kirkwood_pex_io_bs_tag;
-			mvpex_mem_bs_tag = &kirkwood_pex_mem_bs_tag;
-			arm32_mvpex_chipset = &arm32_mvpex0_chipset;
-			iotag = KIRKWOOD_TAG_PEX_IO;
-			memtag = KIRKWOOD_TAG_PEX_MEM;
-			break;
-#endif
-
-#ifdef DOVE
-		case MARVELL_DOVE_88AP510:
-			if (mva->mva_offset == MVSOC_PEX_BASE) {
-				mvpex_io_bs_tag = &dove_pex0_io_bs_tag;
-				mvpex_mem_bs_tag = &dove_pex0_mem_bs_tag;
-				arm32_mvpex_chipset = &arm32_mvpex0_chipset;
-				iotag = DOVE_TAG_PEX0_IO;
-				memtag = DOVE_TAG_PEX0_MEM;
-			} else {
-				mvpex_io_bs_tag = &dove_pex1_io_bs_tag;
-				mvpex_mem_bs_tag = &dove_pex1_mem_bs_tag;
-				arm32_mvpex_chipset = &arm32_mvpex1_chipset;
-				iotag = DOVE_TAG_PEX1_IO;
-				memtag = DOVE_TAG_PEX1_MEM;
-			}
-			break;
-#endif
-
-#ifdef ARMADAXP
-		case MARVELL_ARMADAXP_MV78130:
-		case MARVELL_ARMADAXP_MV78160:
-		case MARVELL_ARMADAXP_MV78230:
-		case MARVELL_ARMADAXP_MV78260:
-		case MARVELL_ARMADAXP_MV78460:
-
-		case MARVELL_ARMADA370_MV6707:
-		case MARVELL_ARMADA370_MV6710:
-		case MARVELL_ARMADA370_MV6W11:
-		  {
-			extern struct arm32_pci_chipset
-			    arm32_mvpex2_chipset, arm32_mvpex3_chipset,
-			    arm32_mvpex4_chipset, arm32_mvpex5_chipset;
-			const struct {
-				bus_size_t offset;
-				struct bus_space *io_bs_tag;
-				struct bus_space *mem_bs_tag;
-				struct arm32_pci_chipset *chipset;
-				int iotag;
-				int memtag;
-			} mvpex_tags[] = {
-				{	MVSOC_PEX_BASE,
-					&armadaxp_pex00_io_bs_tag,
-					&armadaxp_pex00_mem_bs_tag,
-					&arm32_mvpex0_chipset,
-					ARMADAXP_TAG_PEX00_IO,
-					ARMADAXP_TAG_PEX00_MEM },
-
-				{	ARMADAXP_PEX01_BASE,
-					&armadaxp_pex01_io_bs_tag,
-					&armadaxp_pex01_mem_bs_tag,
-					&arm32_mvpex1_chipset,
-					ARMADAXP_TAG_PEX01_IO,
-					ARMADAXP_TAG_PEX01_MEM	},
-
-				{	ARMADAXP_PEX02_BASE,
-					&armadaxp_pex02_io_bs_tag,
-					&armadaxp_pex02_mem_bs_tag,
-					&arm32_mvpex2_chipset,
-					ARMADAXP_TAG_PEX02_IO,
-					ARMADAXP_TAG_PEX02_MEM	},
-
-				{	ARMADAXP_PEX03_BASE,
-					&armadaxp_pex03_io_bs_tag,
-					&armadaxp_pex03_mem_bs_tag,
-					&arm32_mvpex3_chipset,
-					ARMADAXP_TAG_PEX03_IO,
-					ARMADAXP_TAG_PEX03_MEM	},
-
-				{	ARMADAXP_PEX2_BASE,
-					&armadaxp_pex2_io_bs_tag,
-					&armadaxp_pex2_mem_bs_tag,
-					&arm32_mvpex4_chipset,
-					ARMADAXP_TAG_PEX2_IO,
-					ARMADAXP_TAG_PEX2_MEM	},
-
-				{	ARMADAXP_PEX3_BASE,
-					&armadaxp_pex3_io_bs_tag,
-					&armadaxp_pex3_mem_bs_tag,
-					&arm32_mvpex5_chipset,
-					ARMADAXP_TAG_PEX3_IO,
-					ARMADAXP_TAG_PEX3_MEM	},
-
-				{ 0, 0, 0, 0, 0 },
-			};
-
-			for (i = 0; mvpex_tags[i].offset != 0; i++) {
-				if (mva->mva_offset != mvpex_tags[i].offset)
-					continue;
-				break;
-			}
-			if (mvpex_tags[i].offset == 0)
-				return;
-			mvpex_io_bs_tag = mvpex_tags[i].io_bs_tag;
-			mvpex_mem_bs_tag = mvpex_tags[i].mem_bs_tag;
-			arm32_mvpex_chipset = mvpex_tags[i].chipset;
-			iotag = mvpex_tags[i].iotag;
-			memtag = mvpex_tags[i].memtag;
-			break;
-		  }
-#endif
-
-		default:
-			return;
-		}
-
-		arm32_mvpex_chipset->pc_conf_v = device_private(dev);
-		arm32_mvpex_chipset->pc_intr_v = device_private(dev);
-
-		io_bs_tag = prop_data_create_data_nocopy(
-		    mvpex_io_bs_tag, sizeof(struct bus_space));
-		KASSERT(io_bs_tag != NULL);
-		prop_dictionary_set(dict, "io-bus-tag", io_bs_tag);
-		prop_object_release(io_bs_tag);
-		mem_bs_tag = prop_data_create_data_nocopy(
-		    mvpex_mem_bs_tag, sizeof(struct bus_space));
-		KASSERT(mem_bs_tag != NULL);
-		prop_dictionary_set(dict, "mem-bus-tag", mem_bs_tag);
-		prop_object_release(mem_bs_tag);
-
-		pc = prop_data_create_data_nocopy(arm32_mvpex_chipset,
-		    sizeof(struct arm32_pci_chipset));
-		KASSERT(pc != NULL);
-		prop_dictionary_set(dict, "pci-chipset", pc);
-		prop_object_release(pc);
-
-		marvell_startend_by_tag(iotag, &start, &end);
-		prop_dictionary_set_uint64(dict, "iostart", start);
-		prop_dictionary_set_uint64(dict, "ioend", end);
-		marvell_startend_by_tag(memtag, &start, &end);
-		prop_dictionary_set_uint64(dict, "memstart", start);
-		prop_dictionary_set_uint64(dict, "memend", end);
-		prop_dictionary_set_uint32(dict,
-		    "cache-line-size", arm_dcache_align);
-	}
-#endif
-}
-
-#if NGTPCI > 0 || NMVPEX > 0
-static void
-marvell_startend_by_tag(int tag, uint64_t *start, uint64_t *end)
-{
-	uint32_t base, size;
-	int win;
-
-	win = mvsoc_target(tag, NULL, NULL, &base, &size);
-	if (size != 0) {
-		if (win < nremap)
-			*start = read_mlmbreg(MVSOC_MLMB_WRLR(win)) |
-			    ((read_mlmbreg(MVSOC_MLMB_WRHR(win)) << 16) << 16);
-		else
-			*start = base;
-		*end = *start + size - 1;
-	}
-}
-#endif
-#endif
 
 void
 cpu_reboot(int howto, char *bootstr)
