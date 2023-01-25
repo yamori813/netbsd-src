@@ -49,7 +49,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 
 #include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
-//#include <arm/mindspeed/m83xxx_intc.h>
+#include <arm/ralink/rt1310_intr.h>
 #include <arm/ralink/if_fvreg.h>
 
 struct fv_softc {
@@ -58,19 +58,23 @@ struct fv_softc {
 	bus_space_handle_t	sc_bsh;
 	bus_size_t		sc_bss;
 	bus_dma_tag_t		sc_bdt;
-	kmutex_t		mtx;
+	struct ethercom		sc_ec;
+	struct mii_data		sc_mii;
 	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
+	bool			sc_attached;
+	kmutex_t		mtx;
 	struct fv_ring_data	*sc_rdp;
 	struct fv_desc		*sc_rxdesc_ring;
 	bus_dmamap_t		sc_rxdesc_dmamap;
 	struct fv_desc		*sc_txdesc_ring;
 	bus_dmamap_t		sc_txdesc_dmamap;
-	bool			sc_attached;
 	volatile u_int		sc_txnext;
 	volatile u_int		sc_txhead;
 	volatile u_int		sc_rxhead;
-	struct ethercom		sc_ec;
-	struct mii_data		sc_mii;
+	u_int32_t		sc_inten;	/* copy of CSR_INTEN */
+	u_int32_t		sc_rxint_mask;	/* mask of Rx interrupts */
+	u_int32_t		sc_txint_mask;	/* mask of Tx interrupts */
+	bool			sc_txbusy;
 };
 
 static int fv_match(device_t, cfdata_t, void *);
@@ -87,15 +91,18 @@ static int fv_ioctl(struct ifnet *, u_long, void *);
 static void fv_watchdog(struct ifnet *);
 static void fv_stop(struct ifnet *, int);
 
-static int fv_mii_readreg(device_t, int, int, uint16_t *);
-static int fv_mii_writereg(device_t, int, int, uint16_t);
+static int fv_miibus_readreg(device_t, int, int, uint16_t *);
+static int fv_miibus_writereg(device_t, int, int, uint16_t);
 static void fv_mii_statchg(struct ifnet *);
 
 static int fv_new_rxbuf(struct fv_softc * const, const u_int);
 //static void fv_tick(void *);
 
-//static int fv_rxintr(void *);
-//static int fv_txintr(void *);
+static int fv_rxintr(void *);
+static int fv_txintr(void *);
+
+CFATTACH_DECL_NEW(fv, sizeof(struct fv_softc),
+    fv_match, fv_attach, fv_detach, NULL);
 
 #define TXDESC_NEXT(x) fv_txdesc_adjust((x), 1)
 #define TXDESC_PREV(x) fv_txdesc_adjust((x), -1)
@@ -104,10 +111,10 @@ static int fv_new_rxbuf(struct fv_softc * const, const u_int);
 #define RXDESC_PREV(x) fv_rxdesc_adjust((x), -1)
 
 #include <sys/kernhist.h>
-KERNHIST_DEFINE(cgehist);
+KERNHIST_DEFINE(fvhist);
 
 #define CPSWHIST_CALLARGS(A,B,C,D)	do {					\
-	    KERNHIST_CALLARGS(cgehist, "%jx %jx %jx %jx",			\
+	    KERNHIST_CALLARGS(fvhist, "%jx %jx %jx %jx",			\
 		(uintptr_t)(A), (uintptr_t)(B), (uintptr_t)(C), (uintptr_t)(D));\
 	} while (0)
 
@@ -139,9 +146,6 @@ fv_write_4(struct fv_softc * const sc, bus_size_t const offset,
 {
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
-
-CFATTACH_DECL_NEW(fv, sizeof(struct fv_softc),
-    fv_match, fv_attach, fv_detach, NULL);
 
 static int
 fv_match(device_t parent, cfdata_t cf, void *aux)
@@ -203,15 +207,17 @@ fv_attach(device_t parent, device_t self, void *aux)
 {
 	struct ahb_attach_args * const aa = aux;
 	struct fv_softc * const sc = device_private(self);
-	int i, error;
+	int error;
+	int i;
 	struct ethercom * const ec = &sc->sc_ec;
 	struct ifnet * const ifp = &ec->ec_if;
 	struct mii_data * const mii = &sc->sc_mii;
+printf("MORIMORI fv");
 
 	sc->sc_dev = self;
 	sc->sc_bst = aa->ahba_memt;
 	sc->sc_bdt = aa->ahba_dmat;
-	sc->sc_bss = 0x10000;
+	sc->sc_bss = 0x20000;
 
 	aprint_normal(": MAC Interface\n");
 	aprint_naive("\n");
@@ -269,8 +275,18 @@ fv_attach(device_t parent, device_t self, void *aux)
 
 	memset(sc->sc_rxdesc_ring, 0, sizeof(struct fv_desc) * FV_RX_RING_CNT);
 
+	paddr_t paddr;
 	for (i = 0; i < FV_TX_RING_CNT; i++) {
+		if (i == FV_TX_RING_CNT - 1)
+			paddr = FV_TX_RING_ADDR(sc, 0);
+		else
+			paddr = FV_TX_RING_ADDR(sc, i + 1);
 		sc->sc_txdesc_ring[i].fv_stat = 0;
+		sc->sc_txdesc_ring[i].fv_devcs = 0;
+		sc->sc_txdesc_ring[i].fv_addr = 0;
+		sc->sc_txdesc_ring[i].fv_link = paddr;
+		if (i == FV_TX_RING_CNT - 1)
+			sc->sc_txdesc_ring[i].fv_devcs |= ADCTL_ER;
 /*
 		sc->sc_txdesc_ring[i].tx_data = 0;
 		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
@@ -300,12 +316,18 @@ fv_attach(device_t parent, device_t self, void *aux)
 	fv_stop(ifp, 0);
 
 	mii->mii_ifp = ifp;
-	mii->mii_readreg = fv_mii_readreg;
-	mii->mii_writereg = fv_mii_writereg;
+	mii->mii_readreg = fv_miibus_readreg;
+	mii->mii_writereg = fv_miibus_writereg;
 	mii->mii_statchg = fv_mii_statchg;
 
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
+
+/*
+	mii_attach(self, mii, 0xffffffff, MII_PHY_ANY, 0, 0);
+	ifmedia_add(&mii->mii_media, IFM_ETHER | IFM_MANUAL, 0, NULL);
+	ifmedia_set(&mii->mii_media, IFM_ETHER | IFM_MANUAL);
+*/
 
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
@@ -314,13 +336,13 @@ fv_attach(device_t parent, device_t self, void *aux)
 	/* The attach is successful. */
 	sc->sc_attached = true;
 
+printf("MORIMORI %x,", ifp->if_flags);
 	return;
 }
 
 static void
 fv_start(struct ifnet *ifp)
 {
-#if 0
 	struct fv_softc * const sc = ifp->if_softc;
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 //	struct fv_cpdma_bd bd;
@@ -336,11 +358,12 @@ fv_start(struct ifnet *ifp)
 //	u_int mlen;
 	u_int len;
 	int reg;
+printf("MORIMORI start");
 
 	KERNHIST_FUNC(__func__);
 	CPSWHIST_CALLARGS(sc, 0, 0, 0);
 
-	CGE_LOCK(sc);
+//	CGE_LOCK(sc);
 
 	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
 		return;
@@ -350,11 +373,11 @@ fv_start(struct ifnet *ifp)
 	}
 
 	if (sc->sc_txnext >= sc->sc_txhead)
-		txfree = CGE_TX_RING_CNT - 1 + sc->sc_txhead - sc->sc_txnext;
+		txfree = FV_TX_RING_CNT - 1 + sc->sc_txhead - sc->sc_txnext;
 	else
 		txfree = sc->sc_txhead - sc->sc_txnext - 1;
 
-	KERNHIST_LOG(cgehist, "start txf %x txh %x txn %x txr %x\n",
+	KERNHIST_LOG(fvhist, "start txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
 
 
@@ -398,6 +421,7 @@ fv_start(struct ifnet *ifp)
 		if (txstart == -1)
 			txstart = sc->sc_txnext;
 		for (seg = 0; seg < dm->dm_nsegs; seg++) {
+/*
 			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
 			    dm->dm_segs[seg].ds_addr;
 			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
@@ -412,29 +436,37 @@ fv_start(struct ifnet *ifp)
 			if (sc->sc_txnext == CGE_TX_RING_CNT - 1)
 				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
 				    GEMTX_WRAP;
+*/
+			sc->sc_txdesc_ring[sc->sc_txnext].fv_stat = ADSTAT_OWN;
+			sc->sc_txdesc_ring[sc->sc_txnext].fv_addr =
+			    dm->dm_segs[seg].ds_addr;
+			sc->sc_txdesc_ring[sc->sc_txnext].fv_devcs =
+			    FV_DMASIZE(dm->dm_segs[seg].ds_len);
+			len += dm->dm_segs[seg].ds_len;
+			if (seg == dm->dm_nsegs - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].fv_devcs |=
+				    ADCTL_ER;
 
 			txfree--;
 			eopi = sc->sc_txnext;
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-		    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+		    0, sizeof(struct fv_desc) * FV_TX_RING_CNT,
 		    BUS_DMASYNC_PREWRITE);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
 	if (txstart >= 0) {
-		reg = fv_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-		fv_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
-		    (GEM_TX_START | GEM_TX_EN));
-		fv_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
+		reg = (fv_read_4(sc, CSR_STATUS) >> 20) & 7;
+		if (reg == 0 || reg == 6)
+			fv_write_4(sc, CSR_TXPOLL, TXPOLL_TPD);
 		ifp->if_timer = 5;
 	}
-	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
+	KERNHIST_LOG(fvhist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
 
-	CGE_UNLOCK(sc);
-#endif
+//	CGE_UNLOCK(sc);
 }
 
 static int
@@ -463,6 +495,8 @@ fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 static void
 fv_watchdog(struct ifnet *ifp)
 {
+
+printf("MORIMORIWD");
 #if 0
 	struct fv_softc *sc = ifp->if_softc;
 
@@ -472,41 +506,6 @@ fv_watchdog(struct ifnet *ifp)
 	fv_init(ifp);
 	fv_start(ifp);
 #endif
-}
-
-static int
-fv_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
-{
-#if 0
-	struct fv_softc * const sc = device_private(dev);
-	int result, wdata;
-
-	wdata = 0x60020000;
-	wdata |= ((phy << 23) | (reg << 18));
-	fv_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
-	while(!(fv_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
-		;
-	result = fv_read_4(sc, GEM_IP + GEM_PHY_MAN);
-
-	*val = (uint16_t)result;
-#endif
-	return 0;
-}
-
-static int
-fv_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
-{
-#if 0
-	struct fv_softc * const sc = device_private(dev);
-	int wdata;
-
-	wdata = 0x50020000;
-	wdata |= ((phy << 23) | (reg << 18) | val);
-	fv_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
-	while(!(fv_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
-		;
-#endif
-	return 0;
 }
 
 static void
@@ -558,14 +557,12 @@ fv_new_rxbuf(struct fv_softc * const sc, const u_int i)
 	error = 0;
 
 reuse:
-/*
-	sc->sc_rxdesc_ring[i].rx_data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
-	sc->sc_rxdesc_ring[i].rx_status = RX_INT;
-	sc->sc_rxdesc_ring[i].rx_extstatus = 0;
-*/
+	sc->sc_rxdesc_ring[i].fv_addr = rdp->rx_dm[i]->dm_segs[0].ds_addr;
+	sc->sc_rxdesc_ring[i].fv_devcs |=
+	    FV_DMASIZE(rdp->rx_dm[i]->dm_segs[0].ds_len);
 
-//	if (i == CGE_RX_RING_CNT - 1)
-//		sc->sc_rxdesc_ring[i].rx_status |= GEMRX_WRAP;
+	if (i == FV_RX_RING_CNT - 1)
+		sc->sc_rxdesc_ring[i].fv_devcs |= ADCTL_ER;
 
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 	    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
@@ -582,7 +579,8 @@ fv_init(struct ifnet *ifp)
 //	int reg;
 //	int orgreg;
 //	int mac;
-//	paddr_t paddr;
+	paddr_t paddr;
+printf("MORIMORI init");
 
 	fv_stop(ifp, 0);
 
@@ -594,81 +592,63 @@ fv_init(struct ifnet *ifp)
 		fv_new_rxbuf(sc, i);
 	}
 	sc->sc_rxhead = 0;
-#if 0
+
+	fv_write_4(sc, CSR_BUSMODE,
+	    /* XXX: not sure if this is a good thing or not... */
+	    BUSMODE_BAR | BUSMODE_PBL_32LW);
+
+	/*
+	 * Initialize the interrupt mask and enable interrupts.
+	 */
+ 
+	/* normal interrupts */
+	sc->sc_inten =  STATUS_TI | STATUS_TU | STATUS_RI | STATUS_NIS;
+
+	/* abnormal interrupts */
+	sc->sc_inten |= STATUS_TPS | STATUS_TJT | STATUS_UNF |
+	    STATUS_RU | STATUS_RPS | STATUS_SE | STATUS_AIS;
+
+	sc->sc_rxint_mask = STATUS_RI|STATUS_RU;
+	sc->sc_txint_mask = STATUS_TI|STATUS_UNF|STATUS_TJT;
+
+	sc->sc_rxint_mask &= sc->sc_inten;
+	sc->sc_txint_mask &= sc->sc_inten;
+
+	fv_write_4(sc, CSR_INTEN, sc->sc_inten);
+	fv_write_4(sc, CSR_STATUS, 0xffffffff);
 
 	/*
 	 * Give the transmit and receive rings to the chip.
 	 */
 	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
-	fv_write_4(sc, GEM_IP + GEM_QUEUE_BASE0, paddr);
+	fv_write_4(sc, CSR_TXLIST, paddr);
 	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
-	fv_write_4(sc, GEM_IP + GEM_RX_QPTR, paddr);
-
-	mac = sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
-	    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24);
-	fv_write_4(sc, GEM_IP + GEM_LADDR1_BOT, mac);
-	mac = sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8);
-	fv_write_4(sc, GEM_IP + GEM_LADDR1_TOP, mac);
-
-	fv_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
-
-	reg = fv_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
-	fv_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
-
-#if 0
-	delay(1000);
-
-	reg = fv_read_4(sc, GEM_IP + GEM_NET_CONFIG);
-	reg |= GEM_COPY_ALL;
-	fv_write_4(sc, GEM_IP + GEM_NET_CONFIG, reg);
-
-	reg = fv_read_4(sc, GEM_CFG);
-	reg &= ~GEM_CONF_SPEED_MASK;
-	reg |= GEM_CONF_SPEED_GEM_1G;
-	reg &= ~GEM_CONF_MODE_GEM_MASK;
-	reg |= GEM_CONF_MODE_GEM_RGMII;
-	reg |= GEM_CONF_MODE_SEL_GEM;
-	fv_write_4(sc, GEM_CFG, reg);
+	fv_write_4(sc, CSR_RXLIST, paddr);
 
 	/*
-	 * Initialize DMA
+	 * Set the station address.
 	 */
-
-	orgreg = reg = fv_read_4(sc, GEM_IP + GEM_DMA_CONFIG);
-	reg |=(1UL<<31); //enable scheduler
-	reg &= ~((1UL<<26) | (1UL<<25)); //hardware buffer allocation
-	reg |=(1UL<<12); //enable scheduler
-	reg &= ~(0x00FF001F); // enable admittance manager
-	reg |= 0x00200000; // set buffer size to 2048 bytes
-	reg |= 0x00000010; // Attempt to use INCR16 AHB bursts
-	reg |=  GEM_RX_SW_ALLOC;
-	fv_write_4(sc, GEM_IP + GEM_DMA_CONFIG, reg);
-	/* Disabling GEM delay */
-	fv_write_4(sc, 0xf00c, 0);
-#endif
- 
-	/* Enable the receive circuitry */
-	reg = fv_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-	fv_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg | GEM_RX_EN);
-
-	fv_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+//	fv_setfilt(sc);
 
 	/*
-	 * Initialize the interrupt mask and enable interrupts.
+	 * Write out the opmode.
 	 */
-//	fv_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
-	fv_write_4(sc, GEM_IP + GEM_IRQ_ENABLE,
-	    GEM_IRQ_RX_DONE | GEM_IRQ_TX_DONE);
+	fv_write_4(sc, CSR_OPMODE, OPMODE_SR | OPMODE_ST |
+	    OPMODE_TR_128 | OPMODE_FDX | OPMODE_SPEED);
+
+	/*
+	 * Start the receive process.
+	 */
+	fv_write_4(sc, CSR_RXPOLL, RXPOLL_RPD);
 
 	ifp->if_flags |= IFF_RUNNING;
-#endif
+
 	return 0;
 }
 
 static void
 fv_stop(struct ifnet *ifp, int disable)
 {
-#if 0
 	struct fv_softc * const sc = ifp->if_softc;
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 	u_int i;
@@ -679,9 +659,9 @@ fv_stop(struct ifnet *ifp, int disable)
 	if ((ifp->if_flags & IFF_RUNNING) == 0)
 		return;
 
-	callout_stop(&sc->sc_tick_ch);
+//	callout_stop(&sc->sc_tick_ch);
 	mii_down(&sc->sc_mii);
-
+#if 0
 	fv_write_4(sc, CPSW_CPDMA_TX_INTMASK_CLEAR, 1);
 	fv_write_4(sc, CPSW_CPDMA_RX_INTMASK_CLEAR, 1);
 	fv_write_4(sc, CPSW_WR_C_TX_EN(0), 0x0);
@@ -728,6 +708,7 @@ fv_stop(struct ifnet *ifp, int disable)
 		m_freem(rdp->tx_mb[i]);
 		rdp->tx_mb[i] = NULL;
 	}
+#endif
 
 	ifp->if_flags &= ~IFF_RUNNING;
 	ifp->if_timer = 0;
@@ -736,31 +717,30 @@ fv_stop(struct ifnet *ifp, int disable)
 	if (!disable)
 		return;
 
-	for (i = 0; i < CPSW_NRXDESCS; i++) {
+	for (i = 0; i < FV_RX_RING_CNT; i++) {
 		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
 		m_freem(rdp->rx_mb[i]);
 		rdp->rx_mb[i] = NULL;
 	}
-#endif
 }
 
 static int
 fv_intr(void *arg)
 {
-#if 0
 	struct fv_softc * const sc = arg;
-	int reg;
+	int status;
 
-	reg = fv_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+	status = fv_read_4(sc, CSR_STATUS);
+	/* mask out interrupts */
+	while((status & sc->sc_inten) != 0) {
+		if (status & sc->sc_txint_mask)
+			fv_txintr(arg);
 
-	if (reg & GEM_IRQ_TX_DONE)
-		fv_txintr(arg);
+		if (status & sc->sc_rxint_mask)
+			fv_rxintr(arg);
+	}
 
-	if (reg & GEM_IRQ_RX_DONE)
-		fv_rxintr(arg);
-
-	fv_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
-#endif
+//	fv_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
 
 	return 1;
 }
@@ -781,10 +761,10 @@ fv_tick(void *arg)
 }
 #endif
 
-#if 0
 static int
 fv_rxintr(void *arg)
 {
+#if 0
 	struct fv_softc * const sc = arg;
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 	u_int i;
@@ -830,13 +810,14 @@ fv_rxintr(void *arg)
 			break;
 		}
 	}
-
+#endif
 	return 1;
 }
 
 static int
 fv_txintr(void *arg)
 {
+#if 0
 	struct fv_softc * const sc = arg;
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
@@ -874,8 +855,9 @@ fv_txintr(void *arg)
 		if_schedule_deferred_start(ifp);
 
 	return handled;
-}
 #endif
+	return 0;
+}
 
 static int
 fv_alloc_dma(struct fv_softc *sc, size_t size, void **addrp,
@@ -923,4 +905,85 @@ fv_alloc_dma(struct fv_softc *sc, size_t size, void **addrp,
 	bus_dmamem_free(sc->sc_bdt, seglist, 1);
  fail_alloc:
 	return error;
+}
+
+static int
+fv_miibus_readbits(struct fv_softc *sc, int count)
+{
+	int result;
+
+	result = 0;
+	while(count--) {
+		result <<= 1;
+		fv_write_4(sc, CSR_MIIMNG, MII_RD);
+		DELAY(10);
+		fv_write_4(sc, CSR_MIIMNG, MII_RD | MII_CLK);
+		DELAY(10);
+		if (fv_read_4(sc, CSR_MIIMNG) & MII_DIN)
+			result |= 1;
+	}
+
+	return (result);
+}
+
+static int
+fv_miibus_writebits(struct fv_softc *sc, int data, int count)
+{
+	int bit;
+
+	while(count--) {
+		bit = ((data) >> count) & 0x1 ? MII_DOUT : 0;
+		fv_write_4(sc, CSR_MIIMNG, bit | MII_WR);
+		DELAY(10);
+		fv_write_4(sc, CSR_MIIMNG, bit | MII_WR | MII_CLK);
+		DELAY(10);
+	}
+
+	return (0);
+}
+
+static void
+fv_miibus_turnaround(struct fv_softc *sc, int cmd)
+{
+	if (cmd == MII_WRCMD) {
+		fv_miibus_writebits(sc, 0x02, 2);
+	} else {
+		fv_miibus_readbits(sc, 1);
+	}
+}
+
+static int
+fv_miibus_readreg(device_t dev, int phy, int reg, uint16_t *val)
+{
+	struct fv_softc * sc = device_private(dev);
+printf("MORIMORI read %x %x", phy, reg);
+
+//	mtx_lock(&miibus_mtx);
+	fv_miibus_writebits(sc, MII_PREAMBLE, 32);
+	fv_miibus_writebits(sc, MII_RDCMD, 4);
+	fv_miibus_writebits(sc, phy, 5);
+	fv_miibus_writebits(sc, reg, 5);
+	fv_miibus_turnaround(sc, MII_RDCMD);
+	*val = fv_miibus_readbits(sc, 16);
+	fv_miibus_turnaround(sc, MII_RDCMD);
+//	mtx_unlock(&miibus_mtx);
+
+	return 0;
+}
+
+static int
+fv_miibus_writereg(device_t dev, int phy, int reg, uint16_t val)
+{
+	struct fv_softc * sc = device_private(dev);
+
+//	mtx_lock(&miibus_mtx);
+	fv_miibus_writebits(sc, MII_PREAMBLE, 32);
+	fv_miibus_writebits(sc, MII_WRCMD, 4);
+	fv_miibus_writebits(sc, phy, 5);
+	fv_miibus_writebits(sc, reg, 5);
+	fv_miibus_turnaround(sc, MII_WRCMD);
+	fv_miibus_writebits(sc, val, 16);
+//	mtx_unlock(&miibus_mtx);
+
+	return 0;
 }
