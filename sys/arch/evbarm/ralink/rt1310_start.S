@@ -34,7 +34,7 @@
 #include <arm/armreg.h>
 
 #define	DRAM_BASE	0x40000000
-#define	APBH_BASE	0x19000000
+#define	APBH_BASE	0x19c00000
 #define	MEMSIZE		16
 
 .section .start,"ax",%progbits
