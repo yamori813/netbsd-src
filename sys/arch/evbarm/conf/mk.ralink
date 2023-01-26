@@ -13,6 +13,7 @@ MKUBOOTIMAGEARGS+=	-a $(KERNEL_BASE_PHYS)
 MKUBOOTIMAGEARGS+=	-n "NetBSD/$(BOARDTYPE) ${_OSRELEASE}"
 MKUBOOTIMAGEARGS_NONE=	${MKUBOOTIMAGEARGS} -C none
 MKUBOOTIMAGEARGS_GZ=	${MKUBOOTIMAGEARGS} -C gz
+MKUBOOTIMAGEARGS_LZMA=	${MKUBOOTIMAGEARGS} -C lzma
 
 #
 # These not have expanding buffer over 4Mbyte. (before version 1.1.5)
@@ -25,6 +26,8 @@ SYSTEM_LD_TAIL_EXTRA+=; \
 	${TOOL_GZIP} -c $@.bin > $@.bin.gz; \
 	echo ${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_GZ} $@.bin.gz $@.gz.ub; \
 	${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_GZ} $@.bin.gz $@.gz.ub; \
+	/home/hiroki/oldlzma e $@.bin $@.lzma; \
+	${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_LZMA} $@.lzma $@.lzma.ub; \
 	echo ${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_NONE} $@.bin $@.ub; \
 	${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_NONE} $@.bin $@.ub; \
 	echo ${TOOL_MKUBOOTIMAGE} ${MKUBOOTIMAGEARGS_NONE:C/((-a (0x)*)([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2}))/\1 -e \3\7\6\5\4/W} $@.bin $@-old.ub; \

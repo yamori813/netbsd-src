@@ -20,7 +20,8 @@ options 	MEMSIZE=0x1000000
 
 # CPU options
 options 	CPU_ARM9E
-makeoptions	CPUFLAGS="-mcpu=arm926ej-s -mtune=arm926ej-s -Os"
+#makeoptions	CPUFLAGS="-mcpu=arm926ej-s -mtune=arm926ej-s -Os"
+makeoptions	CPUFLAGS="-mcpu=arm926ej-s -mtune=arm926ej-s"
 
 # Standard system options
 
@@ -32,23 +33,23 @@ options 	MSGBUFSIZE=32768
 # File systems
 
 file-system 	FFS		# UFS
-#file-system 	EXT2FS		# second extended file system (linux)
-#file-system 	LFS		# log-structured file system
-#file-system 	MFS		# memory file system
-#file-system 	NFS		# Network File System client
-#file-system 	NTFS		# Windows/NT file system (experimental)
-#file-system 	CD9660		# ISO 9660 + Rock Ridge file system
-#file-system 	MSDOSFS		# MS-DOS file system
-#file-system 	FDESC		# /dev/fd
-#file-system 	KERNFS		# /kern
-#file-system 	NULLFS		# loopback file system
-#file-system 	OVERLAY		# overlay file system
-#file-system 	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
-#file-system 	PROCFS		# /proc
-#file-system 	UMAPFS		# NULLFS + uid and gid remapping
-#file-system 	UNION		# union file system
-#file-system 	CODA		# Coda File System; also needs vcoda (below)
-#file-system 	PTYFS		# /dev/ptm support
+file-system 	EXT2FS		# second extended file system (linux)
+file-system 	LFS		# log-structured file system
+file-system 	MFS		# memory file system
+file-system 	NFS		# Network File System client
+file-system 	NTFS		# Windows/NT file system (experimental)
+file-system 	CD9660		# ISO 9660 + Rock Ridge file system
+file-system 	MSDOSFS		# MS-DOS file system
+file-system 	FDESC		# /dev/fd
+file-system 	KERNFS		# /kern
+file-system 	NULLFS		# loopback file system
+file-system 	OVERLAY		# overlay file system
+file-system 	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
+file-system 	PROCFS		# /proc
+file-system 	UMAPFS		# NULLFS + uid and gid remapping
+file-system 	UNION		# union file system
+file-system 	CODA		# Coda File System; also needs vcoda (below)
+file-system 	PTYFS		# /dev/ptm support
 file-system 	TMPFS		# Efficient memory file-system
 #file-system 	UDF		# experimental - OSTA UDF CD/DVD file-system
 #file-system 	HFS		# experimental - Apple HFS+ (read-only)
@@ -73,32 +74,32 @@ options UDP_CSUM_COUNTERS
 
 #options 	GATEWAY		# packet forwarding
 options 	INET		# IP + ICMP + TCP + UDP
-#options 	INET6		# IPv6
+options 	INET6		# IPv6
 #options 	IPSEC		# IP security
 #options 	IPSEC_DEBUG	# debug for IP security
 #options 	MROUTING	# IP multicast routing
 #options 	PIM		# Protocol Independent Multicast
 #options 	NETATALK	# AppleTalk networking protocols
-#options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
-#options 	PPP_DEFLATE	# Deflate compression support for PPP
-#options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
+options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
+options 	PPP_DEFLATE	# Deflate compression support for PPP
+options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
 #options 	TCP_DEBUG	# Record last TCP_NDEBUG packets with SO_DEBUG
 
-#options 	NFS_BOOT_BOOTP
+options 	NFS_BOOT_BOOTP
 #options 	NFS_BOOT_BOOTPARAM
-#options 	NFS_BOOT_DHCP
-#options 	NFS_BOOT_TCP
+options 	NFS_BOOT_DHCP
+options 	NFS_BOOT_TCP
 
 # Compatibility options
 
-include 	"conf/compat_netbsd16.config"
-options 	COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
+#include 	"conf/compat_netbsd16.config"
+#options 	COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
 
 # Shared memory options
 
-options 	SYSVMSG		# System V-like message queues
-options 	SYSVSEM		# System V-like semaphores
-options 	SYSVSHM		# System V-like memory sharing
+#options 	SYSVMSG		# System V-like message queues
+#options 	SYSVSEM		# System V-like semaphores
+#options 	SYSVSHM		# System V-like memory sharing
 
 # Device options
 
@@ -137,13 +138,14 @@ cpu0	at mainbus?
 
 ahb0		at mainbus?
 intc0		at ahb0 addr 0x19c40000
+fv0		at ahb? addr 0x19c80000 intr 7
+fv1		at ahb? addr 0x19ca0000 intr 8
+
 apb0		at ahb0 addr 0x1e800000
 timer0		at apb? addr 0x1e800000 intr 3
 com0		at apb? addr 0x1e840000 intr 1
 rtgpio0		at apb? addr 0x1e8a0000
 gpio*		at rtgpio?
-
-fv0		at ahb? addr 0x19C80000 intr 7
 
 # NOR Flash
 #options	NOR_VERBOSE
@@ -217,7 +219,7 @@ flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-Boot
 #mvphy*	at mii? phy ?			# Marvell Semiconductor 88E6060 SW
 #rgephy*	at mii? phy ?			# Realtek 8169S/8110S/8211 PHYs
 #rlphy*	at mii? phy ?			# Realtek 8139/8201L PHYs
-#ukphy*	at mii? phy ?			# generic unknown PHYs
+ukphy*	at mii? phy ?			# generic unknown PHYs
 
 # ATA (IDE) bus support
 #atabus*	at ata?
@@ -276,7 +278,7 @@ flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-Boot
 #options 	RF_INCLUDE_PARITY_DECLUSTERING=1
 #options 	RF_INCLUDE_PARITY_DECLUSTERING_DS=1
 #pseudo-device	fss			# file system snapshot device
-#pseudo-device	putter			# for puffs and pud
+pseudo-device	putter			# for puffs and pud
 
 #pseudo-device	md			# memory disk device (ramdisk)
 #pseudo-device	vnd			# disk-like interface to files
@@ -294,47 +296,47 @@ pseudo-device	pppoe			# PPP over Ethernet (RFC 2516)
 pseudo-device	tap			# virtual Ethernet
 pseudo-device	tun			# network tunneling over tty
 #pseudo-device	gre			# generic L3 over IP tunnel
-pseudo-device	gif			# IPv[46] over IPv[46] tunnel (RFC 1933)
+#pseudo-device	gif			# IPv[46] over IPv[46] tunnel (RFC 1933)
 #pseudo-device	faith			# IPv[46] TCP relay translation i/f
-#pseudo-device	stf			# 6to4 IPv6 over IPv4 encapsulation
+pseudo-device	stf			# 6to4 IPv6 over IPv4 encapsulation
 pseudo-device	vlan			# IEEE 802.1q encapsulation
 #pseudo-device	bridge			# simple inter-network bridging
 #pseudo-device	vether			# Virtual Ethernet for bridge
 #pseudo-device	agr			# IEEE 802.3ad link aggregation
 
 # miscellaneous pseudo-devices
-#pseudo-device	pty			# pseudo-terminals
+pseudo-device	pty			# pseudo-terminals
+pseudo-device	clockctl		# user control of clock subsystem
+pseudo-device	ksyms			# /dev/ksyms
 #pseudo-device	sequencer		# MIDI sequencer
 #options 	RND_COM
-#pseudo-device	clockctl		# user control of clock subsystem
-#pseudo-device	ksyms			# /dev/ksyms
 
 # a pseudo device needed for Coda	# also needs CODA (above)
-#pseudo-device	vcoda			# coda minicache <-> venus comm.
+pseudo-device	vcoda			# coda minicache <-> venus comm.
 
 # wscons pseudo-devices
-#pseudo-device	wsmux			# mouse & keyboard multiplexor
-#pseudo-device	wsfont
+pseudo-device	wsmux			# mouse & keyboard multiplexor
+pseudo-device	wsfont
 
 # data mover pseudo-devices
 #pseudo-device	swdmover		# software dmover(9) back-end
 #pseudo-device	dmoverio		# /dev/dmover dmover(9) interface
 
-#pseudo-device	dm
+pseudo-device	dm
 
 # Veriexec
 #include "dev/veriexec.config"
 
-#options 	PAX_MPROTECT=0		# PaX mprotect(2) restrictions
-#options 	PAX_ASLR=0		# PaX Address Space Layout Randomization
+options 	PAX_MPROTECT=0		# PaX mprotect(2) restrictions
+options 	PAX_ASLR=0		# PaX Address Space Layout Randomization
 
 #pseudo-device drvctl
 
 # Wedge support
-#options 	DKWEDGE_AUTODISCOVER	# Automatically add dk(4) instances
-#options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
+options 	DKWEDGE_AUTODISCOVER	# Automatically add dk(4) instances
+options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
 
 # Alternate buffer queue strategies for better responsiveness under high
 # disk I/O load.
-#options BUFQ_READPRIO
-#options BUFQ_PRIOCSCAN
+options BUFQ_READPRIO
+options BUFQ_PRIOCSCAN
