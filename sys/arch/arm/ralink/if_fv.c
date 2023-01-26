@@ -212,7 +212,6 @@ fv_attach(device_t parent, device_t self, void *aux)
 	struct ethercom * const ec = &sc->sc_ec;
 	struct ifnet * const ifp = &ec->ec_if;
 	struct mii_data * const mii = &sc->sc_mii;
-printf("MORIMORI fv");
 
 	sc->sc_dev = self;
 	sc->sc_bst = aa->ahba_memt;
@@ -336,7 +335,6 @@ printf("MORIMORI fv");
 	/* The attach is successful. */
 	sc->sc_attached = true;
 
-printf("MORIMORI %x,", ifp->if_flags);
 	return;
 }
 
@@ -472,7 +470,6 @@ printf("MORIMORI start");
 static int
 fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 {
-#if 0
 	const int s = splnet();
 	int error = 0;
 
@@ -488,15 +485,12 @@ fv_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 	splx(s);
 
 	return error;
-#endif
-	return 0;
 }
 
 static void
 fv_watchdog(struct ifnet *ifp)
 {
 
-printf("MORIMORIWD");
 #if 0
 	struct fv_softc *sc = ifp->if_softc;
 
@@ -956,7 +950,6 @@ static int
 fv_miibus_readreg(device_t dev, int phy, int reg, uint16_t *val)
 {
 	struct fv_softc * sc = device_private(dev);
-printf("MORIMORI read %x %x", phy, reg);
 
 //	mtx_lock(&miibus_mtx);
 	fv_miibus_writebits(sc, MII_PREAMBLE, 32);
