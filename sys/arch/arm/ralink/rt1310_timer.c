@@ -36,7 +36,6 @@
 #include <sys/systm.h>
 #include <sys/time.h>
 #include <sys/timetc.h>
-#include <sys/kernel.h>
 
 #include <arm/pic/picvar.h>
 
@@ -217,10 +216,10 @@ setstatclockrate(int newhz)
 {
 	struct timer_softc *sc = timer_sc;
 
-	if (stathz == 0)
+	if (newhz == 0)
 		return;
 
-	sc->statfreq = RT_APB_FREQ / stathz;
+	sc->statfreq = RT_APB_FREQ / newhz;
 
 	TIMER1_WRITE(sc, RT_TIMER_CONTROL, 0);
 	TIMER1_WRITE(sc, RT_TIMER_LOAD, sc->statfreq);
