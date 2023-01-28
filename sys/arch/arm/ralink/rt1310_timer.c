@@ -267,7 +267,7 @@ rt1310tmr_get_timecount(struct timecounter *tc)
 {
 struct timer_softc *sc = tc->tc_priv;
 
-	return TIMER2_READ(sc, RT_TIMER_VALUE);
+	return ~TIMER2_READ(sc, RT_TIMER_VALUE);
 }
 
 /*
