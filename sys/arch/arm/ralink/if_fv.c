@@ -968,9 +968,11 @@ fv_setfilt(struct fv_softc *sc)
 
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_stat = ADSTAT_OWN;
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_addr = sc->sc_sfbuf_pa;
+	/* This packet is not use interrupt */
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_devcs = ADCTL_Tx_SETUP |
 			    FV_DMASIZE(FV_SFRAME_LEN);
 	sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
+	sc->sc_txhead = sc->sc_txnext;
 
 	i = 0;
 	ETHER_LOCK(ec);
