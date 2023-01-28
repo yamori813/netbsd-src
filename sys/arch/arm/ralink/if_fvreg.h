@@ -126,6 +126,15 @@ struct fv_ring_data {
 #define	CSR_MIIMNG	(0x08*9)	/* MII Management Register */
 #define	CSR_FULLDUP	(0x08*11)	/* Full Duplex Register */
 
+/* 21143 like register */
+#define	FULLDUP_CS		0x80000000	/* Cycle Size */
+#define	FULLDUP_TT_SHIFT	27	/* Transmit Timer */
+#define	FULLDUP_NTP_SHIFT	24	/* Number of Transmit Packets */
+#define	FULLDUP_RT_SHIFT	20	/* Receive Timer */
+#define	FULLDUP_NRP_SHIFT	17	/* Number of Receive Packets */
+#define	FULLDUP_CON_MODE	0x00010000	/* Continuous Mode */
+#define	FULLDUP_TIM_SHIFT	0	/* Timer Value */
+
 /* CSR_TXPOLL - Transmit Poll Demand */
 #define	TXPOLL_TPD		0x00000001	/* transmit poll demand */
 
@@ -295,5 +304,7 @@ struct fv_ring_data {
 
 #define	FV_SFRAME_LEN		192
 #define	FV_MIN_FRAMELEN		60
+
+#define PKT_BUF_SZ		1536
 
 #endif /* __IF_FVREG_H__ */
