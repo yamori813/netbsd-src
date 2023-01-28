@@ -957,6 +957,11 @@ fv_setfilt(struct fv_softc *sc)
 	uint16_t eaddr[(ETHER_ADDR_LEN+1)/2];
 	uint16_t *sp;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	struct ethercom *ec = &sc->sc_ec;
+	struct ether_multi *enm;
+	struct ether_multistep step;
+	int i;
+	uint8_t *ma;
 
 	sp = (uint16_t *)sc->sc_sfbuf;
 	memset(sp, 0xff, FV_SFRAME_LEN);
@@ -967,6 +972,24 @@ fv_setfilt(struct fv_softc *sc)
 			    FV_DMASIZE(FV_SFRAME_LEN);
 	sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 
+	i = 0;
+	ETHER_LOCK(ec);
+	ETHER_FIRST_MULTI(step, ec, enm);
+	while (enm != NULL) {
+		if (memcmp(enm->enm_addrlo, enm->enm_addrhi, 6) == 0) {
+			ma = enm->enm_addrhi;
+			sp[i] = sp[i+1] = (ma[1] << 8 | ma[0]);
+			i += 2;
+			sp[i] = sp[i+1] = (ma[3] << 8 | ma[2]);
+			i += 2;
+			sp[i] = sp[i+1] = (ma[5] << 8 | ma[4]);
+			i += 2;
+		} else {
+			/* XXX */
+		}
+		ETHER_NEXT_MULTI(step, enm);
+	}
+	ETHER_UNLOCK(ec);
 	memcpy(eaddr, CLLADDR(ifp->if_sadl), ETHER_ADDR_LEN);
 	sp[90] = sp[91] = eaddr[0];
 	sp[92] = sp[93] = eaddr[1];
