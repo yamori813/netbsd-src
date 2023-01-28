@@ -36,14 +36,12 @@
 #include <sys/systm.h>
 #include <sys/time.h>
 #include <sys/timetc.h>
+#include <sys/kernel.h>
 
 #include <arm/pic/picvar.h>
 
 #include <arm/ralink/rt1310_reg.h>
 #include <arm/ralink/rt1310_var.h>
-
-extern int hz;
-extern int stathz;
 
 static int	timer_match(device_t, cfdata_t, void *);
 static void	timer_attach(device_t, device_t, void *);
@@ -219,7 +217,10 @@ setstatclockrate(int newhz)
 {
 	struct timer_softc *sc = timer_sc;
 
-	sc->statfreq = RT_APB_FREQ / 100;
+	if (stathz == 0)
+		return;
+
+	sc->statfreq = RT_APB_FREQ / stathz;
 
 	TIMER1_WRITE(sc, RT_TIMER_CONTROL, 0);
 	TIMER1_WRITE(sc, RT_TIMER_LOAD, sc->statfreq);
@@ -242,7 +243,7 @@ timer_init(struct timer_softc *sc)
 	intr_establish(sc->sc_irq + 1, IPL_SCHED, IST_LEVEL, stattimer_irq,
 	    NULL);
 
-	sc->freq = RT_APB_FREQ / 100;
+	sc->freq = RT_APB_FREQ / hz;
 
 	TIMER0_WRITE(sc, RT_TIMER_CONTROL, 0);
 	TIMER0_WRITE(sc, RT_TIMER_LOAD, sc->freq);
