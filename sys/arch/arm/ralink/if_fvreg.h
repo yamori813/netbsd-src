@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef __IF_FVREG_H__
-#define	__IF_FVREG_H__
+#ifndef _ARM_RALINK_IF_FVREG_H
+#define	_ARM_RALINK_IF_FVREG_H
 
 #define FV_TX_RING_CNT	64
 #define FV_RX_RING_CNT	64
@@ -307,4 +307,4 @@ struct fv_ring_data {
 
 #define PKT_BUF_SZ		1536
 
-#endif /* __IF_FVREG_H__ */
+#endif /* _ARM_RALINK_IF_FVREG_H */
