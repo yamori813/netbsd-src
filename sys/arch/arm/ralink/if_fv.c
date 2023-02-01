@@ -78,6 +78,7 @@ struct fv_softc {
 	bool			sc_txbusy;
         void			*sc_sfbuf;
         bus_dmamap_t		sc_sfbuf_dm;
+//	callout_t		sc_tick_ch;
 };
 
 #define sc_sfbuf_pa sc_sfbuf_dm->dm_segs[0].ds_addr
@@ -180,10 +181,10 @@ fv_detach(device_t self, int flags)
 	/* Stop the interface. Callouts are stopped in it. */
 	fv_stop(ifp, 1);
 
-#if 0
 	/* Destroy our callout. */
-	callout_destroy(&sc->sc_tick_ch);
+//	callout_destroy(&sc->sc_tick_ch);
 
+#if 0
 	/* Let go of the interrupts */
 	intr_disestablish(sc->sc_rxthih);
 	intr_disestablish(sc->sc_rxih);
@@ -291,16 +292,19 @@ fv_attach(device_t parent, device_t self, void *aux)
 
 	memset(sc->sc_rxdesc_ring, 0, sizeof(struct fv_desc) * FV_RX_RING_CNT);
 
-	paddr_t paddr;
+//	paddr_t paddr;
 	for (i = 0; i < FV_TX_RING_CNT; i++) {
+/*
 		if (i == FV_TX_RING_CNT - 1)
 			paddr = FV_TX_RING_ADDR(sc, 0);
 		else
 			paddr = FV_TX_RING_ADDR(sc, i + 1);
+*/
 		sc->sc_txdesc_ring[i].fv_stat = 0;
 		sc->sc_txdesc_ring[i].fv_devcs = 0;
 		sc->sc_txdesc_ring[i].fv_addr = 0;
-		sc->sc_txdesc_ring[i].fv_link = paddr;
+//		sc->sc_txdesc_ring[i].fv_link = paddr;
+//		sc->sc_txdesc_ring[i].fv_link = 0;
 	}
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 	    0, sizeof(struct fv_desc) * FV_TX_RING_CNT,
@@ -442,7 +446,7 @@ reuse:
 	sc->sc_rxdesc_ring[i].fv_stat = ADSTAT_OWN;
 	sc->sc_rxdesc_ring[i].fv_addr = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 	sc->sc_rxdesc_ring[i].fv_devcs = PKT_BUF_SZ;
-
+//	sc->sc_rxdesc_ring[i].fv_link = 0;
 	if (i == FV_RX_RING_CNT - 1)
 		sc->sc_rxdesc_ring[i].fv_devcs |= ADCTL_ER;
 /*
@@ -703,7 +707,6 @@ fv_rxintr(void *arg)
 	int length;
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
-	int count;
 
 #if 0
 	for (i = 0; i < FV_RX_RING_CNT; i++) {
@@ -714,6 +717,8 @@ fv_rxintr(void *arg)
 		if(!(sc->sc_rxdesc_ring[i].fv_stat & ADSTAT_OWN)) {
 			sc->sc_rxdesc_ring[i].fv_stat = ADSTAT_OWN;
 			sc->sc_rxdesc_ring[i].fv_devcs = PKT_BUF_SZ;
+			if (i == FV_RX_RING_CNT - 1)
+				sc->sc_rxdesc_ring[i].fv_devcs |= ADCTL_ER;
 			printf("%d,", i);
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
@@ -722,7 +727,6 @@ fv_rxintr(void *arg)
 	}
 	return 0;
 #endif
-	count = 0;
 	for (;;) {
 		i = sc->sc_rxhead;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
@@ -734,30 +738,24 @@ fv_rxintr(void *arg)
 //			    RX_STA_LEN_MASK;
 			length = ADSTAT_Rx_LENGTH(
 			    sc->sc_rxdesc_ring[i].fv_stat);
+//			length -= ETHER_CRC_LEN;
 			m = rdp->rx_mb[i];
-			if (length < ETHER_HDR_LEN) {
-				aprint_error_dev(sc->sc_dev,
-				    "RX error packe length %d\n", length);
-				m_freem(m);
-			} else {
-				bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
-				    0, rdp->rx_dm[i]->dm_mapsize,
-				    BUS_DMASYNC_POSTREAD);
-				m_set_rcvif(m, ifp);
-				m->m_pkthdr.len = m->m_len = length;
-				if_percpuq_enqueue(ifp->if_percpuq, m);
-			}
+			bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+			    0, rdp->rx_dm[i]->dm_mapsize,
+			    BUS_DMASYNC_POSTREAD);
+			bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+			m_set_rcvif(m, ifp);
+			m->m_pkthdr.len = m->m_len = length;
+			m->m_flags |= M_HASFCS;
+			if_percpuq_enqueue(ifp->if_percpuq, m);
 			fv_new_rxbuf(sc, i);
-			
+/*
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-       			    BUS_DMASYNC_PREWRITE);
+			    BUS_DMASYNC_PREWRITE);
+*/
 			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
-			++count;
 		} else {
-			/* may be not happen */
-			if (count == 0)
-				panic("rxintr occur but no data\n");
 			break;
 		}
 	}
@@ -771,7 +769,8 @@ fv_txintr(void *arg)
 	struct fv_ring_data * const rdp = sc->sc_rdp;
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
-	int i;
+	int first;
+//	int i;
 
 #if 0
 	int count = 0;
@@ -788,28 +787,32 @@ fv_txintr(void *arg)
 	printf("TXI %d,", count);
 	return 0;
 #endif
+	first = sc->sc_txhead;
 	for (;;) {
 		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead],
 		    0, rdp->tx_dm[sc->sc_txhead]->dm_mapsize,
 		    BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
 
-		m_freem(rdp->tx_mb[sc->sc_txhead]);
+		if (first == sc->sc_txhead)
+			m_freem(rdp->tx_mb[sc->sc_txhead]);
 		rdp->tx_mb[sc->sc_txhead] = NULL;
 
 		if_statinc(ifp, if_opackets);
 
 		handled = true;
 
-		sc->sc_txbusy = false;
+		sc->sc_txdesc_ring[sc->sc_txhead].fv_devcs = 0;
 
 		sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
 		if (sc->sc_txhead == sc->sc_txnext)
 			break;
 	}
+/*
 	for (i = 0; i < FV_TX_RING_CNT; i++) {
 		sc->sc_txdesc_ring[i].fv_devcs = 0;
 	}
+*/
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 	    0, sizeof(struct fv_desc) * FV_TX_RING_CNT,
 	    BUS_DMASYNC_PREWRITE);
@@ -817,6 +820,8 @@ fv_txintr(void *arg)
 		ifp->if_timer = 0;
 	if (handled)
 		if_schedule_deferred_start(ifp);
+
+	sc->sc_txbusy = false;
 
 	return handled;
 }

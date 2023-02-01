@@ -26,8 +26,8 @@
 #ifndef _ARM_RALINK_IF_FVREG_H
 #define	_ARM_RALINK_IF_FVREG_H
 
-#define FV_TX_RING_CNT	64
-#define FV_RX_RING_CNT	64
+#define FV_TX_RING_CNT	16
+#define FV_RX_RING_CNT	16
 
 #define FV_TXFRAGS	16
 
