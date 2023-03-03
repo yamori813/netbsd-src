@@ -1,4 +1,4 @@
-/*	$NetBSD: func.c,v 1.145 2022/10/01 09:42:40 rillig Exp $	*/
+/*	$NetBSD: func.c,v 1.149 2023/02/21 19:47:21 rillig Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -37,7 +37,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID)
-__RCSID("$NetBSD: func.c,v 1.145 2022/10/01 09:42:40 rillig Exp $");
+__RCSID("$NetBSD: func.c,v 1.149 2023/02/21 19:47:21 rillig Exp $");
 #endif
 
 #include <stdlib.h>
@@ -150,9 +150,6 @@ bool	bitfieldtype_ok;
  */
 bool	quadflg;
 
-/*
- * Puts a new element at the top of the stack used for control statements.
- */
 void
 begin_control_statement(control_statement_kind kind)
 {
@@ -164,9 +161,6 @@ begin_control_statement(control_statement_kind kind)
 	cstmt = cs;
 }
 
-/*
- * Removes the top element of the stack used for control statements.
- */
 void
 end_control_statement(control_statement_kind kind)
 {
@@ -224,7 +218,7 @@ check_statement_reachable(void)
  * redeclaration, etc.
  */
 void
-funcdef(sym_t *fsym)
+begin_function(sym_t *fsym)
 {
 	int	n;
 	bool	dowarn;
@@ -374,7 +368,7 @@ check_missing_return_value(void)
  * Called at the end of a function definition.
  */
 void
-funcend(void)
+end_function(void)
 {
 	sym_t	*arg;
 	int	n;
@@ -432,6 +426,8 @@ funcend(void)
 
 	/* must be set on level 0 */
 	set_reached(true);
+
+	funcsym = NULL;
 }
 
 void
@@ -445,6 +441,7 @@ named_label(sym_t *sym)
 		mark_as_set(sym);
 	}
 
+	/* XXX: Assuming that each label is reachable is wrong. */
 	set_reached(true);
 }
 
@@ -499,13 +496,16 @@ check_case_label(tnode_t *tn, control_statement *cs)
 		return;
 	}
 
-	if (tn != NULL && tn->tn_op != CON) {
+	if (tn == NULL)
+		return;
+
+	if (tn->tn_op != CON) {
 		/* non-constant case expression */
 		error(197);
 		return;
 	}
 
-	if (tn != NULL && !is_integer(tn->tn_type->t_tspec)) {
+	if (!is_integer(tn->tn_type->t_tspec)) {
 		/* non-integral case expression */
 		error(198);
 		return;

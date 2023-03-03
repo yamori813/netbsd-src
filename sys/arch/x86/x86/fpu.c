@@ -1,4 +1,4 @@
-/*	$NetBSD: fpu.c,v 1.79 2022/08/20 11:34:08 riastradh Exp $	*/
+/*	$NetBSD: fpu.c,v 1.83 2023/02/25 18:28:57 riastradh Exp $	*/
 
 /*
  * Copyright (c) 2008, 2019 The NetBSD Foundation, Inc.  All
@@ -96,34 +96,38 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: fpu.c,v 1.79 2022/08/20 11:34:08 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: fpu.c,v 1.83 2023/02/25 18:28:57 riastradh Exp $");
 
 #include "opt_multiprocessor.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
+#include <sys/types.h>
+
 #include <sys/conf.h>
 #include <sys/cpu.h>
 #include <sys/file.h>
-#include <sys/proc.h>
 #include <sys/kernel.h>
+#include <sys/kthread.h>
+#include <sys/proc.h>
 #include <sys/sysctl.h>
+#include <sys/systm.h>
 #include <sys/xcall.h>
 
 #include <machine/cpu.h>
-#include <machine/cpuvar.h>
-#include <machine/cputypes.h>
-#include <machine/intr.h>
 #include <machine/cpufunc.h>
+#include <machine/cputypes.h>
+#include <machine/cpuvar.h>
+#include <machine/intr.h>
 #include <machine/pcb.h>
-#include <machine/trap.h>
 #include <machine/specialreg.h>
+#include <machine/trap.h>
+
 #include <x86/cpu.h>
 #include <x86/fpu.h>
 
 #ifdef XENPV
-#define clts() HYPERVISOR_fpu_taskswitch(0)
-#define stts() HYPERVISOR_fpu_taskswitch(1)
+#define	clts()	HYPERVISOR_fpu_taskswitch(0)
+#define	stts()	HYPERVISOR_fpu_taskswitch(1)
 #endif
 
 void fpu_handle_deferred(void);
@@ -131,13 +135,35 @@ void fpu_switch(struct lwp *, struct lwp *);
 
 uint32_t x86_fpu_mxcsr_mask __read_mostly = 0;
 
+/*
+ * True if this a thread that is allowed to use the FPU -- either a
+ * user thread, or a system thread with LW_SYSTEM_FPU enabled.
+ */
+static inline bool
+lwp_can_haz_fpu(struct lwp *l)
+{
+
+	return (l->l_flag & (LW_SYSTEM|LW_SYSTEM_FPU)) != LW_SYSTEM;
+}
+
+/*
+ * True if this is a system thread with its own private FPU state.
+ */
+static inline bool
+lwp_system_fpu_p(struct lwp *l)
+{
+
+	return (l->l_flag & (LW_SYSTEM|LW_SYSTEM_FPU)) ==
+	    (LW_SYSTEM|LW_SYSTEM_FPU);
+}
+
 static inline union savefpu *
 fpu_lwp_area(struct lwp *l)
 {
 	struct pcb *pcb = lwp_getpcb(l);
 	union savefpu *area = &pcb->pcb_savefpu;
 
-	KASSERT((l->l_flag & LW_SYSTEM) == 0);
+	KASSERT(lwp_can_haz_fpu(l));
 	if (l == curlwp) {
 		fpu_save();
 	}
@@ -155,8 +181,9 @@ fpu_save_lwp(struct lwp *l)
 
 	s = splvm();
 	if (l->l_md.md_flags & MDL_FPU_IN_CPU) {
-		KASSERT((l->l_flag & LW_SYSTEM) == 0);
-		fpu_area_save(area, x86_xsave_features, !(l->l_proc->p_flag & PK_32));
+		KASSERT(lwp_can_haz_fpu(l));
+		fpu_area_save(area, x86_xsave_features,
+		    !(l->l_proc->p_flag & PK_32));
 		l->l_md.md_flags &= ~MDL_FPU_IN_CPU;
 	}
 	splx(s);
@@ -169,12 +196,14 @@ fpu_save_lwp(struct lwp *l)
 void
 fpu_save(void)
 {
+
 	fpu_save_lwp(curlwp);
 }
 
 void
 fpuinit(struct cpu_info *ci)
 {
+
 	/*
 	 * This might not be strictly necessary since it will be initialized
 	 * for each process. However it does no harm.
@@ -255,6 +284,7 @@ fpu_errata_amd(void)
 void
 fpu_area_save(void *area, uint64_t xsave_features, bool is_64bit)
 {
+
 	switch (x86_fpu_save) {
 	case FPU_SAVE_FSAVE:
 		fnsave(area);
@@ -276,6 +306,7 @@ fpu_area_save(void *area, uint64_t xsave_features, bool is_64bit)
 void
 fpu_area_restore(const void *area, uint64_t xsave_features, bool is_64bit)
 {
+
 	clts();
 
 	switch (x86_fpu_save) {
@@ -300,6 +331,7 @@ void
 fpu_handle_deferred(void)
 {
 	struct pcb *pcb = lwp_getpcb(curlwp);
+
 	fpu_area_restore(&pcb->pcb_savefpu, x86_xsave_features,
 	    !(curlwp->l_proc->p_flag & PK_32));
 }
@@ -314,7 +346,7 @@ fpu_switch(struct lwp *oldlwp, struct lwp *newlwp)
 	    cpu_index(ci), ci->ci_ilevel);
 
 	if (oldlwp->l_md.md_flags & MDL_FPU_IN_CPU) {
-		KASSERT(!(oldlwp->l_flag & LW_SYSTEM));
+		KASSERT(lwp_can_haz_fpu(oldlwp));
 		pcb = lwp_getpcb(oldlwp);
 		fpu_area_save(&pcb->pcb_savefpu, x86_xsave_features,
 		    !(oldlwp->l_proc->p_flag & PK_32));
@@ -330,11 +362,11 @@ fpu_lwp_fork(struct lwp *l1, struct lwp *l2)
 	union savefpu *fpu_save;
 
 	/* Kernel threads have no FPU. */
-	if (__predict_false(l2->l_flag & LW_SYSTEM)) {
+	if (__predict_false(!lwp_can_haz_fpu(l2))) {
 		return;
 	}
 	/* For init(8). */
-	if (__predict_false(l1->l_flag & LW_SYSTEM)) {
+	if (__predict_false(!lwp_can_haz_fpu(l1))) {
 		memset(&pcb2->pcb_savefpu, 0, x86_fpu_save_size);
 		return;
 	}
@@ -356,7 +388,14 @@ fpu_lwp_abandon(struct lwp *l)
 	splx(s);
 }
 
-/* -------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+static const union savefpu safe_fpu __aligned(64) = {
+	.sv_xmm = {
+		.fx_mxcsr = __SAFE_MXCSR__,
+	},
+};
+static const union savefpu zero_fpu __aligned(64);
 
 /*
  * fpu_kern_enter()
@@ -377,6 +416,11 @@ fpu_kern_enter(void)
 	struct cpu_info *ci;
 	int s;
 
+	if (lwp_system_fpu_p(l) && !cpu_intr_p()) {
+		KASSERT(!cpu_softintr_p());
+		return;
+	}
+
 	s = splvm();
 
 	ci = curcpu();
@@ -393,8 +437,8 @@ fpu_kern_enter(void)
 	ci->ci_kfpu_spl = s;
 
 	/*
-	 * If we are in a softint and have a pinned lwp, the fpu state is that
-	 * of the pinned lwp, so save it there.
+	 * If we are in a softint and have a pinned lwp, the fpu state
+	 * is that of the pinned lwp, so save it there.
 	 */
 	while ((l->l_pflag & LP_INTR) && (l->l_switchto != NULL))
 		l = l->l_switchto;
@@ -407,6 +451,11 @@ fpu_kern_enter(void)
 	 * the last FPU usage requiring that we save the FPU state.
 	 */
 	clts();
+
+	/*
+	 * Zero the FPU registers and install safe control words.
+	 */
+	fpu_area_restore(&safe_fpu, x86_xsave_features, /*is_64bit*/false);
 }
 
 /*
@@ -417,9 +466,15 @@ fpu_kern_enter(void)
 void
 fpu_kern_leave(void)
 {
-	static const union savefpu zero_fpu __aligned(64);
-	struct cpu_info *ci = curcpu();
+	struct cpu_info *ci;
 	int s;
+
+	if (lwp_system_fpu_p(curlwp) && !cpu_intr_p()) {
+		KASSERT(!cpu_softintr_p());
+		return;
+	}
+
+	ci = curcpu();
 
 #if 0
 	/*
@@ -436,7 +491,7 @@ fpu_kern_leave(void)
 	 * through Spectre-class attacks to userland, even if there are
 	 * no bugs in fpu state management.
 	 */
-	fpu_area_restore(&zero_fpu, x86_xsave_features, false);
+	fpu_area_restore(&zero_fpu, x86_xsave_features, /*is_64bit*/false);
 
 	/*
 	 * Set CR0_TS again so that the kernel can't accidentally use
@@ -449,7 +504,25 @@ fpu_kern_leave(void)
 	splx(s);
 }
 
-/* -------------------------------------------------------------------------- */
+void
+kthread_fpu_enter_md(void)
+{
+
+	/* Enable the FPU by clearing CR0_TS, and enter a safe FPU state.  */
+	clts();
+	fpu_area_restore(&safe_fpu, x86_xsave_features, /*is_64bit*/false);
+}
+
+void
+kthread_fpu_exit_md(void)
+{
+
+	/* Zero the FPU state and disable the FPU by setting CR0_TS.  */
+	fpu_area_restore(&zero_fpu, x86_xsave_features, /*is_64bit*/false);
+	stts();
+}
+
+/* ------------------------------------------------------------------------- */
 
 /*
  * The following table is used to ensure that the FPE_... value
@@ -603,6 +676,7 @@ fpudna(struct trapframe *frame)
 static inline void
 fpu_xstate_reload(union savefpu *fpu_save, uint64_t xstate)
 {
+
 	/*
 	 * Force a reload of the given xstate during the next XRSTOR.
 	 */
@@ -801,6 +875,7 @@ process_read_xstate(struct lwp *l, struct xstate *xstate)
 int
 process_verify_xstate(const struct xstate *xstate)
 {
+
 	/* xstate_bv must be a subset of RFBM */
 	if (xstate->xs_xstate_bv & ~xstate->xs_rfbm)
 		return EINVAL;
@@ -830,8 +905,10 @@ process_write_xstate(struct lwp *l, const struct xstate *xstate)
 
 	/* Convert data into legacy FSAVE format. */
 	if (x86_fpu_save == FPU_SAVE_FSAVE) {
-		if (xstate->xs_xstate_bv & XCR0_X87)
-			process_xmm_to_s87(&xstate->xs_fxsave, &fpu_save->sv_87);
+		if (xstate->xs_xstate_bv & XCR0_X87) {
+			process_xmm_to_s87(&xstate->xs_fxsave,
+			    &fpu_save->sv_87);
+		}
 		return 0;
 	}
 
@@ -864,15 +941,16 @@ process_write_xstate(struct lwp *l, const struct xstate *xstate)
 		/*
 		 * Invalid bits in mxcsr or mxcsr_mask will cause faults.
 		 */
-		fpu_save->sv_xmm.fx_mxcsr_mask = xstate->xs_fxsave.fx_mxcsr_mask
-		    & x86_fpu_mxcsr_mask;
+		fpu_save->sv_xmm.fx_mxcsr_mask =
+		    xstate->xs_fxsave.fx_mxcsr_mask & x86_fpu_mxcsr_mask;
 		fpu_save->sv_xmm.fx_mxcsr = xstate->xs_fxsave.fx_mxcsr &
 		    fpu_save->sv_xmm.fx_mxcsr_mask;
 	}
 
 	if (xstate->xs_xstate_bv & XCR0_SSE) {
 		memcpy(&fpu_save->sv_xsave_hdr.xsh_fxsave[160],
-		    xstate->xs_fxsave.fx_xmm, sizeof(xstate->xs_fxsave.fx_xmm));
+		    xstate->xs_fxsave.fx_xmm,
+		    sizeof(xstate->xs_fxsave.fx_xmm));
 	}
 
 #define COPY_COMPONENT(xcr0_val, xsave_val, field)			\

@@ -1,4 +1,4 @@
-/* $NetBSD: wsemul_vt100_subr.c,v 1.24 2018/12/06 01:42:20 uwe Exp $ */
+/* $NetBSD: wsemul_vt100_subr.c,v 1.30 2023/02/26 14:00:42 uwe Exp $ */
 
 /*
  * Copyright (c) 1998
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: wsemul_vt100_subr.c,v 1.24 2018/12/06 01:42:20 uwe Exp $");
+__KERNEL_RCSID(0, "$NetBSD: wsemul_vt100_subr.c,v 1.30 2023/02/26 14:00:42 uwe Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -188,14 +188,14 @@ wsemul_vt100_el(struct vt100base_data *edp, int arg)
 void
 wsemul_vt100_handle_csi(struct vt100base_data *edp, u_char c)
 {
-	int n, help, flags, fgcol, bgcol;
+	int n, m, help, flags, fgcol, bgcol;
 	long attr, bkgdattr;
 
 #define A3(a, b, c) (((a) << 16) | ((b) << 8) | (c))
 	switch (A3(edp->modif1, edp->modif2, c)) {
 	    case A3('>', '\0', 'c'): /* DA secondary */
 		wsdisplay_emulinput(edp->cbcookie, WSEMUL_VT_ID2,
-				    sizeof(WSEMUL_VT_ID2));
+				    sizeof(WSEMUL_VT_ID2) - 1);
 		break;
 
 	    case A3('\0', '\0', 'J'): /* ED selective erase in display */
@@ -331,7 +331,7 @@ wsemul_vt100_handle_csi(struct vt100base_data *edp, u_char c)
 			{
 			int i, j, ps = 0;
 			char buf[20];
-			KASSERT(edp->tabs != 0);
+			KASSERT(edp->tabs != NULL);
 			wsdisplay_emulinput(edp->cbcookie, "\033P2$u", 5);
 			for (i = 0; i < edp->ncols; i++)
 				if (edp->tabs[i]) {
@@ -410,6 +410,9 @@ wsemul_vt100_handle_csi(struct vt100base_data *edp, u_char c)
 		edp->ccol -= uimin(DEF1_ARG(edp, 0), edp->ccol);
 		edp->flags &= ~VTFL_LASTCHAR;
 		break;
+	    case 'G': /* CHA */
+		edp->ccol = uimin(DEF1_ARG(edp, 0) - 1, edp->ncols -1);
+		break;
 	    case 'H': /* CUP */
 	    case 'f': /* HVP */
 		if (edp->flags & VTFL_DECOM)
@@ -445,17 +448,42 @@ wsemul_vt100_handle_csi(struct vt100base_data *edp, u_char c)
 			COPYCOLS(edp, edp->ccol + n, edp->ccol, help);
 		ERASECOLS(edp, NCOLS(edp) - n, n, edp->bkgdattr);
 		break;
+	    case 'S': /* SU */
+		wsemul_vt100_scrollup(edp, DEF1_ARG(edp, 0));
+		break;
+	    case 'T': /* SD */
+		wsemul_vt100_scrolldown(edp, DEF1_ARG(edp, 0));
+		break;
 	    case 'X': /* ECH erase character */
 		n = uimin(DEF1_ARG(edp, 0), COLS_LEFT(edp) + 1);
 		ERASECOLS(edp, edp->ccol, n, edp->bkgdattr);
 		break;
+	    case 'Z': /* CBT */
+		if (edp->ccol == 0)
+			break;
+		for (m = 0; m < DEF1_ARG(edp, 0); m++) {
+			if (edp->tabs) {
+				for (n = edp->ccol - 1; n > 0; n--) {
+					if (edp->tabs[n])
+						break;
+				}
+			} else
+				n = (edp->ccol - 1) & ~7;
+			edp->ccol = n;
+			if (n == 0)
+				break;
+		}
+		break;
 	    case 'c': /* DA primary */
 		if (ARG(edp, 0) == 0)
 			wsdisplay_emulinput(edp->cbcookie, WSEMUL_VT_ID1,
-					    sizeof(WSEMUL_VT_ID1));
+					    sizeof(WSEMUL_VT_ID1) - 1);
 		break;
+	    case 'd': /* VPA */
+		edp->crow = uimin(DEF1_ARG(edp, 0) - 1, edp->nrows - 1);
+ 		break;
 	    case 'g': /* TBC */
-		KASSERT(edp->tabs != 0);
+		KASSERT(edp->tabs != NULL);
 		switch (ARG(edp, 0)) {
 		    case 0:
 			edp->tabs[edp->ccol] = 0;
@@ -738,19 +766,30 @@ wsemul_vt100_handle_dcs(struct vt100base_data *edp)
 	    case 0: /* not handled */
 		return;
 	    case DCSTYPE_TABRESTORE:
-		KASSERT(edp->tabs != 0);
+		KASSERT(edp->tabs != NULL);
+		KASSERT(edp->ncols <= 1024);
 		memset(edp->tabs, 0, edp->ncols);
 		pos = 0;
 		for (i = 0; i < edp->dcspos; i++) {
 			char c = edp->dcsarg[i];
 			switch (c) {
 			    case '0': case '1': case '2': case '3': case '4':
-			    case '5': case '6': case '7': case '8': case '9':
-				pos = pos * 10 + (edp->dcsarg[i] - '0');
+			    case '5': case '6': case '7': case '8': case '9': {
+				const int c0 = c - '0';
+				if (pos < 0 ||
+				    pos > INT_MAX/10 ||
+				    pos * 10 > edp->ncols - c0) {
+					pos = -1;
+					break;
+				}
+				pos = pos * 10 + c0;
 				break;
+			    }
 			    case '/':
-				if (pos > 0)
+				if (pos > 0) {
+					KASSERT(pos <= edp->ncols);
 					edp->tabs[pos - 1] = 1;
+				}
 				pos = 0;
 				break;
 			    default:
@@ -760,8 +799,10 @@ wsemul_vt100_handle_dcs(struct vt100base_data *edp)
 				break;
 			}
 		}
-		if (pos > 0)
+		if (pos > 0) {
+			KASSERT(pos <= edp->ncols);
 			edp->tabs[pos - 1] = 1;
+		}
 		break;
 	    default:
 		panic("wsemul_vt100_handle_dcs: bad type %d", edp->dcstype);

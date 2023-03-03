@@ -1,4 +1,4 @@
-/*	$NetBSD: make.h,v 1.308 2022/10/10 21:17:25 rillig Exp $	*/
+/*	$NetBSD: make.h,v 1.317 2023/02/18 11:16:09 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -609,15 +609,6 @@ extern GNode *mainNode;
 extern pid_t myPid;
 
 #define MAKEFLAGS	".MAKEFLAGS"
-#define MAKEOVERRIDES	".MAKEOVERRIDES"
-/* prefix when printing the target of a job */
-#define MAKE_JOB_PREFIX	".MAKE.JOB.PREFIX"
-#define MAKE_EXPORTED	".MAKE.EXPORTED"	/* exported variables */
-#define MAKE_MAKEFILES	".MAKE.MAKEFILES"	/* all loaded makefiles */
-#define MAKE_LEVEL	".MAKE.LEVEL"		/* recursion level */
-#define MAKE_MAKEFILE_PREFERENCE ".MAKE.MAKEFILE_PREFERENCE"
-#define MAKE_DEPENDFILE	".MAKE.DEPENDFILE"	/* .depend */
-#define MAKE_MODE	".MAKE.MODE"
 #ifndef MAKE_LEVEL_ENV
 # define MAKE_LEVEL_ENV	"MAKELEVEL"
 #endif
@@ -920,6 +911,14 @@ typedef enum VarEvalMode {
 	 */
 	VARE_PARSE_ONLY,
 
+	/*
+	 * Parse text in which '${...}' and '$(...)' are not parsed as
+	 * subexpressions (with all their individual escaping rules) but
+	 * instead simply as text with balanced '${}' or '$()'.  Other '$'
+	 * are copied verbatim.
+	 */
+	VARE_PARSE_BALANCED,
+
 	/* Parse and evaluate the expression. */
 	VARE_WANTRES,
 
@@ -974,30 +973,6 @@ typedef enum VarSetFlags {
 	VAR_SET_READONLY	= 1 << 1
 } VarSetFlags;
 
-/* The state of error handling returned by Var_Parse. */
-typedef enum VarParseResult {
-
-	/* Both parsing and evaluation succeeded. */
-	VPR_OK,
-
-	/* Parsing or evaluating failed, with an error message. */
-	VPR_ERR,
-
-	/*
-	 * Parsing succeeded, undefined expressions are allowed and the
-	 * expression was still undefined after applying all modifiers.
-	 * No error message is printed in this case.
-	 *
-	 * Some callers handle this case differently, so return this
-	 * information to them, for now.
-	 *
-	 * TODO: Instead of having this special return value, rather ensure
-	 *  that VARE_EVAL_KEEP_UNDEF is processed properly.
-	 */
-	VPR_UNDEF
-
-} VarParseResult;
-
 typedef enum VarExportMode {
 	/* .export-env */
 	VEM_ENV,
@@ -1018,8 +993,8 @@ bool Var_Exists(GNode *, const char *) MAKE_ATTR_USE;
 bool Var_ExistsExpand(GNode *, const char *) MAKE_ATTR_USE;
 FStr Var_Value(GNode *, const char *) MAKE_ATTR_USE;
 const char *GNode_ValueDirect(GNode *, const char *) MAKE_ATTR_USE;
-VarParseResult Var_Parse(const char **, GNode *, VarEvalMode, FStr *);
-VarParseResult Var_Subst(const char *, GNode *, VarEvalMode, char **);
+FStr Var_Parse(const char **, GNode *, VarEvalMode);
+char *Var_Subst(const char *, GNode *, VarEvalMode);
 void Var_Expand(FStr *, GNode *, VarEvalMode);
 void Var_Stats(void);
 void Var_Dump(GNode *);
@@ -1027,10 +1002,12 @@ void Var_ReexportVars(void);
 void Var_Export(VarExportMode, const char *);
 void Var_ExportVars(const char *);
 void Var_UnExport(bool, const char *);
+void Var_ReadOnly(const char *, bool);
 
 void Global_Set(const char *, const char *);
 void Global_Append(const char *, const char *);
 void Global_Delete(const char *);
+void Global_Set_ReadOnly(const char *, const char *);
 
 /* util.c */
 typedef void (*SignalProc)(int);

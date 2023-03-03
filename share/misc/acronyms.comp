@@ -1,9 +1,10 @@
-$NetBSD: acronyms.comp,v 1.330 2022/12/08 23:41:22 jschauma Exp $
+$NetBSD: acronyms.comp,v 1.344 2023/03/01 15:45:00 fcambus Exp $
 3WHS	three-way handshake
 8VSB	8-state vestigial side band modulation
 AA	anti-aliasing
 AAA	authentication, authorization, [and] accounting
 AAT	average access time
+ABE	attribute-based encryption
 ABI	application binary interface
 ABNF	augmented backus-naur form
 ABR	available bit rate
@@ -237,7 +238,7 @@ CF	compact flash
 CFB	cipher feedback
 CFG	context-free grammar
 CFG	control-flow graph
-CFI	control-flow integrity sanitizer
+CFI	control-flow integrity
 CG	control gate
 CGA	Color Graphics Adapter
 CGI	common gateway interface
@@ -485,6 +486,7 @@ DVFS	dynamic voltage and frequency scaling
 DVI	device independent
 DVI	Digital Visual Interface
 DVR	digital video recorder
+DWARF	Debugging With Attributed Record Formats
 E-XER	extended XML encoding rules
 EABI	embedded-application binary interface
 EAI	Email Address Internationalization
@@ -626,6 +628,7 @@ GAL	generic array logic
 GARP	generic attribute registration protocol
 GAS	generic address structure
 GC	garbage collector
+GCC	GNU Compiler Collection
 GCM	Galois counter mode
 GCR	group-coded recording
 GDI	Graphics Device Interface
@@ -660,6 +663,7 @@ GSI	global system interrupt
 GSO	generic send offload
 GUI	graphical user interface
 GUID	globally unique identifier
+GUS	Gravis UltraSound
 GVFS    git virtual file system
 HA	high availability
 HAL	hardware abstraction layer
@@ -786,6 +790,7 @@ IPSEC	Internet Protocol Security
 IRC	Internet Relay Chat
 IRDA	infrared data association
 IRDP	ICMP Router Discovery Protocol
+IR	intermediate representation
 IRQ	interrupt request
 IRQL	interrupt request level
 IRR	interrupt request register
@@ -823,6 +828,7 @@ JPEG	Joint Photographic Experts Group
 JRE	Java Runtime Environment
 JSON	JavaScript Object Notation
 JTAG	joint test action group
+KASAN	Kernel Address Sanitizer
 KASLR	kernel address space layout randomization
 KB	keyboard
 KB	kilobyte
@@ -988,6 +994,7 @@ MLAG	multi-chassis link aggregation group
 MLC	multi-level cell
 MLD	multicast listener discovery
 MLHP	micro loop heat pipe
+MLIR	multi-level intermediate representation
 MMF	multi-mode fiber
 MMIC	monolithic microwave integrated circuit
 MMIO	memory mapped input/output
@@ -1065,6 +1072,7 @@ NFC	near-field communication
 NFCI	no functional change intended
 NFS	network file system
 NFV	network function virtualization
+NHACP	NABU HCCA Application Communication Protocol
 NIA	next instruction address
 NIC	network information center
 NIC	network interface card
@@ -1197,6 +1205,7 @@ PDS	product data sheet
 PDU	protocol data unit
 PE	protection enable
 PE	provider edge
+PE	portable executable
 PEAP	Protected EAP
 PECI	platform environment control interface
 PEP	protocol extension protocol
@@ -1204,6 +1213,7 @@ PER	packed encoding rules
 PFS	perfect forward secrecy
 PGAS	partitioned global address space
 PGE	page global enable
+PGO	profile guided optimization
 PGP	Pretty Good Privacy
 PHB	PCI host bridge
 PHP	PHP: Hypertext Preprocessor
@@ -1319,6 +1329,7 @@ RA	router advertisement
 RAD	rapid application development
 RADIUS	remote authentication dial-in user service
 RAID	redundant array of {independent,inexpensive} disks
+RAII	resource acquisition is initialization
 RAM	random access memory
 RAS	reliability, availability and serviceability
 RAS	remote access service
@@ -1331,7 +1342,6 @@ RC	release candidate
 RC	remote control
 RC	run commands
 RCS	Revision Control System
-RCS	revision control system
 RCU	read, copy, update
 RDB	Rigid Disk Block
 RDBMS	relational database management system
@@ -1402,6 +1412,7 @@ RTOS	real time operating system
 RTP	Real-time Transport Protocol
 RTS	request to send
 RTT	round trip time
+RTTI	run-time type information
 RUP	rational unified process
 RW	Rabin-Williams
 RWM	read-write memory
@@ -1625,6 +1636,7 @@ TDOA	time difference of arrival
 TDP	thermal design {point,power}
 TDR	time-domain reflectometry
 TECO	Text Editor and Corrector
+TEE	Trusted Execution Environment
 TFT	thin film transistor
 TFTP	Trivial File Transfer Protocol
 TIAS	try it and see
@@ -1684,6 +1696,7 @@ TTL	time to live
 TTL	transistor-transistor logic
 TTM	translation table maps
 TTY	teletype
+TU	translation unit
 TUI	{terminal,text-based,textual} user interface
 TX	{transmit out,transmitter}
 TXG	transaction group

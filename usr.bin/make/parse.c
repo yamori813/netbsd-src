@@ -1,4 +1,4 @@
-/*	$NetBSD: parse.c,v 1.690 2023/01/03 00:00:45 rillig Exp $	*/
+/*	$NetBSD: parse.c,v 1.696 2023/02/15 06:52:58 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -105,7 +105,7 @@
 #include "pathnames.h"
 
 /*	"@(#)parse.c	8.3 (Berkeley) 3/19/94"	*/
-MAKE_RCSID("$NetBSD: parse.c,v 1.690 2023/01/03 00:00:45 rillig Exp $");
+MAKE_RCSID("$NetBSD: parse.c,v 1.696 2023/02/15 06:52:58 rillig Exp $");
 
 /*
  * A file being read.
@@ -149,6 +149,7 @@ typedef enum ParseSpecial {
 	SP_NOMETA,	/* .NOMETA */
 	SP_NOMETA_CMP,	/* .NOMETA_CMP */
 	SP_NOPATH,	/* .NOPATH */
+	SP_NOREADONLY,	/* .NOREADONLY */
 	SP_NOT,		/* Not special */
 	SP_NOTPARALLEL,	/* .NOTPARALLEL or .NO_PARALLEL */
 	SP_NULL,	/* .NULL; not mentioned in the manual page */
@@ -161,11 +162,13 @@ typedef enum ParseSpecial {
 	SP_POSIX,	/* .POSIX; not mentioned in the manual page */
 #endif
 	SP_PRECIOUS,	/* .PRECIOUS */
+	SP_READONLY,	/* .READONLY */
 	SP_SHELL,	/* .SHELL */
 	SP_SILENT,	/* .SILENT */
 	SP_SINGLESHELL,	/* .SINGLESHELL; not mentioned in the manual page */
 	SP_STALE,	/* .STALE */
 	SP_SUFFIXES,	/* .SUFFIXES */
+	SP_SYSPATH,	/* .SYSPATH */
 	SP_WAIT		/* .WAIT */
 } ParseSpecial;
 
@@ -269,6 +272,7 @@ static const struct {
     { ".NOMETA",	SP_NOMETA,	OP_NOMETA },
     { ".NOMETA_CMP",	SP_NOMETA_CMP,	OP_NOMETA_CMP },
     { ".NOPATH",	SP_NOPATH,	OP_NOPATH },
+    { ".NOREADONLY",	SP_NOREADONLY,	OP_NONE },
     { ".NOTMAIN",	SP_ATTRIBUTE,	OP_NOTMAIN },
     { ".NOTPARALLEL",	SP_NOTPARALLEL,	OP_NONE },
     { ".NO_PARALLEL",	SP_NOTPARALLEL,	OP_NONE },
@@ -283,12 +287,14 @@ static const struct {
     { ".POSIX",		SP_POSIX,	OP_NONE },
 #endif
     { ".PRECIOUS",	SP_PRECIOUS,	OP_PRECIOUS },
+    { ".READONLY",	SP_READONLY,	OP_NONE },
     { ".RECURSIVE",	SP_ATTRIBUTE,	OP_MAKE },
     { ".SHELL",		SP_SHELL,	OP_NONE },
     { ".SILENT",	SP_SILENT,	OP_SILENT },
     { ".SINGLESHELL",	SP_SINGLESHELL,	OP_NONE },
     { ".STALE",		SP_STALE,	OP_NONE },
     { ".SUFFIXES",	SP_SUFFIXES,	OP_NONE },
+    { ".SYSPATH",	SP_SYSPATH,	OP_NONE },
     { ".USE",		SP_ATTRIBUTE,	OP_USE },
     { ".USEBEFORE",	SP_ATTRIBUTE,	OP_USEBEFORE },
     { ".WAIT",		SP_WAIT,	OP_NONE },
@@ -572,7 +578,7 @@ HandleMessage(ParseErrorLevel level, const char *levelName, const char *umsg)
 		return;
 	}
 
-	(void)Var_Subst(umsg, SCOPE_CMDLINE, VARE_WANTRES, &xmsg);
+	xmsg = Var_Subst(umsg, SCOPE_CMDLINE, VARE_WANTRES);
 	/* TODO: handle errors */
 
 	Parse_Error(level, "%s", xmsg);
@@ -891,10 +897,8 @@ ParseDependencyTargetWord(char **pp, const char *lstart)
 			 * have been discovered in the initial Var_Subst and
 			 * we wouldn't be here.
 			 */
-			FStr val;
-
-			(void)Var_Parse(&cp, SCOPE_CMDLINE,
-			    VARE_PARSE_ONLY, &val);
+			FStr val = Var_Parse(&cp, SCOPE_CMDLINE,
+			    VARE_PARSE_ONLY);
 			FStr_Done(&val);
 		} else
 			cp++;
@@ -918,6 +922,11 @@ HandleDependencyTargetSpecial(const char *targetName,
 		if (*inout_paths == NULL)
 			*inout_paths = Lst_New();
 		Lst_Append(*inout_paths, &dirSearchPath);
+		break;
+	case SP_SYSPATH:
+		if (*inout_paths == NULL)
+			*inout_paths = Lst_New();
+		Lst_Append(*inout_paths, sysIncPath);
 		break;
 	case SP_MAIN:
 		/*
@@ -1125,15 +1134,17 @@ ParseDependencyOp(char **pp)
 }
 
 static void
-ClearPaths(SearchPathList *paths)
+ClearPaths(ParseSpecial special, SearchPathList *paths)
 {
 	if (paths != NULL) {
 		SearchPathListNode *ln;
 		for (ln = paths->first; ln != NULL; ln = ln->next)
 			SearchPath_Clear(ln->datum);
 	}
-
-	Dir_SetPATH();
+	if (special == SP_SYSPATH)
+		Dir_SetSYSPATH();
+	else
+		Dir_SetPATH();
 }
 
 static char *
@@ -1254,7 +1265,8 @@ HandleDependencySourcesEmpty(ParseSpecial special, SearchPathList *paths)
 		opts.silent = true;
 		break;
 	case SP_PATH:
-		ClearPaths(paths);
+	case SP_SYSPATH:
+		ClearPaths(special, paths);
 		break;
 #ifdef POSIX
 	case SP_POSIX:
@@ -1306,11 +1318,20 @@ ParseDependencySourceSpecial(ParseSpecial special, const char *word,
 	case SP_LIBS:
 		Suff_AddLib(word);
 		break;
+	case SP_NOREADONLY:
+		Var_ReadOnly(word, false);
+		break;
 	case SP_NULL:
 		Suff_SetNull(word);
 		break;
 	case SP_OBJDIR:
 		Main_SetObjdir(false, "%s", word);
+		break;
+	case SP_READONLY:
+		Var_ReadOnly(word, true);
+		break;
+	case SP_SYSPATH:
+		AddToPaths(word, paths);
 		break;
 	default:
 		break;
@@ -1524,9 +1545,16 @@ ParseDependencySources(char *p, GNodeType targetAttr,
 	}
 
 	/* Now go for the sources. */
-	if (special == SP_SUFFIXES || special == SP_PATH ||
-	    special == SP_INCLUDES || special == SP_LIBS ||
-	    special == SP_NULL || special == SP_OBJDIR) {
+	switch (special) {
+	case SP_INCLUDES:
+	case SP_LIBS:
+	case SP_NOREADONLY:
+	case SP_NULL:
+	case SP_OBJDIR:
+	case SP_PATH:
+	case SP_READONLY:
+	case SP_SUFFIXES:
+	case SP_SYSPATH:
 		ParseDependencySourcesSpecial(p, special, *inout_paths);
 		if (*inout_paths != NULL) {
 			Lst_Free(*inout_paths);
@@ -1534,10 +1562,14 @@ ParseDependencySources(char *p, GNodeType targetAttr,
 		}
 		if (special == SP_PATH)
 			Dir_SetPATH();
-	} else {
+		if (special == SP_SYSPATH)
+			Dir_SetSYSPATH();
+		break;
+	default:
 		assert(*inout_paths == NULL);
 		if (!ParseDependencySourcesMundane(p, special, targetAttr))
 			return;
+		break;
 	}
 
 	MaybeUpdateMainTarget();
@@ -1742,10 +1774,8 @@ VarCheckSyntax(VarAssignOp type, const char *uvalue, GNode *scope)
 {
 	if (opts.strict) {
 		if (type != VAR_SUBST && strchr(uvalue, '$') != NULL) {
-			char *expandedValue;
-
-			(void)Var_Subst(uvalue, scope, VARE_PARSE_ONLY,
-			    &expandedValue);
+			char *expandedValue = Var_Subst(uvalue,
+			    scope, VARE_PARSE_ONLY);
 			/* TODO: handle errors */
 			free(expandedValue);
 		}
@@ -1771,7 +1801,7 @@ VarAssign_EvalSubst(GNode *scope, const char *name, const char *uvalue,
 	if (!Var_ExistsExpand(scope, name))
 		Var_SetExpand(scope, name, "");
 
-	(void)Var_Subst(uvalue, scope, VARE_KEEP_DOLLAR_UNDEF, &evalue);
+	evalue = Var_Subst(uvalue, scope, VARE_KEEP_DOLLAR_UNDEF);
 	/* TODO: handle errors */
 
 	Var_SetExpand(scope, name, evalue);
@@ -1840,7 +1870,7 @@ VarAssign_Eval(const char *name, VarAssignOp op, const char *uvalue,
 static void
 VarAssignSpecial(const char *name, const char *avalue)
 {
-	if (strcmp(name, MAKEOVERRIDES) == 0)
+	if (strcmp(name, ".MAKEOVERRIDES") == 0)
 		Main_ExportMAKEFLAGS(false);	/* re-export MAKEFLAGS */
 	else if (strcmp(name, ".CURDIR") == 0) {
 		/*
@@ -1850,9 +1880,9 @@ VarAssignSpecial(const char *name, const char *avalue)
 		 */
 		Dir_InitCur(avalue);
 		Dir_SetPATH();
-	} else if (strcmp(name, MAKE_JOB_PREFIX) == 0)
+	} else if (strcmp(name, ".MAKE.JOB.PREFIX") == 0)
 		Job_SetPrefix();
-	else if (strcmp(name, MAKE_EXPORTED) == 0)
+	else if (strcmp(name, ".MAKE.EXPORTED") == 0)
 		Var_ExportVars(avalue);
 }
 
@@ -2116,8 +2146,8 @@ VarContainsWord(const char *varname, const char *word)
 static void
 TrackInput(const char *name)
 {
-	if (!VarContainsWord(MAKE_MAKEFILES, name))
-		Global_Append(MAKE_MAKEFILES, name);
+	if (!VarContainsWord(".MAKE.MAKEFILES", name))
+		Global_Append(".MAKE.MAKEFILES", name);
 }
 
 
@@ -2208,7 +2238,7 @@ ParseTraditionalInclude(char *line)
 
 	pp_skip_whitespace(&file);
 
-	(void)Var_Subst(file, SCOPE_CMDLINE, VARE_WANTRES, &all_files);
+	all_files = Var_Subst(file, SCOPE_CMDLINE, VARE_WANTRES);
 	/* TODO: handle errors */
 
 	for (file = all_files; !done; file = cp + 1) {
@@ -2253,7 +2283,7 @@ ParseGmakeExport(char *line)
 	/*
 	 * Expand the value before putting it in the environment.
 	 */
-	(void)Var_Subst(value, SCOPE_CMDLINE, VARE_WANTRES, &value);
+	value = Var_Subst(value, SCOPE_CMDLINE, VARE_WANTRES);
 	/* TODO: handle errors */
 
 	setenv(variable, value, 1);
@@ -2830,7 +2860,7 @@ ParseDependencyLine(char *line)
 	 * Var_Subst.
 	 */
 	emode = opts.strict ? VARE_WANTRES : VARE_UNDEFERR;
-	(void)Var_Subst(line, SCOPE_CMDLINE, emode, &expanded_line);
+	expanded_line = Var_Subst(line, SCOPE_CMDLINE, emode);
 	/* TODO: handle errors */
 
 	/* Need a fresh list for the target nodes */

@@ -1,7 +1,7 @@
-/*	$NetBSD: util.c,v 1.164 2022/08/06 18:26:43 andvar Exp $	*/
+/*	$NetBSD: util.c,v 1.166 2023/02/25 12:07:25 mlelstv Exp $	*/
 
 /*-
- * Copyright (c) 1997-2020 The NetBSD Foundation, Inc.
+ * Copyright (c) 1997-2023 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -64,7 +64,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID("$NetBSD: util.c,v 1.164 2022/08/06 18:26:43 andvar Exp $");
+__RCSID("$NetBSD: util.c,v 1.166 2023/02/25 12:07:25 mlelstv Exp $");
 #endif /* not lint */
 
 /*
@@ -209,7 +209,7 @@ getremoteinfo(void)
 			    os_len, reply_string + 4);
 		}
 		/*
-		 * Decide whether we should default to bninary.
+		 * Decide whether we should default to binary.
 		 * Traditionally checked for "215 UNIX Type: L8", but
 		 * some printers report "Linux" ! so be more forgiving.
 		 * In reality we probably almost never want text any more.
@@ -1493,6 +1493,26 @@ int
 ftp_poll(struct pollfd *fds, int nfds, int timeout)
 {
 	return poll(fds, nfds, timeout);
+}
+
+/*
+ * Evaluate a "boolean" string, accept only "1" as true and "0" as false
+ * Anything else returns the default value.
+ * Warn about an invalid value that isn't empty.
+ */
+int
+ftp_truthy(const char *name, const char *str, int defvalue)
+{
+
+	if (strcmp(str, "1") == 0)
+		return 1;
+	else if (strcmp(str, "0") == 0)
+		return 0;
+
+	if (*str)
+		warn("Option %s must be boolean (1 or 0)\n", name);
+
+	return defvalue;
 }
 
 #ifndef SMALL

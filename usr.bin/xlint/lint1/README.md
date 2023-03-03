@@ -1,4 +1,4 @@
-[//]: # ($NetBSD: README.md,v 1.9 2022/07/08 20:27:36 rillig Exp $)
+[//]: # ($NetBSD: README.md,v 1.12 2023/02/22 23:55:05 rillig Exp $)
 
 # Introduction
 
@@ -64,25 +64,40 @@ or just informational depends on several things:
 * The option `-q` enables additional queries that are not suitable as regular
   warnings but may be interesting to look at on a case-by-case basis.
 
+# Limitations
+
+Lint operates on the level of individual expressions.
+
+* It does not build an AST of the statements of a function, therefore it
+  cannot reliably analyze the control flow in a single function.
+* It does not store the control flow properties of functions, therefore it
+  cannot relate argument nullability with the return value.
+* It does not have information about functions, except for their prototypes,
+  therefore it cannot relate them across translation units.
+* It does not store detailed information about complex data types, therefore
+  it cannot cross-check them across translation units.
+
 # Fundamental types
 
 Lint mainly analyzes expressions (`tnode_t`), which are formed from operators
 (`op_t`) and their operands (`tnode_t`).
-Each node has a type (`type_t`) and a few other properties.
+Each node has a data type (`type_t`) and a few other properties that depend on
+the operator.
 
 ## type_t
 
-The elementary types are `int`, `_Bool`, `unsigned long`, `pointer` and so on,
+The basic types are `int`, `_Bool`, `unsigned long`, `pointer` and so on,
 as defined in `tspec_t`.
 
-Actual types like `int`, `const char *` are created by `gettyp(INT)`,
+Concrete types like `int` or `const char *` are created by `gettyp(INT)`,
 or by deriving new types from existing types, using `block_derive_pointer`,
 `block_derive_array` and `block_derive_function`.
 (See [below](#memory-management) for the meaning of the prefix `block_`.)
 
 After a type has been created, it should not be modified anymore.
-Ideally all references to types would be `const`, but that's a lot of work.
-Before modifying a type,
+Ideally all references to types would be `const`, but that's still on the
+to-do list and not trivial.
+In the meantime, before modifying a type,
 it needs to be copied using `block_dup_type` or `expr_dup_type`.
 
 ## tnode_t
@@ -93,15 +108,49 @@ Each node has an operator that defines which other members may be accessed.
 The operators and their properties are defined in `ops.def`.
 Some examples for operators:
 
-| Operator | Meaning                                                 |
-|----------|---------------------------------------------------------|
-| CON      | compile-time constant in `tn_val`                       |
-| NAME     | references the identifier in `tn_sym`                   |
-| UPLUS    | the unary operator `+tn_left`                           |
-| PLUS     | the binary operator `tn_left + tn_right`                |
-| CALL     | a function call, typically CALL(LOAD(NAME("function"))) |
-| ICALL    | an indirect function call                               |
-| CVT      | an implicit conversion or an explicit cast              |
+| Operator | Meaning                                    |
+|----------|--------------------------------------------|
+| CON      | compile-time constant in `tn_val`          |
+| NAME     | references the identifier in `tn_sym`      |
+| UPLUS    | the unary operator `+tn_left`              |
+| PLUS     | the binary operator `tn_left + tn_right`   |
+| CALL     | a direct function call                     |
+| ICALL    | an indirect function call                  |
+| CVT      | an implicit conversion or an explicit cast |
+
+As an example, the expression `strcmp(names[i], "name")` has this internal
+structure:
+
+~~~text
+ 1: 'call' type 'int'
+ 2:  '&' type 'pointer to function(pointer to const char, pointer to const char) returning int'
+ 3:    'name' 'strcmp' with extern 'function(pointer to const char, pointer to const char) returning int'
+ 4:  'push' type 'pointer to const char'
+ 5:    'convert' type 'pointer to const char'
+ 6:      '&' type 'pointer to char'
+ 7:        'string' type 'array[5] of char', lvalue, length 4, "name"
+ 8:    'push' type 'pointer to const char'
+ 9:      'load' type 'pointer to const char'
+10:        '*' type 'pointer to const char', lvalue
+11:          '+' type 'pointer to pointer to const char'
+12:            'load' type 'pointer to pointer to const char'
+13:              'name' 'names' with auto 'pointer to pointer to const char', lvalue
+14:            '*' type 'long'
+15:              'convert' type 'long'
+16:                'load' type 'int'
+17:                  'name' 'i' with auto 'int', lvalue
+18:              'constant' type 'long', value 8
+~~~
+
+| Lines  | Notes                                                            |
+|--------|------------------------------------------------------------------|
+| 4, 8   | Each argument of the function call corresponds to a `PUSH` node. |
+| 5, 9   | The left operand of a `PUSH` node is the actual argument.        |
+| 8      | The right operand is the `PUSH` node of the previous argument.   |
+| 5, 9   | The arguments of a call are ordered from right to left.          |
+| 10, 11 | Array access is represented as `*(left + right)`.                |
+| 14, 18 | Array and struct offsets are in premultiplied form.              |
+| 18     | The size of a pointer on this platform is 8 bytes.               |
 
 See `debug_node` for how to interpret the members of `tnode_t`.
 
@@ -188,7 +237,7 @@ They do this by placing `expect` comments near the location of the diagnostic.
 The comment `/* expect+1: ... */` expects a diagnostic to be generated for the
 code 1 line below, `/* expect-5: ... */` expects a diagnostic to be generated
 for the code 5 lines above.
-Each `expect` comment must be in a single line.
+An `expect` comment cannot span multiple lines.
 At the start and the end of the comment, the placeholder `...` stands for an
 arbitrary sequence of characters.
 There may be other code or comments in the same line of the `.c` file.
@@ -201,8 +250,7 @@ Most other tests focus on a single feature.
 
 1. Run `make add-test NAME=test_name`.
 2. Run `cd ../../../tests/usr.bin/xlint/lint1`.
-3. Sort the `FILES` lines in `Makefile`.
-4. Make the test generate the desired diagnostics.
-5. Run `./accept.sh test_name` until it no longer complains.
-6. Run `cd ../../..`.
-7. Run `cvs commit distrib/sets/lists/tests/mi tests/usr.bin/xlint`.
+3. Make the test generate the desired diagnostics.
+4. Run `./accept.sh test_name` until it no longer complains.
+5. Run `cd ../../..`.
+6. Run `cvs commit distrib/sets/lists/tests/mi tests/usr.bin/xlint`.

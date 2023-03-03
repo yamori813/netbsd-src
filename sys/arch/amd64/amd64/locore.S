@@ -1,4 +1,4 @@
-/*	$NetBSD: locore.S,v 1.215 2022/12/26 17:46:00 christos Exp $	*/
+/*	$NetBSD: locore.S,v 1.217 2023/03/01 08:38:50 riastradh Exp $	*/
 
 /*
  * Copyright-o-rama!
@@ -1177,8 +1177,32 @@ ENTRY(cpu_switchto)
 	movq	PCB_RBP(%r14),%rbp
 
 	/*
-	 * Set curlwp.  This must be globally visible in order to permit
-	 * non-interlocked mutex release.
+	 * Issue XCHG, rather than MOV, to set ci_curlwp := newlwp in
+	 * order to coordinate mutex_exit on this CPU with
+	 * mutex_vector_enter on another CPU.
+	 *
+	 * 1. Any prior mutex_exit by oldlwp must be visible to other
+	 *    CPUs before we set ci_curlwp := newlwp on this one,
+	 *    requiring a store-before-store barrier.
+	 *
+	 *    (This is always guaranteed by the x86 memory model, TSO,
+	 *    but other architectures require a explicit barrier before
+	 *    the store to ci->ci_curlwp.)
+	 *
+	 * 2. ci_curlwp := newlwp must be visible on all other CPUs
+	 *    before any subsequent mutex_exit by newlwp can even test
+	 *    whether there might be waiters, requiring a
+	 *    store-before-load barrier.
+	 *
+	 *    (This is the only ordering x86 TSO ever requires any kind
+	 *    of barrier for -- in this case, we take advantage of the
+	 *    sequential consistency implied by XCHG to obviate the
+	 *    need for MFENCE or something.)
+	 *
+	 * See kern_mutex.c for details -- this is necessary for
+	 * adaptive mutexes to detect whether the lwp is on the CPU in
+	 * order to safely block without requiring atomic r/m/w in
+	 * mutex_exit.
 	 */
 	movq	%r12,%rcx
 	xchgq	%rcx,CPUVAR(CURLWP)
@@ -1247,7 +1271,7 @@ ENTRY(cpu_switchto)
 
 	/* Don't bother with the rest if switching to a system process. */
 	testl	$LW_SYSTEM,L_FLAG(%r12)
-	jnz	.Lswitch_return
+	jnz	.Lswitch_system
 
 	/* Is this process using RAS (restartable atomic sequences)? */
 	movq	L_PROC(%r12),%rdi
@@ -1336,6 +1360,21 @@ ENTRY(cpu_switchto)
 	popq	%r12
 	popq	%rbx
 	ret
+
+.Lswitch_system:
+	/*
+	 * If it has LWP_SYSTEM_FPU set, meaning it's running in
+	 * kthread_fpu_enter/exit, we need to restore the FPU state
+	 * and enable FPU instructions with fpu_handle_deferred.
+	 *
+	 * No need to test MDL_FPU_IN_CPU via HANDLE_DEFERRED_FPU --
+	 * fpu_switch guarantees it is clear, so we can just call
+	 * fpu_handle_deferred unconditionally.
+	 */
+	testl	$LW_SYSTEM_FPU,L_FLAG(%r12)
+	jz	.Lswitch_return
+	callq	_C_LABEL(fpu_handle_deferred)
+	jmp	.Lswitch_return
 END(cpu_switchto)
 
 /*

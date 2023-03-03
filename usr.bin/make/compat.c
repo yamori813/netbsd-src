@@ -1,4 +1,4 @@
-/*	$NetBSD: compat.c,v 1.243 2022/12/07 10:28:48 rillig Exp $	*/
+/*	$NetBSD: compat.c,v 1.245 2023/02/14 21:38:31 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990 The Regents of the University of California.
@@ -91,7 +91,7 @@
 #include "pathnames.h"
 
 /*	"@(#)compat.c	8.2 (Berkeley) 3/19/94"	*/
-MAKE_RCSID("$NetBSD: compat.c,v 1.243 2022/12/07 10:28:48 rillig Exp $");
+MAKE_RCSID("$NetBSD: compat.c,v 1.245 2023/02/14 21:38:31 rillig Exp $");
 
 static GNode *curTarg = NULL;
 static pid_t compatChild;
@@ -238,7 +238,7 @@ Compat_RunCommand(const char *cmdp, GNode *gn, StringListNode *ln)
 	errCheck = !(gn->type & OP_IGNORE);
 	doIt = false;
 
-	(void)Var_Subst(cmd, gn, VARE_WANTRES, &cmdStart);
+	cmdStart = Var_Subst(cmd, gn, VARE_WANTRES);
 	/* TODO: handle errors */
 
 	if (cmdStart[0] == '\0') {
@@ -280,7 +280,8 @@ Compat_RunCommand(const char *cmdp, GNode *gn, StringListNode *ln)
 			doIt = true;
 			if (shellName == NULL)	/* we came here from jobs */
 				Shell_Init();
-		} else
+		} else if (!ch_isspace(*cmd))
+			/* Ignore whitespace for compatibility with gnu make */
 			break;
 		cmd++;
 	}

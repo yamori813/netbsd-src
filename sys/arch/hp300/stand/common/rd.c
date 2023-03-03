@@ -1,4 +1,4 @@
-/*	$NetBSD: rd.c,v 1.15 2022/11/25 13:06:27 tsutsui Exp $	*/
+/*	$NetBSD: rd.c,v 1.17 2023/02/12 16:04:57 andvar Exp $	*/
 
 /*
  * Copyright (c) 1988 University of Utah.
@@ -178,7 +178,7 @@ rdident(int ctlr, int unit)
 		}
 	}
 	/*
-	 * Take care of a couple of anomolies:
+	 * Take care of a couple of anomalies:
 	 * 1. 7945A and 7946A both return same HW id
 	 * 2. 9122S and 9134D both return same HW id
 	 * 3. 9122D and 9134L both return same HW id
@@ -235,7 +235,7 @@ rdgetinfo(struct rd_softc *rs)
 		printf("rdgetinfo: rdstrategy error %d\n", err);
 		return 0;
 	}
-	
+
 	msg = getdisklabel(io_buf, lp);
 	if (msg) {
 		printf("rd(%d,%d,%d): WARNING: %s\n",

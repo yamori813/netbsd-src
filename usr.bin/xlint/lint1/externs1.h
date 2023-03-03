@@ -1,4 +1,4 @@
-/*	$NetBSD: externs1.h,v 1.170 2022/10/01 09:59:40 rillig Exp $	*/
+/*	$NetBSD: externs1.h,v 1.174 2023/02/18 15:21:34 rillig Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -99,8 +99,6 @@ extern	int	get_filename_id(const char *);
 extern	void	add_directory_replacement(char *);
 extern	const char *transform_filename(const char *, size_t);
 
-extern	void	initmem(void);
-
 extern	void	*block_zero_alloc(size_t);
 extern	void	*level_zero_alloc(size_t, size_t);
 extern	void	level_free_all(size_t);
@@ -108,8 +106,8 @@ extern	void	level_free_all(size_t);
 extern	void	*expr_zero_alloc(size_t);
 extern	tnode_t	*expr_alloc_tnode(void);
 extern	void	expr_free_all(void);
-extern	struct	memory_block *expr_save_memory(void);
-extern	void	expr_restore_memory(struct memory_block *);
+extern	memory_pool expr_save_memory(void);
+extern	void	expr_restore_memory(memory_pool);
 
 /*
  * debug.c
@@ -166,8 +164,6 @@ extern	void	warning(int, ...);
 extern	bool	gnuism(int, ...);
 extern	void	c99ism(int, ...);
 extern	void	c11ism(int, ...);
-extern	void	internal_error(const char *, int, const char *, ...)
-     __attribute__((__noreturn__,__format__(__printf__, 3, 4)));
 extern	void	assert_failed(const char *, int, const char *, const char *)
 		__attribute__((__noreturn__));
 extern	void	update_location(const char *, int, bool, bool);
@@ -307,8 +303,8 @@ extern	bool	quadflg;
 extern	void	begin_control_statement(control_statement_kind);
 extern	void	end_control_statement(control_statement_kind);
 extern	void	check_statement_reachable(void);
-extern	void	funcdef(sym_t *);
-extern	void	funcend(void);
+extern	void	begin_function(sym_t *);
+extern	void	end_function(void);
 extern	void	named_label(sym_t *);
 extern	void	case_label(tnode_t *);
 extern	void	default_label(void);
@@ -346,7 +342,7 @@ extern	void	bitfieldtype(int);
  */
 extern	void	begin_initialization(sym_t *);
 extern	void	end_initialization(void);
-extern	sym_t	**current_initsym(void);
+extern	sym_t	*current_initsym(void);
 
 extern	void	init_rbrace(void);
 extern	void	init_lbrace(void);

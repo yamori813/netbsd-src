@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.sys.mk,v 1.310 2022/12/30 02:01:42 christos Exp $
+#	$NetBSD: bsd.sys.mk,v 1.312 2023/01/22 15:20:01 rillig Exp $
 #
 # Build definitions used for NetBSD source tree builds.
 
@@ -138,10 +138,7 @@ CFLAGS+=	-Wno-maybe-uninitialized
 .endif
 
 .if ${MKRELRO:Uno} != "no"
-# XXX Workaround for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1014301
-# Set manually the maxpagesize to 4096 which is ok for now since we only
-# support relro by default on x86 and aarch64
-LDFLAGS+=	-Wl,-z,relro -Wl,-z,max-page-size=4096
+LDFLAGS+=	-Wl,-z,relro
 .endif
 
 .if ${MKRELRO:Uno} == "full" && ${NOFULLRELRO:Uno} == "no"
@@ -166,7 +163,7 @@ CWARNFLAGS+=	${CWARNFLAGS.${ACTIVE_CC}}
 CPPFLAGS+=	${AUDIT:D-D__AUDIT__}
 _NOWERROR=	${defined(NOGCCERROR) || (${ACTIVE_CC} == "clang" && defined(NOCLANGERROR)):?yes:no}
 CFLAGS+=	${${_NOWERROR} == "no" :?-Werror:} ${CWARNFLAGS}
-LINTFLAGS+=	${DESTDIR:D-d ${DESTDIR}/usr/include}
+LINTFLAGS+=	${DESTDIR:D-d ${DESTDIR}}
 
 .if !defined(NOSSP) && (${USE_SSP:Uno} != "no") && (${BINDIR:Ux} != "/usr/mdec")
 .   if !defined(KERNSRCDIR) && !defined(KERN) # not for kernels / kern modules

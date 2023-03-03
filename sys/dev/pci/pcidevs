@@ -1,4 +1,4 @@
-$NetBSD: pcidevs,v 1.1474 2023/01/04 03:12:09 msaitoh Exp $
+$NetBSD: pcidevs,v 1.1479 2023/02/14 14:42:46 msaitoh Exp $
 
 /*
  * Copyright (c) 1995, 1996 Christopher G. Demetriou
@@ -1054,12 +1054,52 @@ product AMD F17_7X_RESV_SPP	0x1485	Family17h/7xh Reserved SPP
 product AMD F17_7X_CCP		0x1486	Family17h/7xh Crypto
 product AMD F17_3X_HDA		0x1487	17h/7xh HD Audio
 product AMD F17_7X_USB3		0x149c	Family17h/7xh USB 3.0 Host Controller
+product AMD F19_1X_IOMMU	0x149e	19h/7xh IOMMU
+product AMD F19_1X_PCIE_DUMMY_HB 0x149f	19h/7xh PCIe Dummy Host Bridge
+product AMD F19_1X_RC		0x14a4	19h/1xh Root Complex
+product AMD F19_1X_GPPB_0	0x14a5	19h/1xh PCIe GPP Bridge
+product AMD F19_1X_RCEC		0x14a6	19h/1xh RCEC
+product AMD F19_1X_INTNL_GPPB	0x14a7	19h/1xh Internal PCIe GPP Bridge
+product AMD F19_1X_GPPB_1	0x14aa	19h/1xh PCIe GPP Bridge
+product AMD F19_1X_GPPB_2	0x14ab	19h/1xh PCIe GPP Bridge
+product AMD F19_1X_PCIE_DUMMY_0	0x14ac	19h/1xh PCIe Dummy Function
+product AMD F19_1X_DF_0		0x14ad	19h/1xh Data Fabric
+product AMD F19_1X_DF_1		0x14ae	19h/1xh Data Fabric
+product AMD F19_1X_DF_2		0x14af	19h/1xh Data Fabric
+product AMD F19_1X_DF_3		0x14b0	19h/1xh Data Fabric
+product AMD F19_1X_DF_4		0x14b1	19h/1xh Data Fabric
+product AMD F19_1X_DF_5		0x14b2	19h/1xh Data Fabric
+product AMD F19_1X_DF_6		0x14b3	19h/1xh Data Fabric
+product AMD F19_1X_DF_7		0x14b4	19h/1xh Data Fabric
 product AMD F17_AX_RC		0x14b5	17h/Axh Root Complex
 product AMD F17_AX_IOMMU	0x14b6	17h/Axh IOMMU
 product AMD F17_AX_PCIE_DUMMY_HB 0x14b7	17h/Axh PCIe Dummy Host Bridge
 product AMD F17_AX_INTNL_GPPB_0	0x14b9	17h/Axh Internal GPP Bridge 0
 product AMD F17_AX_GPPB		0x14ba	17h/Axh PCIe GPP Bridge
+product AMD F19_1X_NTB_0	0x14c0	19h/1xh Primary PCIe Non Transparent Bridge
+product AMD F19_1X_VNTB		0x14c1	19h/1xh Secondary vNTB
+product AMD F19_1X_PCIE_DUMMY_1	0x14c2	19h/1xh PCIe Dummy Function
+product AMD F19_1X_NTB_1	0x14c3	19h/1xh PCIe Non Transparent Bridge
+product AMD F19_1X_SWDS		0x14c4	19h/1xh Swith NBIF DS
+product AMD F19_1X_NVME		0x14c5	19h/1xh NVMe
+product AMD F19_1X_SWUS		0x14c6	19h/1xh Swith US in PCIe
+product AMD F19_1X_PSP		0x14ca	19h/1xh PSP
+product AMD F19_1X_ACP		0x14cb	19h/1xh ACP
+product AMD F19_1X_HDA		0x14cc	19h/1xh HD Audio
 product AMD F19_6X_RC		0x14d8	19h/6xh Root Complex
+product AMD F19_6X_IOMMU	0x14d9	19h/6xh IOMMU
+product AMD F19_6X_PCIE_DUMMY_HB 0x14da	19h/6xh PCIe Dummy Host Bridge
+product AMD F19_6X_GPPB		0x14db	19h/6xh PCIe GPP Bridge
+product AMD F19_6X_INTNL_GPPB	0x14dd	19h/6xh Internal PCIe GPP Bridge
+product AMD F19_6X_PCIE_DUMMY	0x14de	19h/6xh PCIe Dummy Function
+product AMD F19_6X_DF_0		0x14e0	19h/6xh Data Fabric 0
+product AMD F19_6X_DF_1		0x14e1	19h/6xh Data Fabric 1
+product AMD F19_6X_DF_2		0x14e2	19h/6xh Data Fabric 2
+product AMD F19_6X_DF_3		0x14e3	19h/6xh Data Fabric 3
+product AMD F19_6X_DF_4		0x14e4	19h/6xh Data Fabric 4
+product AMD F19_6X_DF_5		0x14e5	19h/6xh Data Fabric 5
+product AMD F19_6X_DF_6		0x14e6	19h/6xh Data Fabric 6
+product AMD F19_6X_DF_7		0x14e7	19h/6xh Data Fabric 7
 product AMD F17_AX_XHCI_0	0x1503	17h/Axh USB 3.1 xHCI
 product AMD F17_AX_XHCI_1	0x1504	17h/Axh USB 3.1 xHCI
 product AMD F17_AX_USB_BIOM	0x1505	17h/Axh Secure USB BIOmetric
@@ -1095,6 +1135,7 @@ product AMD F15_6X_HDA		0x157a	15h/6xh Audio Controller
 product AMD F15_6X_HB		0x157b	15h/6xh Host Bridge
 product AMD F15_6X_RP		0x157c	15h/6xh Root Port
 product AMD F15_6X_HB_2		0x157d	15h/6xh Host Bridge
+product AMD F19_1X_XHCI		0x157f	19h/1xh USB 3.2
 product AMD F16_30_HT		0x1580	Family16h HyperTransport Configuration
 product AMD F16_30_ADDR		0x1581	Family16h Address Map Configuration
 product AMD F16_30_DRAM		0x1582	Family16h DRAM Configuration
@@ -1107,6 +1148,9 @@ product AMD F15_7X_DRAM		0x15b2	15h/7xh DRAM Configuration
 product AMD F15_7X_NB		0x15b3	15h/7xh North Bridge Configuration
 product AMD F15_7X_CSTATE	0x15b4	15h/7xh CPU C-state Configuration
 product AMD F15_7X_MISC		0x15b5	15h/7xh Miscellaneous Configuration
+product AMD F19_6X_XHCI_0	0x15b6	19h/6xh USB 3.1 xHCI
+product AMD F19_6X_XHCI_1	0x15b7	19h/6xh USB 3.1 xHCI
+product AMD F19_6X_USB_BIOM	0x15b8	19h/6xh Secure USB BIOmetric
 product AMD F17_1X_RC		0x15d0	Family17h/1xh Root Complex
 product AMD F17_1X_IOMMU	0x15d1	Family17h/1xh IOMMU
 product AMD F17_1X_PCIE_1	0x15d3	Family17h/1xh PCIe
@@ -1150,6 +1194,7 @@ product AMD F17_9X_HB		0x1645	17h/9xh Host
 product AMD F17_9X_PCIE_1	0x1647	17h/9xh PCIE
 product AMD F17_9X_PCIE_2	0x1648	17h/9xh PCIE
 product AMD F17_9X_CCP		0x1649	17h/9xh Crypto
+product AMD F19_6X_GFX		0x164e	19h/6xh Internal GPU
 product AMD F17_9X_DF_0		0x1660	17h/9xh Data Fabric
 product AMD F17_9X_DF_1		0x1661	17h/9xh Data Fabric
 product AMD F17_9X_DF_2		0x1662	17h/9xh Data Fabric
@@ -1404,17 +1449,25 @@ product APPLE BCM5701		0x1645	BCM5701
 
 /* Aquantia Corp. */
 product AQUANTIA AQC100		0x00b1	AQC100 10 Gigabit Network Adapter
+product AQUANTIA AQC113DEV	0x00c0	AQC113DEV 10 Gigabit Network Adapter
+product AQUANTIA AQC113		0x04c0	AQC113 10 Gigabit Network Adapter
 product AQUANTIA AQC107		0x07b1	AQC107 10 Gigabit Network Adapter
 product AQUANTIA AQC108		0x08b1	AQC108 5 Gigabit Network Adapter
 product AQUANTIA AQC109		0x09b1	AQC109 2.5 Gigabit Network Adapter
 product AQUANTIA AQC111		0x11b1	AQC111 5 Gigabit Network Adapter
+product AQUANTIA AQC116C	0x11c0	AQC116C Gigabit Network Adapter
 product AQUANTIA AQC112		0x12b1	AQC112 2.5 Gigabit Network Adapter
+product AQUANTIA AQC115C	0x12c0	AQC115C 2.5 Gigabit Network Adapter
+product AQUANTIA AQC113C	0x14c0	AQC113C 10 Gigabit Network Adapter
+product AQUANTIA AQC113CA	0x34c0	AQC113CA 10 Gigabit Network Adapter
 product AQUANTIA AQC100S	0x80b1	AQC100S 10 Gigabit Network Adapter
 product AQUANTIA AQC107S	0x87b1	AQC107S 10 Gigabit Network Adapter
 product AQUANTIA AQC108S	0x88b1	AQC108S 5 Gigabit Network Adapter
 product AQUANTIA AQC109S	0x89b1	AQC109S 2.5 Gigabit Network Adapter
 product AQUANTIA AQC111S	0x91b1	AQC111S 5 Gigabit Network Adapter
 product AQUANTIA AQC112S	0x92b1	AQC112S 2.5 Gigabit Network Adapter
+product AQUANTIA AQC114CS	0x93c0	AQC114CS 5 Gigabit Network Adapter
+product AQUANTIA AQC113CS	0x94c0	AQC113CS 10 Gigabit Network Adapter
 product AQUANTIA D100		0xd100	D100 10 Gigabit Network Adapter
 product AQUANTIA D107		0xd107	D107 10 Gigabit Network Adapter
 product AQUANTIA D108		0xd108	D108 5 Gigabit Network Adapter
@@ -3169,6 +3222,7 @@ product ES FREEDOM	0x0001	Freedom PCI-GBus Interface
 product EXAR XR17D152	0x0152	dual-channel Universal PCI UART
 product EXAR XR17D154	0x0154	quad-channel Universal PCI UART
 product EXAR XR17D158	0x0158	octal-channel Universal PCI UART
+product EXAR XR17V354	0x0354	quad-channel Universal PCIe UART
 
 /* FORE products */
 product FORE PCA200	0x0210	ATM PCA-200
@@ -8986,6 +9040,7 @@ product SAMSUNGELEC3	SM961		0xa804	SM961 M.2 NVMe SSD
 product SAMSUNGELEC3	SM981		0xa808	SM981 M.2 NVMe SSD
 product SAMSUNGELEC3	SM980		0xa809	SM980 M.2 NVMe SSD
 product SAMSUNGELEC3	PM9A1		0xa80a	PM9A1 M.2 NVMe SSD
+product SAMSUNGELEC3	SM990		0xa80c	SM990 M.2 NVMe SSD
 product SAMSUNGELEC3	171X		0xa820	NVMe SSD Controller 171X
 product SAMSUNGELEC3	172X		0xa821	NVMe SSD Controller 172X
 product SAMSUNGELEC3	172XAB		0xa822	NVMe SSD Controller 172Xa/172Xb
