@@ -1922,6 +1922,26 @@ gsec_init_regs(struct gsec_softc *sc)
 	paddr_t paddr;
 	uint32_t status, val;
 
+	int i;
+	int initreg[] = {
+		0xffff0000, 0x003aa730, 0x004ebe79, 0x00463d96,
+		0x804c0000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00032101,
+		0x0000002b, 0x00244439, 0x08040201, 0x0000017c,
+		0x00000000, 0xaa003751, 0x10ddccbb, 0x00000021,
+		0x00001001, 0x00001001, 0x00001001, 0x00001001,
+		0x000001af, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0xffff1fff,
+		0x00000040, 0x4a020000, 0x000000b9, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0xffff1fff,
+		0x00000040, 0x4a020000, 0x000000b9, 0x00032101,
+		0x0000002b, 0x00244439, 0x08040201, 0xffff1fff,
+		0x00000040, 0xea023751, 0x10ddccbb, 0x00000021,
+		0x00001001, 0x00001001, 0x00001001, 0xffff1fff,
+		0x000001ef, 0x4a020000, 0x000000b9, 0x00000000,
+	};
+
 #ifdef DEBUG_GSE
 	printf("%s:%d\n", __func__, __LINE__);
 #endif
@@ -1947,6 +1967,9 @@ gsec_init_regs(struct gsec_softc *sc)
 	bus_space_write_4(sc->sc_iot, sc->sc_ioh, GSE_TX_DMA_CTRL_REG, 0);
 	bus_space_write_4(sc->sc_iot, sc->sc_ioh, GSE_RX_DMA_CTRL_REG, 0);
 
+	for (i = 0; i < 64; ++i) {
+		bus_space_write_4(sc->sc_iot, sc->sc_ioh, i * 4, initreg[i]);
+	}
 
 	/* switch configuration */
 	bus_space_write_4(sc->sc_iot, sc->sc_ioh, GSE_SW_CFG_REG,
