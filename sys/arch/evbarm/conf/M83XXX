@@ -143,7 +143,8 @@ options		ARM_CFI_ADDRESS=0x20000000
 options		ARM_CFI_BUS_TAG=m83_bs_tag
 cfi0		at mainbus?
 nor0		at cfi0
-flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # U-boot
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # u-boot
+flash1		at nor0 offset 0x00040000 size 0x00020000 readonly 1 # env
 
 # Devices
 
