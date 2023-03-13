@@ -117,8 +117,8 @@ struct tTXdesc {
 #define	CGE_DMASIZE(len)	((len)  & ((1 << 11)-1))		
 #define	CGE_PKTSIZE(len)	((len & 0xffff0000) >> 16)
 
-#define	CGE_RX_RING_CNT		32
-#define	CGE_TX_RING_CNT		32
+#define	CGE_RX_RING_CNT		256
+#define	CGE_TX_RING_CNT		256
 #define	CGE_TX_RING_SIZE	sizeof(struct tTXdesc) * CGE_TX_RING_CNT
 #define	CGE_RX_RING_SIZE	sizeof(struct tRXdesc) * CGE_RX_RING_CNT
 #define	CGE_RING_ALIGN		sizeof(struct tRXdesc)
@@ -126,7 +126,7 @@ struct tTXdesc {
 #define	CGE_MAXFRAGS		8
 #define	CGE_TX_INTR_THRESH	8
 
-#define	CGE_MIN_FRAMELEN	60
+#define	CGE_MIN_FRAMELEN	(ETHER_MIN_LEN - ETHER_CRC_LEN)
 
 #define	CGE_TX_RING_ADDR(sc, i)	\
     ((sc)->cge_rdata.cge_tx_ring_paddr + sizeof(struct tTXdesc) * (i))
@@ -152,6 +152,9 @@ struct cge_softc {
 	bus_addr_t		sc_txdescs_pa;
 	bus_addr_t		sc_rxdescs_pa;
 	struct ethercom		sc_ec;
+	void			*sc_txpad;
+	bus_dmamap_t		sc_txpad_dm;
+#define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
 	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
 	bool			sc_attached;
 	struct cge_ring_data	*sc_rdp;
@@ -433,6 +436,7 @@ sum */
 #define ARM_FIFO_TXFF_RES				(1 << 12)
 #define ARM_FIFO_RXFF_RES				(1 << 13)
 #define ARM_FIFO_RXCP_INH				(1 << 15)
+
 
 
 #endif /* __IF_CGEREG_H__ */
