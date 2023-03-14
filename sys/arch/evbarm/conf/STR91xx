@@ -92,7 +92,8 @@ options 	INET6		# IPV6
 #options 	NFS_BOOTSTATIC_SERVADDR="\"172.31.185.65\""
 #options 	NFS_BOOTSTATIC_SERVER="\"172.31.185.65:/src/boot/str9100\""
 
-config		netbsd		root on ? type ?
+#config		netbsd		root on ? type ?
+config		netbsd		root on sd0 type ffs
 
 # Compatibility options
 #include	"conf/compat_netbsd50.config"
