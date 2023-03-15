@@ -923,6 +923,9 @@ next:
 		sc->sc_txbusy = false;
 
 		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct tTXdesc) * i, sizeof(struct tTXdesc),
+		    BUS_DMASYNC_PREWRITE);
 	}
 /*
 	for (i = CGE_TX_RING_CNTi - 1; i >= 0; --i) {
@@ -931,9 +934,6 @@ next:
 		}
 	}
 */
-	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
-	    BUS_DMASYNC_PREWRITE);
 //	if (handled && sc->sc_txnext == sc->sc_txhead)
 //		ifp->if_timer = 0;
 	if (handled)
