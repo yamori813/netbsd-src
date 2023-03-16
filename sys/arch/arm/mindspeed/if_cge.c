@@ -644,6 +644,16 @@ cge_init(struct ifnet *ifp)
 
 	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
 
+#define DEFAULT_RX_COAL_TIME   500 // us
+	cge_write_4(sc, GEM_ADM_BLOCK + GEM_ADM_BLOCK,
+	    DEFAULT_RX_COAL_TIME * 125);
+#define DEFAULT_RX_COAL_PKTS     8
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_BATCHINTRPKTTHRES,
+	    DEFAULT_RX_COAL_PKTS);
+
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CNFG, 0x84210030);
+	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CNFG, 0x000000aa);
+
 	reg = cge_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
 	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
 
