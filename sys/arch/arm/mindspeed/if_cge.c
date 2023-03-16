@@ -352,7 +352,7 @@ cge_start(struct ifnet *ifp)
 	bool pad;
 	u_int mlen;
 	u_int len;
-	int reg;
+//	int reg;
 	int i;
 
 	KERNHIST_FUNC(__func__);
@@ -468,9 +468,6 @@ cge_start(struct ifnet *ifp)
 	}
 
 	if (txstart >= 0) {
-		reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-		cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg |
-		    (GEM_TX_START | GEM_TX_EN));
 		cge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
 		ifp->if_timer = 5;
 	}
@@ -689,9 +686,10 @@ cge_init(struct ifnet *ifp)
 	/* Disabling GEM delay */
 	cge_write_4(sc, 0xf00c, 0);
  
-	/* Enable the receive circuitry */
+	/* Enable the transmit and receive circuitry */
 	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg | GEM_RX_EN);
+	reg |= (GEM_TX_START | GEM_TX_EN | GEM_RX_EN);
+	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
 
 	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
 
@@ -844,6 +842,8 @@ cge_rxintr(void *arg)
 		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
 			length = sc->sc_rxdesc_ring[i].rx_status &
 			    RX_STA_LEN_MASK;
+			cge_write_4(sc, GEM_ADM_BLOCK + ADM_PKTDQ,
+			    length);
 			m = rdp->rx_mb[i];
 			if (length < ETHER_HDR_LEN) {
 				aprint_error_dev(sc->sc_dev,
@@ -856,8 +856,6 @@ cge_rxintr(void *arg)
 				m_set_rcvif(m, ifp);
 				m->m_pkthdr.len = m->m_len = length;
 				if_percpuq_enqueue(ifp->if_percpuq, m);
-				cge_write_4(sc, GEM_ADM_BLOCK + ADM_PKTDQ,
-				    length);
 			}
 			cge_new_rxbuf(sc, i);
 			
