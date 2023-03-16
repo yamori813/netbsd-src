@@ -444,6 +444,9 @@ cge_start(struct ifnet *ifp)
 
 			txfree--;
 //			eopi = sc->sc_txnext;
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+			    sizeof(struct tTXdesc) * sc->sc_txnext,
+			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
 		if (pad) {
@@ -456,11 +459,11 @@ cge_start(struct ifnet *ifp)
 			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
 			txfree--;
 //			eopi = sc->sc_txnext;
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+			    sizeof(struct tTXdesc) * sc->sc_txnext,
+			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-		    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
-		    BUS_DMASYNC_PREWRITE);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
@@ -826,8 +829,8 @@ cge_rxintr(void *arg)
 		i = sc->sc_rxhead;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 		    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
-//		    BUS_DMASYNC_PREREAD);
-		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+		    BUS_DMASYNC_PREREAD);
+//		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		if(sc->sc_rxdesc_ring[i].rx_extstatus & GEMRX_OWN) {
 			length = sc->sc_rxdesc_ring[i].rx_status &
 			    RX_STA_LEN_MASK;
@@ -843,6 +846,8 @@ cge_rxintr(void *arg)
 				m_set_rcvif(m, ifp);
 				m->m_pkthdr.len = m->m_len = length;
 				if_percpuq_enqueue(ifp->if_percpuq, m);
+				cge_write_4(sc, GEM_ADM_BLOCK + ADM_PKTDQ,
+				    length);
 			}
 			cge_new_rxbuf(sc, i);
 			
