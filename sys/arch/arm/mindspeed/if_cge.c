@@ -55,6 +55,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/m83xxx_var.h>
 #include <arm/mindspeed/m83xxx_intc.h>
 #include <arm/mindspeed/if_cgereg.h>
+#include <arm/mindspeed/arswitchreg.h>
 
 #define CGE_TXFRAGS	16
 
@@ -100,6 +101,23 @@ KERNHIST_DEFINE(cgehist);
 
 int arswitch_readreg(device_t dev, int addr);
 int arswitch_writereg(device_t dev, int addr, int value);
+
+void arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+    uint16_t dbg_data);
+
+void
+arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+    uint16_t dbg_data)
+{
+/*
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_ADDR, dbg_addr);
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_DATA, dbg_data);
+*/
+	cge_mii_writereg(dev, phy, MII_ATH_DBG_ADDR, dbg_addr);
+	cge_mii_writereg(dev, phy, MII_ATH_DBG_DATA, dbg_data);
+}
 
 static inline void
 arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
@@ -322,7 +340,15 @@ cge_attach(device_t parent, device_t self, void *aux)
 		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
 		    arswitch_readreg(self, 0),
 		    arswitch_readreg(self, 8));
-//		arswitch_writereg(self, 0, (1 << 31));
+		arswitch_writereg(self, AR8X16_REG_MODE,
+		    AR8X16_MODE_RGMII_PORT4_ISO);
+		/* work around for phy4 rgmii mode */
+		arswitch_writedbg(self, 4, 0x12, 0x480c);
+		/* rx delay */
+		arswitch_writedbg(self, 4, 0x0, 0x824e);
+		/* tx delay */
+		arswitch_writedbg(self, 4, 0x5, 0x3d47);
+		delay(1000);    /* 1ms, again to let things settle */ 
 	}
 
 	if_attach(ifp);
@@ -361,9 +387,11 @@ cge_start(struct ifnet *ifp)
 	CGE_LOCK(sc);
 
 	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
+		device_printf(sc->sc_dev, "if not run\n");
 		return;
 	}
 	if (__predict_false(sc->sc_txbusy)) {
+		device_printf(sc->sc_dev, "txbusy\n");
 		return;
 	}
 
@@ -381,13 +409,20 @@ cge_start(struct ifnet *ifp)
 		if(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK)
 			++txfree;
 	}
+/*
+	if (txfree < (CGE_TX_RING_CNT / 3)) {
+		reg = cge_read_4(sc, GEM_IP + GEM_TX_STATUS);
+		device_printf(sc->sc_dev, "tx ring %d (%x)\n",
+		    txfree, reg);
+	}
+*/
 
 	KERNHIST_LOG(cgehist, "start txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
 
-	len = 0;
 
 	while (txfree > 0) {
+		len = 0;
 		IFQ_POLL(&ifp->if_snd, m);
 		if (m == NULL)
 			break;
@@ -428,13 +463,12 @@ cge_start(struct ifnet *ifp)
 			    dm->dm_segs[seg].ds_addr;
 			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
 			    dm->dm_segs[seg].ds_len;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    (GEMTX_FCS | GEMTX_IE | GEMTX_POOLB);
 			len += dm->dm_segs[seg].ds_len;
 			if (!pad && (seg == dm->dm_nsegs - 1))
 				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
-			else
-				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    GEMTX_FCS;
+				    GEMTX_LAST;
 			if(seg == 0)
 				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
 				    GEMTX_BUFRET;
@@ -456,7 +490,10 @@ cge_start(struct ifnet *ifp)
 			    CGE_MIN_FRAMELEN - mlen;
 			len += CGE_MIN_FRAMELEN - mlen;
 			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE);
+			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE | GEMTX_POOLB);
+			if (sc->sc_txnext == CGE_TX_RING_CNT - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_WRAP;
 			txfree--;
 //			eopi = sc->sc_txnext;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
@@ -464,12 +501,12 @@ cge_start(struct ifnet *ifp)
 			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
+		cge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
 	if (txstart >= 0) {
-		cge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
-		ifp->if_timer = 5;
+		ifp->if_timer = 8;
 	}
 	KERNHIST_LOG(cgehist, "end txf %x txh %x txn %x txr %x\n",
 	    txfree, sc->sc_txhead, sc->sc_txnext, sc->sc_txrun);
@@ -500,12 +537,13 @@ cge_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 static void
 cge_watchdog(struct ifnet *ifp)
 {
-#if 0
 	struct cge_softc *sc = ifp->if_softc;
 
-	device_printf(sc->sc_dev, "device timeout\n");
+	device_printf(sc->sc_dev, "device timeout %d\n", sc->sc_txnext);
 
 	if_statinc(ifp, if_oerrors);
+#if 0
+	ifp->if_flags |= IFF_RUNNING;
 	cge_init(ifp);
 	cge_start(ifp);
 #endif
@@ -639,7 +677,7 @@ cge_init(struct ifnet *ifp)
 	mac = sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8);
 	cge_write_4(sc, GEM_IP + GEM_LADDR1_TOP, mac);
 
-	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+//	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
 
 #define DEFAULT_RX_COAL_TIME   500 // us
 	cge_write_4(sc, GEM_ADM_BLOCK + GEM_ADM_BLOCK,
@@ -654,21 +692,47 @@ cge_init(struct ifnet *ifp)
 	reg = cge_read_4(sc, GEM_ADM_BLOCK + ADM_CONTROL);
 	cge_write_4(sc, GEM_ADM_BLOCK + ADM_CONTROL, reg & ~1);
 
-#if 0
+#if 1
 	delay(1000);
 
 	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONFIG);
+/* u-boot:160080
+GEM_MDC_DIV:5
+GEM_RX_NO_FCS
+GEM_COPY_ALL
+ reset:140000
+GEM_MDC_DIV:5
+*/
+//printf("MORIMORI GEM_NET_CONFIG %x\n", reg);
+
 	reg |= GEM_COPY_ALL;
 	cge_write_4(sc, GEM_IP + GEM_NET_CONFIG, reg);
 
 	reg = cge_read_4(sc, GEM_CFG);
+/*
+u-boot:15f01
+GEM_CONF_MODE_SEL_GEM
+GEM_CONF_DUPLEX_SEL_GEM
+GEM_CONF_DUPLEX_GEM_FULL
+GEM_CONF_DUPLEX_PHY_FULL
+GEM_CONF_SPEED_SEL_GEM
+GEM_CONF_SPEED_GEM_100M
+GEM_CONF_SPEED_PHY_100M
+GEM_CONF_PHY_LINK_UP
+
+reset:16f01
+GEM_CONF_SPEED_GEM_1G
+*/
+//printf("MORIMORI GEM_CFG %x\n", reg);
+
 	reg &= ~GEM_CONF_SPEED_MASK;
-	reg |= GEM_CONF_SPEED_GEM_1G;
+//	reg |= GEM_CONF_SPEED_GEM_1G;
+//	reg |= GEM_CONF_SPEED_PHY_1G;
+	reg |= GEM_CONF_SPEED_GEM_100M;
 	reg &= ~GEM_CONF_MODE_GEM_MASK;
 	reg |= GEM_CONF_MODE_GEM_RGMII;
 	reg |= GEM_CONF_MODE_SEL_GEM;
 	cge_write_4(sc, GEM_CFG, reg);
-
 #endif
 	/*
 	 * Initialize DMA
@@ -691,7 +755,7 @@ cge_init(struct ifnet *ifp)
 	reg |= (GEM_TX_START | GEM_TX_EN | GEM_RX_EN);
 	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
 
-	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 1);
+	cge_write_4(sc, GEM_SCH_BLOCK + SCH_CONTROL, 3);
 
 	/*
 	 * Initialize the interrupt mask and enable interrupts.
@@ -699,6 +763,7 @@ cge_init(struct ifnet *ifp)
 //	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, GEM_IRQ_ALL);
 	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE,
 	    GEM_IRQ_RX_DONE | GEM_IRQ_TX_DONE);
+	cge_write_4(sc, GEM_IP + GEM_IRQ_MASK, 0);
 
 	ifp->if_flags |= IFF_RUNNING;
 
@@ -708,10 +773,10 @@ cge_init(struct ifnet *ifp)
 static void
 cge_stop(struct ifnet *ifp, int disable)
 {
-#if 0
 	struct cge_softc * const sc = ifp->if_softc;
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	u_int i;
+	int reg;
 
 	aprint_debug_dev(sc->sc_dev, "%s: ifp %p disable %d\n", __func__,
 	    ifp, disable);
@@ -719,9 +784,10 @@ cge_stop(struct ifnet *ifp, int disable)
 	if ((ifp->if_flags & IFF_RUNNING) == 0)
 		return;
 
-	callout_stop(&sc->sc_tick_ch);
+//	callout_stop(&sc->sc_tick_ch);
 	mii_down(&sc->sc_mii);
 
+#if 0
 	cge_write_4(sc, CPSW_CPDMA_TX_INTMASK_CLEAR, 1);
 	cge_write_4(sc, CPSW_CPDMA_RX_INTMASK_CLEAR, 1);
 	cge_write_4(sc, CPSW_WR_C_TX_EN(0), 0x0);
@@ -761,12 +827,20 @@ cge_stop(struct ifnet *ifp, int disable)
 	cge_write_4(sc, CPSW_CPDMA_SOFT_RESET, 1);
 	while (cge_read_4(sc, CPSW_CPDMA_SOFT_RESET) & 1)
 		;
+#endif
+	cge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, 0);
+
+	reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+	reg &= ~(GEM_TX_EN | GEM_RX_EN);
+	cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
 
 	/* Release any queued transmit buffers. */
-	for (i = 0; i < CPSW_NTXDESCS; i++) {
-		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
-		m_freem(rdp->tx_mb[i]);
-		rdp->tx_mb[i] = NULL;
+	for (i = 0; i < CGE_TX_RING_CNT; i++) {
+		if (rdp->tx_mb[i] != NULL) {
+			bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
+			m_freem(rdp->tx_mb[i]);
+			rdp->tx_mb[i] = NULL;
+		}
 	}
 
 	ifp->if_flags &= ~IFF_RUNNING;
@@ -776,12 +850,11 @@ cge_stop(struct ifnet *ifp, int disable)
 	if (!disable)
 		return;
 
-	for (i = 0; i < CPSW_NRXDESCS; i++) {
+	for (i = 0; i < CGE_RX_RING_CNT; i++) {
 		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
 		m_freem(rdp->rx_mb[i]);
 		rdp->rx_mb[i] = NULL;
 	}
-#endif
 }
 
 static int
@@ -791,13 +864,12 @@ cge_intr(void *arg)
 	int reg;
 
 	reg = cge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
-
-//	if (reg & GEM_IRQ_TX_DONE)
-//		cge_txintr(arg);
+//printf("INTR %x,", reg);
 
 	if (reg & GEM_IRQ_RX_DONE)
 		cge_rxintr(arg);
-	else
+//	else
+	if (reg & GEM_IRQ_TX_DONE)
 		cge_txintr(arg);
 
 	cge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
@@ -882,7 +954,7 @@ cge_txintr(void *arg)
 	struct cge_ring_data * const rdp = sc->sc_rdp;
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
-	int i;
+	int i, remain;
 
 #if 0
 	for (;;) {
@@ -914,13 +986,18 @@ next:
 			break;
 	}
 #endif
+	remain = 0;
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT, BUS_DMASYNC_PREREAD);
 	for (i = 0; i < CGE_TX_RING_CNT; i++) {
-		if (!(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK))
+		if (!(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK)) {
+			++remain;
 			continue;
+		}
+
 		if ((sc->sc_txdesc_ring[i].tx_ctl & GEMTX_BUFRET) == 0)
-			continue;
+//			continue;
+			goto next;
 		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
 		    0, rdp->tx_dm[i]->dm_mapsize,
 		    BUS_DMASYNC_POSTWRITE);
@@ -935,20 +1012,24 @@ next:
 
 		sc->sc_txbusy = false;
 
+next:
 		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 		    sizeof(struct tTXdesc) * i, sizeof(struct tTXdesc),
 		    BUS_DMASYNC_PREWRITE);
+
 	}
 /*
-	for (i = CGE_TX_RING_CNTi - 1; i >= 0; --i) {
-		if((sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK) == 0) {
-			sc->sc_txhead = i;
-		}
+	for (i = 0; i < CGE_TX_RING_CNT; ++i) {
+		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
 	}
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    0, sizeof(struct tTXdesc) * CGE_TX_RING_CNT,
+	    BUS_DMASYNC_PREWRITE);
 */
-//	if (handled && sc->sc_txnext == sc->sc_txhead)
-//		ifp->if_timer = 0;
+
+	if (remain == 0)
+		ifp->if_timer = 0;
 	if (handled)
 		if_schedule_deferred_start(ifp);
 
