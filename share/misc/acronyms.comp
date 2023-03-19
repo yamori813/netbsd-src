@@ -1,4 +1,4 @@
-$NetBSD: acronyms.comp,v 1.344 2023/03/01 15:45:00 fcambus Exp $
+$NetBSD: acronyms.comp,v 1.348 2023/03/15 01:25:02 jschauma Exp $
 3WHS	three-way handshake
 8VSB	8-state vestigial side band modulation
 AA	anti-aliasing
@@ -176,6 +176,7 @@ BPI	bits per inch
 BPM	business process modelling
 BPS	bits per second
 BPSK	binary phase shift keying
+BQP	bounded-error quantum polynomial time
 BQS	Berkeley quality software
 BRE	basic regular expression
 BS	backspace
@@ -269,7 +270,9 @@ CM	configuration management
 CMA	concert multithread architecture
 CMC	chassis management controller
 CMC	corrected machine check
+CMC	certificate management over CMS
 CMS	{configuration,content,course} management system
+CMS	cryptographic message syntax
 CMI	control {management,method} interface
 CMOS	complementary metal-oxide-semiconductor
 CMP	chip multi-processing
@@ -670,6 +673,8 @@ HAL	hardware abstraction layer
 HAT	hashed array tree
 HATEOAS	hypermedia as the engine of application state
 HBA	host bus adapter
+HCC	Home Cable Computer
+HCCA	Home Cable Computer Adaptor
 HCF	halt and catch fire
 HCI	host controller interface
 HCI	human-computer interaction
@@ -835,6 +840,7 @@ KB	kilobyte
 KBD	keyboard
 KBD	kilobaud
 KCS	keyboard controller style
+KEM	key encapsulation mechanism
 KLOC	thousand lines of code
 KMS	kernel-mode setting
 KPI	kernel programming interface
@@ -1277,6 +1283,7 @@ PPR	processor programming reference
 PPT	powerpoint
 PPT	punched paper tape
 PPU	physics processing unit
+PQC	post-quantum cryptography
 PRAM	Parameter RAM
 PRBS	pseudorandom bit sequence
 PRG	pseudorandom generator
@@ -1562,6 +1569,7 @@ SPD	serial presence detect
 SPDIF	Sony/Philips digital interface format
 SPI	serial peripheral interface
 SPI	stateful packet inspection
+SPIR	standard portable intermediate representation
 SPL	system interrupt priority level
 SPL	spinlock
 SPMD	single process, multiple data
