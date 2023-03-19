@@ -160,8 +160,8 @@ struct cge_softc {
 	struct cge_ring_data	*sc_rdp;
 	struct mii_data		sc_mii;
 	volatile u_int		sc_txnext;
-	volatile u_int		sc_txhead;
 	volatile u_int		sc_rxhead;
+	void			*sc_ih;
 
 	struct tRXdesc		*sc_rxdesc_ring;
 	bus_dmamap_t		sc_rxdesc_dmamap;
@@ -402,7 +402,7 @@ sum */
 #define GEM_CONF_DUPLEX_PHY_FULL                        (1 << 10)
 #define GEM_CONF_SPEED_SEL_PHY                          (0 << 11)
 #define GEM_CONF_SPEED_SEL_GEM                          (1 << 11)
-#define GEM_CONF_SPEED_MASK                             (3 << 12)
+#define GEM_CONF_SPEED_MASK                             ((3 << 12) | (3 << 14))
 #define GEM_CONF_SPEED_GEM_10M                          (0 << 12)
 #define GEM_CONF_SPEED_GEM_100M                         (1 << 12)
 #define GEM_CONF_SPEED_GEM_1G                           (2 << 12)
