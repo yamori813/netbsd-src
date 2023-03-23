@@ -31,13 +31,13 @@
  * Interrupt controller
  */
 
-#define	RT_INTC_SCR0			0x00
-#define	RT_INTC_SVR0			0x80
-#define	RT_INTC_ISR			0x104
-#define	RT_INTC_IPR			0x108
-#define	RT_INTC_IMR			0x10c
-#define	RT_INTC_IECR			0x114
-#define	RT_INTC_ICCR			0x118
+#define	RT_INTC_SCR0			0x00	/* Intr Source Control Reg. 0 */
+#define	RT_INTC_SVR0			0x80	/* Intr Vector Reg. 0  */
+#define	RT_INTC_ISR			0x104	/* Intr Status Reg.  */
+#define	RT_INTC_IPR			0x108	/* Intr Pending Reg.*/
+#define	RT_INTC_IMR			0x10c	/* Intr Mask Reg. */
+#define	RT_INTC_IECR			0x114	/* Intr Enable Command Reg. */
+#define	RT_INTC_ICCR			0x118	/* Intr Clear Command Reg. */
 
 #define	RT_INTC_TRIG_LOW_LVL		(0)
 #define	RT_INTC_TRIG_HIGH_LVL		(1)
