@@ -709,34 +709,12 @@ fv_rxintr(void *arg)
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
 
-#if 0
-	for (i = 0; i < FV_RX_RING_CNT; i++) {
-		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
-		    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-//		    BUS_DMASYNC_PREREAD);
-		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
-		if(!(sc->sc_rxdesc_ring[i].fv_stat & ADSTAT_OWN)) {
-			sc->sc_rxdesc_ring[i].fv_stat = ADSTAT_OWN;
-			sc->sc_rxdesc_ring[i].fv_devcs = PKT_BUF_SZ;
-			if (i == FV_RX_RING_CNT - 1)
-				sc->sc_rxdesc_ring[i].fv_devcs |= ADCTL_ER;
-			printf("%d,", i);
-			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
-			    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-			    BUS_DMASYNC_PREWRITE);
-		}
-	}
-	return 0;
-#endif
 	for (;;) {
 		i = sc->sc_rxhead;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 		    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
 		    BUS_DMASYNC_PREREAD);
-//		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		if(!(sc->sc_rxdesc_ring[i].fv_stat & ADSTAT_OWN)) {
-//			length = sc->sc_rxdesc_ring[i].rx_status &
-//			    RX_STA_LEN_MASK;
 			length = ADSTAT_Rx_LENGTH(
 			    sc->sc_rxdesc_ring[i].fv_stat);
 //			length -= ETHER_CRC_LEN;
@@ -744,25 +722,19 @@ fv_rxintr(void *arg)
 			bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
 			    0, rdp->rx_dm[i]->dm_mapsize,
 		    	BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
-		char *p = mtod(m, char *);
-		if (p == 0) {
-			/* Why happen ??? */
-			device_printf(sc->sc_dev, "rx mbuf error\n");
-			m_freem(m);
-		} else {
-//			m_adj(m, 2);
-			m_set_rcvif(m, ifp);
-			m->m_pkthdr.len = m->m_len = length;
-			m->m_flags |= M_HASFCS;
-			if_percpuq_enqueue(ifp->if_percpuq, m);
-//			m_freem(m);
-		}
+			char *p = mtod(m, char *);
+			if (p == 0) {
+				/* Why happen ??? */
+				device_printf(sc->sc_dev, "rx mbuf error\n");
+				m_freem(m);
+			} else {
+				m_set_rcvif(m, ifp);
+				m->m_pkthdr.len = m->m_len = length;
+				m->m_flags |= M_HASFCS;
+				if_percpuq_enqueue(ifp->if_percpuq, m);
+			}
+
 			fv_new_rxbuf(sc, i);
-/*
-			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
-			    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-			    BUS_DMASYNC_POSTWRITE);
-*/
 
 			fv_write_4(sc, CSR_RXPOLL, 1);
 
