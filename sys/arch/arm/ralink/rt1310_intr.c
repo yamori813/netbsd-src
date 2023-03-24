@@ -138,6 +138,8 @@ find_pending_irqs(struct intc_softc *sc)
 	if (pending == 0)
 		return 0;
 
+	INTC_WRITE(sc, RT_INTC_ICCR, pending);
+
 	return pic_mark_pending_sources(&sc->intc_pic, 0, pending);
 }
 

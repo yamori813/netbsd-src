@@ -79,6 +79,7 @@ struct fv_softc {
         void			*sc_sfbuf;
         bus_dmamap_t		sc_sfbuf_dm;
 //	callout_t		sc_tick_ch;
+	void			*sc_ih;
 };
 
 #define sc_sfbuf_pa sc_sfbuf_dm->dm_segs[0].ds_addr
@@ -184,13 +185,8 @@ fv_detach(device_t self, int flags)
 	/* Destroy our callout. */
 //	callout_destroy(&sc->sc_tick_ch);
 
-#if 0
 	/* Let go of the interrupts */
-	intr_disestablish(sc->sc_rxthih);
-	intr_disestablish(sc->sc_rxih);
-	intr_disestablish(sc->sc_txih);
-	intr_disestablish(sc->sc_miscih);
-#endif
+	intr_disestablish(sc->sc_ih);
 
 	ether_ifdetach(ifp);
 	if_detach(ifp);
@@ -243,7 +239,7 @@ fv_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 
-	intr_establish(aa->ahba_intr, IPL_NET, IST_LEVEL,
+	sc->sc_ih = intr_establish(aa->ahba_intr, IPL_NET, IST_LEVEL,
 	    fv_intr, sc);
 
 	sc->sc_enaddr[0] = 0xd4;
@@ -412,11 +408,13 @@ fv_new_rxbuf(struct fv_softc * const sc, const u_int i)
 
 	MGETHDR(m, M_DONTWAIT, MT_DATA);
 	if (m == NULL) {
+		device_printf(sc->sc_dev, "MGETHDR error\n");
 		goto reuse;
 	}
 
 	MCLGET(m, M_DONTWAIT);
 	if ((m->m_flags & M_EXT) == 0) {
+		device_printf(sc->sc_dev, "MCLGET error\n");
 		m_freem(m);
 		goto reuse;
 	}
@@ -449,11 +447,11 @@ reuse:
 //	sc->sc_rxdesc_ring[i].fv_link = 0;
 	if (i == FV_RX_RING_CNT - 1)
 		sc->sc_rxdesc_ring[i].fv_devcs |= ADCTL_ER;
-/*
+
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 	    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
             BUS_DMASYNC_PREWRITE);
-*/
+//            BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 
 	return error;
 }
@@ -653,8 +651,9 @@ static int
 fv_intr(void *arg)
 {
 	struct fv_softc * const sc = arg;
-	int status;
+	int status, rv;
 
+	rv = 0;
 	status = fv_read_4(sc, CSR_STATUS);
 	/* mask out interrupts */
 	while((status & sc->sc_inten) != 0) {
@@ -662,11 +661,13 @@ fv_intr(void *arg)
 		if (status & STATUS_UNF) {
 			device_printf(sc->sc_dev, "Transmit Underflow\n");
 		}
-		if (status & sc->sc_txint_mask) {
-			fv_txintr(arg);
-		}
 		if (status & sc->sc_rxint_mask) {
 			fv_rxintr(arg);
+			rv = 1;
+		}
+		if (status & sc->sc_txint_mask) {
+			fv_txintr(arg);
+			rv = 1;
 		}
 		if (status & STATUS_AIS) {
 			device_printf(sc->sc_dev, "Abnormal Interrupt %x\n",
@@ -679,7 +680,7 @@ fv_intr(void *arg)
 		status = fv_read_4(sc, CSR_STATUS);
 	}
 
-	return 1;
+	return rv;
 }
 
 #if 0
@@ -731,8 +732,8 @@ fv_rxintr(void *arg)
 		i = sc->sc_rxhead;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 		    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-//		    BUS_DMASYNC_PREREAD);
-		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+		    BUS_DMASYNC_PREREAD);
+//		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		if(!(sc->sc_rxdesc_ring[i].fv_stat & ADSTAT_OWN)) {
 //			length = sc->sc_rxdesc_ring[i].rx_status &
 //			    RX_STA_LEN_MASK;
@@ -742,18 +743,29 @@ fv_rxintr(void *arg)
 			m = rdp->rx_mb[i];
 			bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
 			    0, rdp->rx_dm[i]->dm_mapsize,
-			    BUS_DMASYNC_POSTREAD);
-			bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+		    	BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+		char *p = mtod(m, char *);
+		if (p == 0) {
+			/* Why happen ??? */
+			device_printf(sc->sc_dev, "rx mbuf error\n");
+			m_freem(m);
+		} else {
+//			m_adj(m, 2);
 			m_set_rcvif(m, ifp);
 			m->m_pkthdr.len = m->m_len = length;
 			m->m_flags |= M_HASFCS;
 			if_percpuq_enqueue(ifp->if_percpuq, m);
+//			m_freem(m);
+		}
 			fv_new_rxbuf(sc, i);
 /*
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct fv_desc) * i, sizeof(struct fv_desc),
-			    BUS_DMASYNC_PREWRITE);
+			    BUS_DMASYNC_POSTWRITE);
 */
+
+			fv_write_4(sc, CSR_RXPOLL, 1);
+
 			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
 		} else {
 			break;
@@ -770,9 +782,9 @@ fv_txintr(void *arg)
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
 	int first;
-//	int i;
 
 #if 0
+	int i;
 	int count = 0;
 	for (i = 0; i < FV_TX_RING_CNT; i++) {
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
@@ -794,6 +806,12 @@ fv_txintr(void *arg)
 		    BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[sc->sc_txhead]);
 
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct fv_desc) * sc->sc_txhead,
+		    sizeof(struct fv_desc), BUS_DMASYNC_PREREAD);
+		if (sc->sc_txdesc_ring[sc->sc_txhead].fv_devcs &
+		    ADCTL_Tx_SETUP) {
+		} else {
 		if (first == sc->sc_txhead)
 			m_freem(rdp->tx_mb[sc->sc_txhead]);
 		rdp->tx_mb[sc->sc_txhead] = NULL;
@@ -803,6 +821,7 @@ fv_txintr(void *arg)
 		handled = true;
 
 		sc->sc_txdesc_ring[sc->sc_txhead].fv_devcs = 0;
+		}
 
 		sc->sc_txhead = TXDESC_NEXT(sc->sc_txhead);
 		if (sc->sc_txhead == sc->sc_txnext)
@@ -968,16 +987,22 @@ fv_setfilt(struct fv_softc *sc)
 	int i;
 	uint8_t *ma;
 
+
 	sp = (uint16_t *)sc->sc_sfbuf;
 	memset(sp, 0xff, FV_SFRAME_LEN);
+
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    sizeof(struct fv_desc) * sc->sc_txnext,
+	    sizeof(struct fv_desc), BUS_DMASYNC_PREREAD);
 
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_stat = ADSTAT_OWN;
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_addr = sc->sc_sfbuf_pa;
 	/* This packet is not use interrupt */
 	sc->sc_txdesc_ring[sc->sc_txnext].fv_devcs = ADCTL_Tx_SETUP |
 			    FV_DMASIZE(FV_SFRAME_LEN);
-	sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
-	sc->sc_txhead = sc->sc_txnext;
+	/* end of descriptor */
+	if (sc->sc_txnext == FV_TX_RING_CNT - 1)
+		sc->sc_txdesc_ring[sc->sc_txnext].fv_devcs |= ADCTL_ER;
 
 	i = 0;
 	ETHER_LOCK(ec);
@@ -1005,8 +1030,9 @@ fv_setfilt(struct fv_softc *sc)
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_sfbuf_dm, 0, FV_SFRAME_LEN,
 	    BUS_DMASYNC_PREWRITE);
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-	    sizeof(struct fv_desc), sizeof(struct fv_desc),
+	    sizeof(struct fv_desc) * sc->sc_txnext,  sizeof(struct fv_desc),
 	    BUS_DMASYNC_PREWRITE);
+	sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 	fv_write_4(sc, CSR_TXPOLL, 0xFFFFFFFF);
 
 	DELAY(10000);
@@ -1198,6 +1224,7 @@ fv_start_locked(struct ifnet *ifp)
 	sc = ifp->if_softc;
 
 //	FV_LOCK_ASSERT(sc);
+	mutex_enter(&(sc)->mtx);
 
 	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
 		return;
@@ -1231,7 +1258,7 @@ fv_start_locked(struct ifnet *ifp)
 		 * to him.
 		 */
 //		ETHER_BPF_MTAP(ifp, m_head);
-		bpf_mtap(ifp, m_head, BPF_D_OUT);
+//		bpf_mtap(ifp, m_head, BPF_D_OUT);
 	}
 
 	if (enq > 0) {
@@ -1239,4 +1266,5 @@ fv_start_locked(struct ifnet *ifp)
 		if (txstat == 0 || txstat == 6)
 			fv_write_4(sc, CSR_TXPOLL, TXPOLL_TPD);
 	}
+	mutex_exit(&(sc)->mtx);
 }
