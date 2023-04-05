@@ -33,6 +33,11 @@ device	ixpdog: sysmon_wdog
 attach	ixpdog at ixpsip
 file	arch/arm/xscale/ixp425_wdog.c		ixpdog
 
+# GPIO controller
+device  ixpgpio: gpiobus
+attach  ixpgpio at ixpsip
+file arch/arm/xscale/ixp425_gpio.c		ixpgpio needs-flag
+
 # Serial port
 # Note: Can't call this 'ixpcom' as that clashes with another arm device.
 attach	com at ixpsip with ixsipcom
