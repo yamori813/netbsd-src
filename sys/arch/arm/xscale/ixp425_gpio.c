@@ -73,8 +73,8 @@ struct ixpgpio_softc {
 	device_t sc_dev;
 	bus_space_tag_t sc_bust;
 	bus_space_handle_t sc_bush;
-	void *sc_irqcookie[4];
-	uint32_t sc_mask[4];
+	void *sc_irqcookie[GPIO_NPINS];
+	uint32_t sc_mask;
 	struct gpio_irq_handler *sc_handlers[GPIO_NPINS];
 	struct gpio_chipset_tag sc_gpio_gc;
 	gpio_pin_t sc_gpio_pins[GPIO_NPINS];
@@ -146,6 +146,8 @@ ixpgpio_attach(device_t parent, device_t self, void *aux)
 
 	sc->sc_dev = self;
 	sc->sc_bust = sa->sa_iot;
+
+	sc->sc_mask = 0;
 
 	aprint_normal(": GPIO Controller\n");
 
@@ -219,17 +221,24 @@ ixpgpio_attach(device_t parent, device_t self, void *aux)
 }
 
 void *
-ixp425_gpio_intr_establish(u_int gpio, int level, int spl, int (*func)(void *),
+ixp425_gpio_intr_establish(u_int irq, int level, int spl, int (*func)(void *),
     void *arg)
 {
 	struct ixpgpio_softc *sc = ixpgpio_softc;
 	struct gpio_irq_handler *gh;
 	uint32_t bit, reg;
 	int irqs[] = {6, 7, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
-	int irq;
+	int gpio;
+	int i;
 
-	if (gpio > sizeof(irqs))
-		panic("ixp425_gpio_intr_establish: bad pin number: %d", gpio);
+	for (i = 0;i < sizeof(irqs); ++i) {
+		if (irqs[i] == irq) {
+			gpio = i;
+			break;
+		}
+	}
+	if (i == sizeof(irqs))
+		panic("ixp425_gpio_intr_establish: bad irq number: %d", irq);
 
 //	if (!GPIO_IS_GPIO_IN(ixp425_gpio_get_function(gpio)))
 //		panic("ixp425_gpio_intr_establish: Pin %d not GPIO_IN", gpio);
@@ -260,12 +269,12 @@ ixp425_gpio_intr_establish(u_int gpio, int level, int spl, int (*func)(void *),
 	sc->sc_handlers[gpio] = gh;
 
 //	KDASSERT(sc->sc_irqcookie[1] == NULL);
-	sc->sc_irqcookie[irq] = ixp425_intr_establish(irq, spl, gpio_intrN,
+	sc->sc_irqcookie[gpio] = ixp425_intr_establish(irq, spl, gpio_intrN,
 	    sc);
 //	KDASSERT(sc->sc_irqcookie[1]);
 
 	bit = 0;
-//	sc->sc_mask[GPIO_BANK(gpio)] |= bit;
+	sc->sc_mask |= (1 << gpio);
 
 	switch (level) {
 	case IST_EDGE_FALLING:
@@ -360,6 +369,7 @@ gpio_dispatch(struct ixpgpio_softc *sc)
 	 * registered
 	 */
 
+	gedr &= sc->sc_mask;
 	ghp = &sc->sc_handlers[0];
 	pins = GPIO_NPINS;
 	handled = 0;
@@ -370,7 +380,7 @@ gpio_dispatch(struct ixpgpio_softc *sc)
 			continue;
 		gedr &= ~mask;
 
-		if ((gh = *ghp) == NULL) {
+		if ((gh = ghp[i]) == NULL) {
 			aprint_error_dev(sc->sc_dev,
 			    "unhandled GPIO interrupt. GPIO#%d\n", i);
 			continue;

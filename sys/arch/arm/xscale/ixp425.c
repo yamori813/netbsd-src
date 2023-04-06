@@ -101,6 +101,7 @@ ixp425_attach(device_t self)
 	pba.pba_iot = &sc->sc_pci_iot;
 	pba.pba_memt = &sc->sc_pci_memt;
 	pba.pba_dmat = &sc->ia_pci_dmat;
+	pba.pba_dmat64 = NULL;
 	pba.pba_bus = 0;	/* bus number = 0 */
 	pba.pba_bridgetag = NULL;
 	pba.pba_intrswiz = 0;	/* XXX */
