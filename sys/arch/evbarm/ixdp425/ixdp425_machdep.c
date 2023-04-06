@@ -400,7 +400,8 @@ initarm(void *arg)
 	/* XXX overwrite bootconfig to hardcoded values */
 	bootconfig.dramblocks = 1;
 	bootconfig.dram[0].address = 0x10000000;
-	bootconfig.dram[0].pages = ixp425_sdram_size() / PAGE_SIZE;
+//	bootconfig.dram[0].pages = ixp425_sdram_size() / PAGE_SIZE;
+	bootconfig.dram[0].pages = 0x04000000 / PAGE_SIZE;
 
 	kerneldatasize = (uint32_t)&end - (uint32_t)KERNEL_TEXT_BASE;
 
