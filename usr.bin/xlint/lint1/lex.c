@@ -1,4 +1,4 @@
-/* $NetBSD: lex.c,v 1.154 2023/02/19 12:00:15 rillig Exp $ */
+/* $NetBSD: lex.c,v 1.157 2023/04/07 11:08:31 rillig Exp $ */
 
 /*
  * Copyright (c) 1996 Christopher G. Demetriou.  All Rights Reserved.
@@ -38,7 +38,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID)
-__RCSID("$NetBSD: lex.c,v 1.154 2023/02/19 12:00:15 rillig Exp $");
+__RCSID("$NetBSD: lex.c,v 1.157 2023/04/07 11:08:31 rillig Exp $");
 #endif
 
 #include <ctype.h>
@@ -514,6 +514,11 @@ lex_integer_constant(const char *yytext, size_t yyleng, int base)
 		warned = true;
 	}
 
+	if (any_query_enabled && base == 8 && uq != 0) {
+		/* octal number '%.*s' */
+		query_message(8, (int)len, cp);
+	}
+
 	/*
 	 * If the value is too big for the current type, we must choose
 	 * another type.
@@ -644,11 +649,10 @@ lex_floating_constant(const char *yytext, size_t yyleng)
 	char *eptr;
 	long double ld = strtold(cp, &eptr);
 	lint_assert(eptr == cp + len);
-	if (errno != 0)
+	if (errno != 0) {
 		/* floating-point constant out of range */
 		warning(248);
-
-	if (typ == FLOAT) {
+	} else if (typ == FLOAT) {
 		ld = (float)ld;
 		if (isfinite(ld) == 0) {
 			/* floating-point constant out of range */
@@ -936,21 +940,19 @@ parse_line_directive_flags(const char *p,
 	*is_system = false;
 
 	while (*p != '\0') {
-		const char *word_start, *word_end;
-
 		while (ch_isspace(*p))
 			p++;
 
-		word_start = p;
+		const char *word = p;
 		while (*p != '\0' && !ch_isspace(*p))
 			p++;
-		word_end = p;
+		size_t len = (size_t)(p - word);
 
-		if (word_end - word_start == 1 && word_start[0] == '1')
+		if (len == 1 && word[0] == '1')
 			*is_begin = true;
-		if (word_end - word_start == 1 && word_start[0] == '2')
+		if (len == 1 && word[0] == '2')
 			*is_end = true;
-		if (word_end - word_start == 1 && word_start[0] == '3')
+		if (len == 1 && word[0] == '3')
 			*is_system = true;
 		/* Flag '4' is only interesting for C++. */
 	}

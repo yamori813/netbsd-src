@@ -1,4 +1,4 @@
-/*	$NetBSD: func.c,v 1.149 2023/02/21 19:47:21 rillig Exp $	*/
+/*	$NetBSD: func.c,v 1.151 2023/03/28 20:01:21 rillig Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -37,7 +37,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID)
-__RCSID("$NetBSD: func.c,v 1.149 2023/02/21 19:47:21 rillig Exp $");
+__RCSID("$NetBSD: func.c,v 1.151 2023/03/28 20:01:21 rillig Exp $");
 #endif
 
 #include <stdlib.h>
@@ -76,7 +76,7 @@ bool	warn_about_unreachable;
 bool	seen_fallthrough;
 
 /* The innermost control statement */
-control_statement *cstmt;
+static control_statement *cstmt;
 
 /*
  * Number of arguments which will be checked for usage in following
@@ -1324,10 +1324,7 @@ lintlib(int n)
 	vflag = false;
 }
 
-/*
- * Suppress most warnings at the current and the following line.
- */
-/* ARGSUSED */
+/* Suppress one or most warnings at the current and the following line. */
 void
 linted(int n)
 {

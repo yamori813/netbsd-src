@@ -1,4 +1,4 @@
-/*	$NetBSD: memalloc.c,v 1.37 2022/05/31 08:43:13 andvar Exp $	*/
+/*	$NetBSD: memalloc.c,v 1.39 2023/04/07 10:42:28 kre Exp $	*/
 
 /*-
  * Copyright (c) 1991, 1993
@@ -37,7 +37,7 @@
 #if 0
 static char sccsid[] = "@(#)memalloc.c	8.3 (Berkeley) 5/4/95";
 #else
-__RCSID("$NetBSD: memalloc.c,v 1.37 2022/05/31 08:43:13 andvar Exp $");
+__RCSID("$NetBSD: memalloc.c,v 1.39 2023/04/07 10:42:28 kre Exp $");
 #endif
 #endif /* not lint */
 
@@ -240,7 +240,7 @@ growstackblock(void)
 
 		/*
 		 * Stack marks pointing to the start of the old block
-		 * must be relocated to point to the new block 
+		 * must be relocated to point to the new block
 		 */
 		xmark = markp;
 		while (xmark != NULL && xmark->stackp == oldstackp) {
@@ -402,4 +402,3 @@ ststrcat(size_t *lp, ...)
 
 	return str;
 }
-
