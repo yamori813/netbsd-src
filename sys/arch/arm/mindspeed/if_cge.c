@@ -673,10 +673,13 @@ cge_init(struct ifnet *ifp)
 	*/
 
 	reg &= ~GEM_CONF_SPEED_MASK;
-//	reg |= GEM_CONF_SPEED_GEM_1G;
-//	reg |= GEM_CONF_SPEED_PHY_1G;
-	reg |= GEM_CONF_SPEED_GEM_100M;
-	reg |= GEM_CONF_SPEED_PHY_100M;
+	if (device_unit(sc->sc_dev) == 0) {
+		reg |= GEM_CONF_SPEED_GEM_100M;
+		reg |= GEM_CONF_SPEED_PHY_100M;
+	} else {
+		reg |= GEM_CONF_SPEED_GEM_1G;
+		reg |= GEM_CONF_SPEED_PHY_1G;
+	}
 	reg &= ~GEM_CONF_MODE_GEM_MASK;
 	reg |= GEM_CONF_MODE_GEM_RGMII;
 	reg |= GEM_CONF_MODE_SEL_GEM;
