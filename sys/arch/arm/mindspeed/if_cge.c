@@ -468,7 +468,7 @@ cge_start(struct ifnet *ifp)
 	}
 
 	if (txstart >= 0) {
-		ifp->if_timer = 30;	/* not immediate interrupt */
+		ifp->if_timer = 300;	/* not immediate interrupt */
 	}
 
 	CGE_UNLOCK(sc);
