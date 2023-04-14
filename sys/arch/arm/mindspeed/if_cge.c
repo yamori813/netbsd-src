@@ -324,10 +324,9 @@ cge_attach(device_t parent, device_t self, void *aux)
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
 	if (device_unit(self) == 0) {
-		arswitch_writereg(self, 8, 0x81461bea);
 		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-		    arswitch_readreg(self, 0),
-		    arswitch_readreg(self, 8));
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
+		    arswitch_readreg(self, AR8X16_REG_MODE));
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -673,13 +672,8 @@ cge_init(struct ifnet *ifp)
 	*/
 
 	reg &= ~GEM_CONF_SPEED_MASK;
-	if (device_unit(sc->sc_dev) == 0) {
-		reg |= GEM_CONF_SPEED_GEM_100M;
-		reg |= GEM_CONF_SPEED_PHY_100M;
-	} else {
-		reg |= GEM_CONF_SPEED_GEM_1G;
-		reg |= GEM_CONF_SPEED_PHY_1G;
-	}
+	reg |= GEM_CONF_SPEED_GEM_1G;
+	reg |= GEM_CONF_SPEED_PHY_1G;
 	reg &= ~GEM_CONF_MODE_GEM_MASK;
 	reg |= GEM_CONF_MODE_GEM_RGMII;
 	reg |= GEM_CONF_MODE_SEL_GEM;
