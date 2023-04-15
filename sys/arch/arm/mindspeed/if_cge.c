@@ -247,7 +247,7 @@ cge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_enaddr[2] = 0xa1;
 	sc->sc_enaddr[3] = 0x97;
 	sc->sc_enaddr[4] = 0x03;
-	sc->sc_enaddr[5] = 0x94;
+	sc->sc_enaddr[5] = 0x94 + device_unit(self);
 
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
@@ -324,9 +324,6 @@ cge_attach(device_t parent, device_t self, void *aux)
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
 	if (device_unit(self) == 0) {
-		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
-		    arswitch_readreg(self, AR8X16_REG_MODE));
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -336,6 +333,25 @@ cge_attach(device_t parent, device_t self, void *aux)
 		/* tx delay */
 		arswitch_writedbg(self, 4, 0x5, 0x3d47);
 		delay(1000);    /* 1ms, again to let things settle */ 
+/* not work strang behaviour ???
+		arswitch_writereg(self, AR8X16_REG_MASK_CTRL,
+		    AR8X16_MASK_CTRL_SOFT_RESET);
+		delay(1000);
+*/
+#ifdef _DEBUG
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT STS %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1)));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT CTRL %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 4));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT VLAN %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
+#endif
+		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
+		    arswitch_readreg(self, AR8X16_REG_MODE));
 	}
 
 	if_attach(ifp);
@@ -476,10 +492,23 @@ cge_start(struct ifnet *ifp)
 static int
 cge_ioctl(struct ifnet *ifp, u_long cmd, void *data)
 {
+	struct cge_softc * const sc = ifp->if_softc;
 	const int s = splnet();
 	int error = 0;
+	int reg;
 
 	switch (cmd) {
+	case SIOCSIFFLAGS:
+		if ((ifp->if_flags & (IFF_PROMISC | IFF_ALLMULTI)) != 0) {
+			reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+			reg |= GEM_COPY_ALL;
+			cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
+		} else {
+			reg = cge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+			reg &= ~GEM_COPY_ALL;
+			cge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
+		}
+		break;
 	default:
 		error = ether_ioctl(ifp, cmd, data);
 		if (error == ENETRESET) {
