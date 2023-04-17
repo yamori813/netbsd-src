@@ -1,4 +1,4 @@
-/*	$NetBSD: pmap_machdep.c,v 1.3 2023/02/25 00:40:22 riastradh Exp $	*/
+/*	$NetBSD: pmap_machdep.c,v 1.5 2023/04/16 14:01:51 skrll Exp $	*/
 
 /*-
  * Copyright (c) 2022 The NetBSD Foundation, Inc.
@@ -37,7 +37,7 @@
 #define __PMAP_PRIVATE
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: pmap_machdep.c,v 1.3 2023/02/25 00:40:22 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: pmap_machdep.c,v 1.5 2023/04/16 14:01:51 skrll Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -513,7 +513,8 @@ pmap_bootstrap(vaddr_t vstart, vaddr_t vend)
 #endif
 	    IPL_NONE);
 
-	pmap_pvlist_lock_init(/*arm_dcache_align*/ 128);
+	// arm_dcache_align
+	pmap_pvlist_lock_init(CACHE_LINE_SIZE);
 
 	VPRINTF("done\n");
 }
@@ -717,8 +718,8 @@ pmap_devmap_bootstrap(vaddr_t l0pt, const struct pmap_devmap *table)
 		    table[i].pd_va);
 		va = table[i].pd_va;
 
-		KASSERT((VM_KERNEL_IO_ADDRESS <= va) &&
-		    (va < (VM_KERNEL_IO_ADDRESS + VM_KERNEL_IO_SIZE)));
+		KASSERT((VM_KERNEL_IO_BASE <= va) &&
+		    (va < (VM_KERNEL_IO_BASE + VM_KERNEL_IO_SIZE)));
 
 		/* update and check virtual_devmap_addr */
 		if ((virtual_devmap_addr == 0) ||

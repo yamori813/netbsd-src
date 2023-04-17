@@ -1,4 +1,4 @@
-/*	$NetBSD: msg_302.c,v 1.4 2022/06/22 19:23:18 rillig Exp $	*/
+/*	$NetBSD: msg_302.c,v 1.7 2023/04/15 12:59:02 rillig Exp $	*/
 # 3 "msg_302.c"
 
 // Test for message: '%s' returns pointer to automatic object [302]
@@ -19,17 +19,39 @@ return_local(void)
 }
 
 void *
-return_local_array(_Bool cond)
+return_local_array(int x)
 {
-	int local[5];
-	int *p = local;
+	int local[5], *indirect = local;
 
-	/* XXX: lint doesn't track this indirection, but Clang-tidy does. */
-	if (cond)
-		return p;
-
-	/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
-	return local + 5;
+	switch (x) {
+	case 0:
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return local;
+	case 1:
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return &local[3];
+	case 2:
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return 5 + local;
+	case 3:
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return local + 5;
+	case 4:
+		/* XXX: lint only checks '+' but not '-'. */
+		return local - -3;
+	case 5:
+		/* XXX: lint doesn't track this indirection, but Clang-tidy does. */
+		return indirect;
+	case 6:
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return (local);
+	case 7:
+		/* C99 6.5.2.5p6 */
+		/* expect+1: warning: 'return_local_array' returns pointer to automatic object [302] */
+		return (char[]){"local string"};
+	default:
+		return "OK";
+	}
 }
 
 void *

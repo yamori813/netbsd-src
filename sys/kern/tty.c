@@ -1,4 +1,4 @@
-/*	$NetBSD: tty.c,v 1.308 2023/02/17 23:13:01 riastradh Exp $	*/
+/*	$NetBSD: tty.c,v 1.310 2023/04/12 06:35:26 riastradh Exp $	*/
 
 /*-
  * Copyright (c) 2008, 2020 The NetBSD Foundation, Inc.
@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: tty.c,v 1.308 2023/02/17 23:13:01 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: tty.c,v 1.310 2023/04/12 06:35:26 riastradh Exp $");
 
 #ifdef _KERNEL_OPT
 #include "opt_compat_netbsd.h"
@@ -2193,13 +2193,11 @@ ttread(struct tty *tp, struct uio *uio, int flag)
  * Call with tty lock held.
  */
 static int
-ttycheckoutq_wlock(struct tty *tp, int wait)
+ttycheckoutq_wlock(struct tty *tp)
 {
 	int	hiwat;
 
 	KASSERT(mutex_owned(&tty_lock));
-
-	KASSERT(wait == 0);
 
 	hiwat = tp->t_hiwat;
 	if (tp->t_outq.c_cc > hiwat + 200)
@@ -2212,12 +2210,12 @@ ttycheckoutq_wlock(struct tty *tp, int wait)
 }
 
 int
-ttycheckoutq(struct tty *tp, int wait)
+ttycheckoutq(struct tty *tp)
 {
 	int	r;
 
 	mutex_spin_enter(&tty_lock);
-	r = ttycheckoutq_wlock(tp, wait);
+	r = ttycheckoutq_wlock(tp);
 	mutex_spin_exit(&tty_lock);
 
 	return (r);
@@ -2380,6 +2378,7 @@ ttwrite(struct tty *tp, struct uio *uio, int flag)
 	 * offset and iov pointers have moved forward, but it doesn't matter
 	 * (the call will either return short or restart with a new uio).
 	 */
+	KASSERTMSG(error || cc == 0, "error=%d cc=%d", error, cc);
 	uio->uio_resid += cc;
 	return (error);
 
@@ -2800,7 +2799,7 @@ ttyputinfo(struct tty *tp, char *buf)
 
 	KASSERT(mutex_owned(&tty_lock));
 
-	if (ttycheckoutq_wlock(tp, 0) == 0)
+	if (ttycheckoutq_wlock(tp) == 0)
 		return;
 	ttyprintf_nolock(tp, "%s\n", buf);
 	tp->t_rocount = 0;	/* so pending input will be retyped if BS */
