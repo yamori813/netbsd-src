@@ -1,4 +1,4 @@
-/*	$NetBSD: lvm.c,v 1.15 2023/04/16 20:46:17 nikita Exp $	*/
+/*	$NetBSD: lvm.c,v 1.17 2023/04/17 20:37:43 nikita Exp $	*/
 
 /*
 ** Id: lvm.c 
@@ -698,8 +698,10 @@ void luaV_concat (lua_State *L, int total) {
       /* collect total length and number of strings */
       for (n = 1; n < total && tostring(L, s2v(top - n - 1)); n++) {
         size_t l = vslen(s2v(top - n - 1));
-        if (l_unlikely(l >= (MAX_SIZE/sizeof(char)) - tl))
+        if (l_unlikely(l >= (MAX_SIZE/sizeof(char)) - tl)) {
+          L->top = top - total;  /* pop strings to avoid wasting stack */
           luaG_runerror(L, "string length overflow");
+        }
         tl += l;
       }
       if (tl <= LUAI_MAXSHORTLEN) {  /* is result a short string? */
@@ -714,7 +716,7 @@ void luaV_concat (lua_State *L, int total) {
       setsvalue2s(L, top - n, ts);  /* create result */
     }
     total -= n-1;  /* got 'n' strings to create 1 new */
-    L->top -= n-1;  /* popped 'n' strings and pushed one */
+    L->top = top - (n - 1);  /* popped 'n' strings and pushed one */
   } while (total > 1);  /* repeat until only 1 result left */
 }
 
@@ -1465,6 +1467,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_MODK) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arithK(L, luaV_mod, luaV_modf);
         vmbreak;
       }
@@ -1479,6 +1482,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
 #endif /* _KERNEL */
       vmcase(OP_IDIVK) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arithK(L, luaV_idiv, luai_numidiv);
         vmbreak;
       }
@@ -1525,6 +1529,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_MOD) {
+        savestate(L, ci);  /* in case of division by 0 */
         op_arith(L, luaV_mod, luaV_modf);
         vmbreak;
       }
@@ -1539,6 +1544,7 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       }
 #endif /* _KERNEL */
       vmcase(OP_IDIV) {  /* floor division */
+        savestate(L, ci);  /* in case of division by 0 */
         op_arith(L, luaV_idiv, luai_numidiv);
         vmbreak;
       }
