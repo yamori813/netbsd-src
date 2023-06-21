@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.2 2011/05/25 19:21:19 he Exp $
+# $NetBSD: Makefile,v 1.4 2023/06/20 17:23:04 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
@@ -17,9 +17,11 @@ SRCS= connect.c config.c main.c
 CPPFLAGS+= 				\
 	-I${HEIMDIST}/lib/krb5		\
 	-I${HEIMBASE}/include/krb5	\
+	-I${HEIMDIST}/lib
 
-LDADD+=	-lkdc -lhdb -lheimntlm -lutil
-DPADD+=	${LIBKDC} ${LIBHDB} ${LIBHEIMNTLM} ${LIBUTIL}
+PROGDPLIBS+=	${DPLIBKDC} ${DPLIBHDB} ${DPLIBHEIMNTLM}
+LDADD+=	-lutil
+DPADD+=	${LIBUTIL}
 
 MAN=	kdc.8
 

@@ -1,156 +1,238 @@
-/* $NetBSD: opt_eei.c,v 1.8 2022/04/24 09:04:12 rillig Exp $ */
+/* $NetBSD: opt_eei.c,v 1.15 2023/06/15 09:19:07 rillig Exp $ */
 
 /*
  * Tests for the options '-eei' and '-neei'.
  *
  * The option '-eei' enables extra indentation on continuation lines of the
  * expression part of 'if' and 'while' statements. These continuation lines
- * are indented one extra level.
+ * are indented one extra level to avoid being confused for the first
+ * statement of the body, even if the condition line starts with an operator
+ * such as '&&' or '<' that could not start a statement.
  *
  * The option '-neei' indents these conditions in the same way as all other
  * continued statements.
  */
 
 //indent input
-bool
-less(int a, int b)
 {
 	if (a <
-	    b)
-		return true;
+b)
+		stmt();
 	if (a
-	    <
-	    b)
-		return true;
-}
-//indent end
-
-//indent run -eei
-bool
-less(int a, int b)
-{
-	if (a <
-			b)
-		return true;
-	if (a
-			<
-			b)
-		return true;
-}
-//indent end
-
-//indent run-equals-input -neei
-
-/*
- * When a single indentation level is the same as the continuation
- * indentation, the code does not clearly show whether the 'b' belongs to the
- * condition or the body statement.
- */
-//indent run -neei -i4
-bool
-less(int a, int b)
-{
-    if (a <
-	b)
-	return true;
-    if (a
-	<
-	b)
-	return true;
-}
-//indent end
-
-/*
- * Adding the extra level of indentation is useful when the standard
- * indentation is the same as the indentation of statement continuations. In
- * such a case, the continued condition would have the same indentation as the
- * following statement, which would be confusing.
- */
-//indent run -eei -i4
-bool
-less(int a, int b)
-{
-    if (a <
-	    b)
-	return true;
-    if (a
-	    <
-	    b)
-	return true;
-}
-//indent end
-
-/*
- * With an indentation size of 4, the width of the code 'if (' is exactly one
- * indentation level. With the option '-nlp', the option '-eei' has no effect.
- *
- * XXX: This is unexpected since this creates the exact ambiguity that the
- * option '-eei' is supposed to prevent.
- */
-//indent run -eei -i4 -nlp
-bool
-less(int a, int b)
-{
-    if (a <
-	b)
-	return true;
-    if (a
-	<
-	b)
-	return true;
-}
-//indent end
-
-
-/*
- * The option '-eei' applies no matter whether the continued expression starts
- * with a word or an operator like '&&'. The latter cannot start a statement,
- * so there would be no ambiguity.
- */
-//indent input
-{
-	if (a
-&& b)
-	    stmt();
-}
-//indent end
-
-/*
- * XXX: The extra indentation is unnecessary since there is no possible
- * confusion: the standard indentation is 8, the indentation of the continued
- * condition could have stayed at 4.
- */
-//indent run -eei
-{
-	if (a
-			&& b)
+<
+b)
+		stmt();
+	while (a
+< b)
+		stmt();
+	switch (
+		a)
 		stmt();
 }
 //indent end
 
 /*
- * The extra indentation is necessary here since otherwise the '&&' and the
- * 'stmt()' would start at the same indentation.
+ * By default, continuation lines are aligned on parentheses, and only a
+ * multi-line switch statement would have ambiguous indentation.
  */
+//indent run
+{
+	if (a <
+	    b)
+		stmt();
+	if (a
+	    <
+	    b)
+		stmt();
+	while (a
+	       < b)
+		stmt();
+	switch (
+		a)
+		stmt();
+}
+//indent end
+
+//indent run-equals-prev-output -neei
+
+/*
+ * For indentation 8, the only expression that needs to be disambiguated is
+ * the one from the switch statement.
+ */
+//indent run -eei
+{
+	if (a <
+	    b)
+		stmt();
+	if (a
+	    <
+	    b)
+		stmt();
+	while (a
+	       < b)
+		stmt();
+	switch (
+			a)
+		stmt();
+}
+//indent end
+
+/* For indentation 4, the expressions from the 'if' are ambiguous. */
+//indent run -neei -i4
+{
+    if (a <
+	b)
+	stmt();
+    if (a
+	<
+	b)
+	stmt();
+    while (a
+	   < b)
+	stmt();
+    switch (
+	    a)
+	stmt();
+}
+//indent end
+
 //indent run -eei -i4
 {
+    if (a <
+	    b)
+	stmt();
     if (a
-	    && b)
+	    <
+	    b)
+	stmt();
+    while (a
+	   < b)
+	stmt();
+    switch (
+/* $ XXX: No extra indentation necessary. */
+	    a)
 	stmt();
 }
 //indent end
 
 /*
- * With an indentation size of 4, the width of the code 'if (' is exactly one
- * indentation level. With the option '-nlp', the option '-eei' has no effect.
- *
- * XXX: This is unexpected since this creates the exact ambiguity that the
- * option '-eei' is supposed to prevent.
+ * The -nlp option uses a fixed indentation for continuation lines. The if
+ * statements are disambiguated.
  */
 //indent run -eei -i4 -nlp
 {
-    if (a
-	&& b)
+    if (a <
+	    b)
 	stmt();
+    if (a
+	    <
+	    b)
+	stmt();
+    while (a
+	    < b)
+	stmt();
+    switch (
+	    a)
+	stmt();
+}
+//indent end
+
+/* With a continuation indentation of 2, there is no ambiguity at all. */
+//indent run -eei -i6 -ci2 -nlp
+{
+      if (a <
+	b)
+	    stmt();
+      if (a
+	<
+	b)
+	    stmt();
+      while (a
+	< b)
+	    stmt();
+      switch (
+	a)
+	    stmt();
+}
+//indent end
+
+
+/*
+ * Ensure that after a condition with extra indentation, the following
+ * statements are not affected.
+ */
+//indent input
+{
+	if (
+		cond
+	)
+		stmt(
+			arg
+		);
+}
+//indent end
+
+//indent run -eei -nlp -i4
+{
+    if (
+	    cond
+	)
+	stmt(
+	    arg
+	    );
+}
+//indent end
+
+
+/*
+ * When multi-line expressions are aligned on the parentheses, they may have an
+ * ambiguous indentation as well.
+ */
+//indent input
+{
+	if (fun(
+		1,
+		2,
+		3))
+		stmt;
+}
+//indent end
+
+//indent run-equals-input
+
+//indent run -eei
+{
+	if (fun(
+			1,
+			2,
+			3))
+		stmt;
+}
+//indent end
+
+
+//indent input
+{
+	if (((
+		3
+	)))
+		stmt;
+	if ((((
+		4
+	))))
+		stmt;
+}
+//indent end
+
+//indent run -ci2 -nlp -eei
+{
+	if (((
+	      3
+	    )))
+		stmt;
+	if ((((
+		  4
+	      ))))
+		stmt;
 }
 //indent end

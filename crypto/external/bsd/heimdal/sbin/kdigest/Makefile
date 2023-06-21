@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.3 2014/11/22 01:28:13 pettai Exp $
+# $NetBSD: Makefile,v 1.5 2023/06/20 17:23:05 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
@@ -10,8 +10,9 @@ MAN= kdigest.8
 
 HEIMSRCS+= kdigest.c kdigest-commands.in
 
-LDADD+= -lheimntlm -lsl -lutil -ledit -lterminfo
-DPADD+= ${LIBHEIMNTLM} ${LIBSL} ${LIBUTIL} ${LIBEDIT} ${LIBTERMINFO}
+PROGDPLIBS+= ${DPLIBHEIMNTLM} ${DPLIBSL}
+LDADD+= -lcrypto -lutil -ledit -lterminfo
+DPADD+= ${LIBCRYPTO} ${LIBUTIL} ${LIBEDIT} ${LIBTERMINFO}
 
 .include <${HEIMBASE}/Makefile.rules.inc>
 .include <bsd.prog.mk>

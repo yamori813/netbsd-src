@@ -1,15 +1,16 @@
-# $NetBSD: Makefile,v 1.2 2011/05/25 19:21:19 he Exp $
+# $NetBSD: Makefile,v 1.4 2023/06/20 17:23:05 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
 
 USE_FORT?= yes	# cryptographic software
 
-.PATH: ${HEIMDIST}/kdc
+.PATH: ${HEIMDIST}/kdc ${HEIMDIST}/lib/hcrypto
 
 PROG= kstash
-SRCS= kstash.c
+SRCS= kstash.c ui.c
 MAN=  kstash.8
+
 
 CPPFLAGS+= -I${HEIMDIST}/lib/krb5 -I${DESTDIR}/usr/include/krb5
 
@@ -21,8 +22,9 @@ CPPFLAGS+= -I${HEIMDIST}/lib/krb5 -I${DESTDIR}/usr/include/krb5
 #	-I${HEIMBASE}/lib/libwind	\
 #	-DHAVE_CONFIG_H
 
-LDADD+=	-lhdb
-DPADD+=	${LIBHDB}
+PROGDPLIBS+= ${DPLIBHDB}
+LDADD+=-lcrypto
+DPADD+=${LIBCRYPTO}
 
 .include <${HEIMBASE}/Makefile.rules.inc>
 .include <bsd.prog.mk>

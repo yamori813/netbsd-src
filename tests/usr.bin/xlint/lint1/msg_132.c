@@ -1,4 +1,4 @@
-/*	$NetBSD: msg_132.c,v 1.26 2023/03/28 14:44:34 rillig Exp $	*/
+/*	$NetBSD: msg_132.c,v 1.31 2023/06/03 20:28:54 rillig Exp $	*/
 # 3 "msg_132.c"
 
 // Test for message: conversion from '%s' to '%s' may lose accuracy [132]
@@ -24,6 +24,8 @@ typedef signed short s16_t;
 typedef signed int s32_t;
 typedef signed long long s64_t;
 
+_Bool cond;
+char ch;
 
 u8_t u8;
 u16_t u16;
@@ -172,7 +174,7 @@ to_bool(long a, long b)
 const char *
 cover_build_plus_minus(const char *arr, double idx)
 {
-	/* expect+3: error: operands of '+' have incompatible types 'pointer' and 'double' [107] */
+	/* expect+3: error: operands of '+' have incompatible types 'pointer to const char' and 'double' [107] */
 	/* expect+2: warning: function 'cover_build_plus_minus' expects to return value [214] */
 	if (idx > 0.0)
 		return arr + idx;
@@ -364,4 +366,39 @@ test_ic_bitand(void)
 
 	/* expect+1: warning: conversion from 'unsigned int' to 'unsigned char' may lose accuracy [132] */
 	u8 = u16 & u32;
+}
+
+void
+test_ic_cvt(void)
+{
+	u16 = (u32 & 0x0000ff00);
+	u16 = (u32_t)(u32 & 0x0000ff00);
+}
+
+void
+test_ic_conditional(char c1, char c2)
+{
+	/* Both operands are representable as char. */
+	ch = cond ? '?' : ':';
+
+	/*
+	 * Both operands are representable as char. Clang-Tidy 17 wrongly
+	 * warns about a narrowing conversion from 'int' to signed type
+	 * 'char'.
+	 */
+	ch = cond ? c1 : c2;
+
+	/*
+	 * Mixing s8 and u8 results in a number from -128 to 255, which does
+	 * not necessarily fit into s8.
+	 */
+	/* expect+1: warning: conversion from 'int' to 'signed char' may lose accuracy [132] */
+	s8 = cond ? s8 : u8;
+
+	/*
+	 * Mixing s8 and u8 results in a number from -128 to 255, which does
+	 * not necessarily fit into u8.
+	 */
+	/* expect+1: warning: conversion from 'int' to 'unsigned char' may lose accuracy [132] */
+	u8 = cond ? s8 : u8;
 }

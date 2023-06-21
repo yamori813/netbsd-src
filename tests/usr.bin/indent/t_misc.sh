@@ -1,5 +1,5 @@
 #! /bin/sh
-# $NetBSD: t_misc.sh,v 1.20 2022/04/22 21:21:20 rillig Exp $
+# $NetBSD: t_misc.sh,v 1.27 2023/06/05 10:12:21 rillig Exp $
 #
 # Copyright (c) 2021 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -26,7 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 # Tests for indent that do not follow the input-profile-output scheme that is
-# used in t_indent.
+# used in t_options.
 
 indent=$(atf_config_get usr.bin.indent.test_indent /usr/bin/indent)
 
@@ -81,13 +81,11 @@ verbose_profile_body()
 	cat <<-\EOF > after.c.exp
 		int		decl;
 	EOF
-	cat <<-\EOF > stdout.exp
+	cat <<-\EOF > stderr.exp
 		profile: -fc1
 		profile: -bacc
 		profile: -v
 		profile: -fc1
-		There were 1 output lines and 0 comments
-		(Lines with comments)/(Lines with code):  0.000
 	EOF
 
 	# The code in args.c function set_profile suggests that options from
@@ -98,7 +96,7 @@ verbose_profile_body()
 	# is listed because when running ATF, $HOME equals $PWD.
 
 	atf_check \
-	    -o 'file:stdout.exp' \
+	    -e 'file:stderr.exp' \
 	    "$indent" -v before.c after.c
 	atf_check \
 	     -o 'file:after.c.exp' \
@@ -200,7 +198,7 @@ option_P_in_profile_file_body()
 
 	echo 'syntax # error' > code.c
 
-	atf_check -o 'inline:syntax\n#error\n' \
+	atf_check -o 'inline:syntax\n# error\n' \
 	    "$indent" < code.c
 }
 
@@ -313,7 +311,7 @@ opt_U_body()
 
 		size_t			from stddef.h
 		off_t			for file offsets
- 		 ignored_t		is ignored since it is indented
+		 ignored_t		is ignored since it is indented
 	EOF
 
 	cat <<-\EOF > code.c
@@ -397,6 +395,26 @@ command_line_vs_profile_body()
 	    "$indent" -Pcustom.pro code.c -st -di0
 }
 
+
+atf_test_case 'opt_v_break_line'
+opt_v_break_line_body()
+{
+	printf '%s\n' 'int *function(void)' '{}' > code.c
+
+	atf_check -o 'ignore' \
+	    "$indent" -v code.c -st
+}
+
+
+atf_test_case 'trailing_whitespace_in_preprocessing_line'
+trailing_whitespace_in_preprocessing_line_body()
+{
+	printf '#if trailing && space \n#endif\n' > code.c
+
+	atf_check -o 'inline:#if trailing && space\n#endif\n' \
+	    "$indent" code.c -st
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case 'in_place'
@@ -407,9 +425,11 @@ atf_init_test_cases()
 	atf_add_test_case 'opt'
 	atf_add_test_case 'opt_npro'
 	atf_add_test_case 'opt_U'
+	atf_add_test_case 'opt_v_break_line'
 	atf_add_test_case 'line_no_counting'
 	atf_add_test_case 'default_backup_extension'
 	atf_add_test_case 'several_profiles'
 	atf_add_test_case 'command_line_vs_profile'
 	atf_add_test_case 'in_place_parse_error'
+	atf_add_test_case 'trailing_whitespace_in_preprocessing_line'
 }

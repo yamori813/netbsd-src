@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
-#	$NetBSD: build.sh,v 1.366 2023/03/13 11:52:29 martin Exp $
+#	$NetBSD: build.sh,v 1.372 2023/06/13 16:56:00 christos Exp $
 #
-# Copyright (c) 2001-2022 The NetBSD Foundation, Inc.
+# Copyright (c) 2001-2023 The NetBSD Foundation, Inc.
 # All rights reserved.
 #
 # This code is derived from software contributed to The NetBSD Foundation
@@ -38,7 +38,7 @@
 # We try to determine whether or not this script is being run under
 # a shell that supports the features that we use.  If not, we try to
 # re-exec the script under another shell.  If we can't find another
-# suitable shell, then we print a message and exit.
+# suitable shell, then we show a message and exit.
 #
 
 errmsg=''		# error message, if not empty
@@ -358,8 +358,8 @@ warning()
 	statusmsg "Warning: $@"
 }
 
-# Find a program in the PATH, and print the result.  If not found,
-# print a default.  If $2 is defined (even if it is an empty string),
+# Find a program in the PATH, and show the result.  If not found,
+# show a default.  If $2 is defined (even if it is an empty string),
 # then that is the default; otherwise, $1 is used as the default.
 #
 find_in_PATH()
@@ -490,7 +490,7 @@ level of source directory"
 	#
 	# Note that "uname -p" is not part of POSIX, but we want uname_p
 	# to be set to the host MACHINE_ARCH, if possible.  On systems
-	# where "uname -p" fails, prints "unknown", or prints a string
+	# where "uname -p" fails, shows "unknown", or shows a string
 	# that does not look like an identifier, fall back to using the
 	# output from "uname -m" instead.
 	#
@@ -563,6 +563,7 @@ level of source directory"
 	do_install_image=false
 	do_disk_image=false
 	do_params=false
+	do_show_params=false
 	do_rump=false
 	do_dtb=false
 
@@ -906,7 +907,7 @@ listarch()
 }
 
 # nobomb_getmakevar --
-# Given the name of a make variable in $1, print make's idea of the
+# Given the name of a make variable in $1, show make's idea of the
 # value of that variable, or return 1 if there's an error.
 #
 nobomb_getmakevar()
@@ -921,7 +922,7 @@ EOF
 }
 
 # bomb_getmakevar --
-# Given the name of a make variable in $1, print make's idea of the
+# Given the name of a make variable in $1, show make's idea of the
 # value of that variable, or bomb if there's an error.
 #
 bomb_getmakevar()
@@ -931,8 +932,8 @@ bomb_getmakevar()
 }
 
 # getmakevar --
-# Given the name of a make variable in $1, print make's idea of the
-# value of that variable, or print a literal '$' followed by the
+# Given the name of a make variable in $1, show make's idea of the
+# value of that variable, or show a literal '$' followed by the
 # variable name if ${make} is not executable.  This is intended for use in
 # messages that need to be readable even if $make hasn't been built,
 # such as when build.sh is run with the "-n" option.
@@ -1022,7 +1023,8 @@ resolvepath()
 	eval ${var}=\"\${val}\"
 }
 
-# Display synopsis to stdout.
+# Show synopsis to stdout.
+#
 synopsis()
 {
 	cat <<_usage_
@@ -1038,7 +1040,7 @@ Usage: ${progname} [-EnoPRrUux] [-a ARCH] [-B BID] [-C EXTRAS]
 _usage_
 }
 
-# Display help to stdout.
+# Show help to stdout.
 #
 help()
 {
@@ -1050,7 +1052,7 @@ help()
     release             Run "make release" (includes kernels & distrib media).
 
  Other OPERATIONs:
-    help                Show this message and exit.
+    help                Show this help message, and exit.
     makewrapper         Create ${toolprefix}make-\${MACHINE} wrapper and ${toolprefix}make.
                         Always performed.
     cleandir            Run "make cleandir".  [Default unless -u is used]
@@ -1083,8 +1085,9 @@ help()
                         RELEASEDIR/RELEASEMACHINEDIR/installation/installimage.
     disk-image=TARGET   Create bootable disk image in
                         RELEASEDIR/RELEASEMACHINEDIR/binary/gzimg/TARGET.img.gz.
-    params              Display various make(1) parameters.
-    list-arch           Display a list of valid MACHINE/MACHINE_ARCH values,
+    params              Create params file with various make(1) parameters.
+    show-params         Show various make(1) parameters.
+    list-arch           Show a list of valid MACHINE/MACHINE_ARCH values,
                         and exit.  The list may be narrowed by passing glob
                         patterns or exact values in MACHINE or MACHINE_ARCH.
     mkrepro-timestamp   Show the latest source timestamp used for reproducable
@@ -1102,7 +1105,7 @@ help()
     -E             Set "expert" mode; disables various safety checks.
                    Should not be used without expert knowledge of the build
                    system.
-    -h             Print this help message, and exit.
+    -h             Show this help message, and exit.
     -j NJOB        Run up to NJOB jobs in parallel; see make(1) -j.
     -M MOBJ        Set obj root directory to MOBJ; sets MAKEOBJDIRPREFIX=MOBJ,
                    unsets MAKEOBJDIR.
@@ -1143,12 +1146,12 @@ help()
     -X X11SRC      Set X11SRCDIR=X11SRC.  [Default: /usr/xsrc]
     -x             Set MKX11=yes; build X11 from X11SRCDIR.
     -Z VAR         Unset ("zap") variable VAR.
-    -?             Print this help message, and exit.
+    -?             Show this help message, and exit.
 
 _usage_
 }
 
-# Display optional error message, help to stderr, and exit 1.
+# Show optional error message, help to stderr, and exit 1.
 #
 usage()
 {
@@ -1460,6 +1463,7 @@ parseoptions()
 		rump|\
 		rumptest|\
 		sets|\
+		show-params|\
 		sourcesets|\
 		syspkgs|\
 		tools)
@@ -1559,9 +1563,10 @@ sanitycheck()
 	done
 }
 
-# print_tooldir_make --
-# Try to find and print a path to an existing
+# print_tooldir_program --
+# Try to find and show a path to an existing
 # ${TOOLDIR}/bin/${toolprefix}program
+#
 print_tooldir_program()
 {
 	local possible_TOP_OBJ
@@ -1608,15 +1613,16 @@ print_tooldir_program()
 		[ -n "${possible_TOP_OBJ}" ] || continue
 		possible_TOOLDIR="${possible_TOP_OBJ}/tooldir.${host_ostype}"
 		possible_program="${possible_TOOLDIR}/bin/${toolprefix}${program}"
-		if [ -x "${possible_make}" ]; then
+		if [ -x "${possible_program}" ]; then
 			echo ${possible_program}
 			return;
 		fi
 	done
 	echo ""
 }
+
 # print_tooldir_make --
-# Try to find and print a path to an existing
+# Try to find and show a path to an existing
 # ${TOOLDIR}/bin/${toolprefix}make, for use by rebuildmake() before a
 # new version of ${toolprefix}make has been built.
 #
@@ -1634,7 +1640,7 @@ print_tooldir_program()
 #   nobomb_getmakevar to find the correct value for TOOLDIR, and believe the
 #   result only if it's a directory that already exists;
 # * If a value of TOOLDIR was found above, and if
-#   ${TOOLDIR}/bin/${toolprefix}make exists, print that value.
+#   ${TOOLDIR}/bin/${toolprefix}make exists, show that value.
 #
 print_tooldir_make()
 {
@@ -1758,7 +1764,7 @@ rebuildmake()
 # Creates the top-level obj directory, because that
 # is needed by some of the sanity checks.
 #
-# Prints status messages reporting the values of several variables.
+# Shows status messages reporting the values of several variables.
 #
 validatemakeparams()
 {
@@ -2010,7 +2016,7 @@ createmakewrapper()
 	eval cat <<EOF ${makewrapout}
 #! ${HOST_SH}
 # Set proper variables to allow easy "make" building of a NetBSD subtree.
-# Generated from:  \$NetBSD: build.sh,v 1.366 2023/03/13 11:52:29 martin Exp $
+# Generated from:  \$NetBSD: build.sh,v 1.372 2023/06/13 16:56:00 christos Exp $
 # with these arguments: ${_args}
 #
 
@@ -2256,21 +2262,34 @@ installworld()
 # Above all, note that THIS IS NOT A SUBSTITUTE FOR A FULL BUILD.
 #
 
-RUMP_LIBSETS='
-	-lrumpvfs_nofifofs -lrumpvfs -lrump,
-	-lrumpvfs_nofifofs -lrumpvfs -lrumpdev -lrump,
-	-lrumpvfs_nofifofs -lrumpvfs
-	-lrumpnet_virtif -lrumpnet_netinet -lrumpnet_net -lrumpnet -lrump,
-	-lrumpkern_tty -lrumpvfs_nofifofs -lrumpvfs -lrump,
-	-lrumpfs_tmpfs -lrumpvfs_nofifofs -lrumpvfs -lrump,
-	-lrumpfs_ffs -lrumpfs_msdos -lrumpvfs_nofifofs -lrumpvfs -lrumpdev_disk -lrumpdev -lrump,
+# XXX: uwe: kern/56599 - while riastradh addressed librump problems,
+# there are still unwanted dependencies:
+#    net -> net_net
+#    vfs -> fifo
+
+# -lrumpvfs -> $LRUMPVFS for now
+LRUMPVFS="-lrumpvfs -lrumpvfs_nofifofs"
+
+RUMP_LIBSETS="
+	-lrump,
+        -lrumpvfs
+            --no-whole-archive -lrumpvfs_nofifofs -lrump,
+	-lrumpkern_tty
+            --no-whole-archive $LRUMPVFS -lrump,
+	-lrumpfs_tmpfs
+            --no-whole-archive $LRUMPVFS -lrump,
+	-lrumpfs_ffs -lrumpfs_msdos
+            --no-whole-archive $LRUMPVFS -lrumpdev_disk -lrumpdev -lrump,
 	-lrumpnet_virtif -lrumpnet_netinet -lrumpnet_net -lrumpnet
-	    -lrumpdev -lrumpvfs_nofifofs -lrumpvfs -lrump,
-	-lrumpnet_sockin -lrumpfs_nfs
-	-lrumpnet_virtif -lrumpnet_netinet -lrumpnet_net -lrumpnet
-	-lrumpvfs_nofifofs -lrumpvfs -lrump,
-	-lrumpdev_cgd -lrumpdev_raidframe -lrumpdev_disk -lrumpdev_rnd
-	    -lrumpdev_dm -lrumpdev -lrumpvfs_nofifofs -lrumpvfs -lrumpkern_crypto -lrump'
+	    --no-whole-archive -lrump,
+	-lrumpfs_nfs
+	    --no-whole-archive $LRUMPVFS
+	    -lrumpnet_sockin -lrumpnet_virtif -lrumpnet_netinet
+            --start-group -lrumpnet_net -lrumpnet --end-group -lrump,
+	-lrumpdev_cgd -lrumpdev_raidframe -lrumpdev_rnd -lrumpdev_dm
+            --no-whole-archive $LRUMPVFS -lrumpdev_disk -lrumpdev -lrumpkern_crypto -lrump
+"
+
 dorump()
 {
 	local doclean=""
@@ -2312,7 +2331,7 @@ dorump()
 	for set in ${RUMP_LIBSETS} ; do
 		IFS="${oIFS}"
 		${runcmd} ${tool_ld} -nostdlib -L${DESTDIR}/usr/lib	\
-		    -static --whole-archive -lpthread -lc ${set} 2>&1 -o /tmp/rumptest.$$ | \
+		    -static --whole-archive ${set} --no-whole-archive -lpthread -lc 2>&1 -o /tmp/rumptest.$$ | \
 		      awk -v quirks="${md_quirks}" '
 			/undefined reference/ &&
 			    !/more undefined references.*follow/{
@@ -2469,7 +2488,7 @@ main()
 			statusmsg "Successful make ${op}"
 			;;
 
-		cleandir|obj|sourcesets|syspkgs|params)
+		cleandir|obj|sourcesets|syspkgs|params|show-params)
 			${runcmd} "${makewrapper}" ${parallel} ${op} ||
 			    bomb "Failed to make ${op}"
 			statusmsg "Successful make ${op}"
@@ -2484,7 +2503,7 @@ main()
 
 		live-image|install-image)
 			# install-image and live-image require mtree spec files
-			# built with UNPRIVED.  Assume UNPRIVED build has been
+			# built with MKUNPRIVED.  Assume MKUNPRIVED build has been
 			# performed if METALOG file is created in DESTDIR.
 			if [ ! -e "${DESTDIR}/METALOG" ] ; then
 				bomb "The release binaries must have been built with -U to create images"

@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile.libldap,v 1.13 2021/09/13 01:12:36 dholland Exp $
+#	$NetBSD: Makefile.libldap,v 1.15 2023/06/03 09:09:05 lukem Exp $
 
 .include "../../openldap.mk"
 
@@ -22,6 +22,8 @@ SRCS+=		tls2.c tls_o.c tls_g.c
 
 CPPFLAGS+=	-DLDAP_LIBRARY
 
+COPTS.tls_o.c+=-Wno-error=deprecated-declarations
+
 LIBDPLIBS+=	lber	${.CURDIR}/../liblber
 
 .if ${USE_KERBEROS} != "no"
@@ -32,4 +34,4 @@ LIBDPLIBS+=	gssapi	${NETBSDSRCDIR}/crypto/external/bsd/heimdal/lib/libgssapi
 LIBDPLIBS+=	crypto	${NETBSDSRCDIR}/crypto/external/bsd/${EXTERNAL_OPENSSL_SUBDIR}/lib/libcrypto
 LIBDPLIBS+=	ssl	${NETBSDSRCDIR}/crypto/external/bsd/${EXTERNAL_OPENSSL_SUBDIR}/lib/libssl
 
-COPTS.charray.c+=	${GCC_NO_STRINGOP_OVERFLOW}
+COPTS.charray.c+=	${CC_WNO_STRINGOP_OVERFLOW}

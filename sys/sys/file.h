@@ -1,4 +1,4 @@
-/*	$NetBSD: file.h,v 1.88 2021/09/19 15:51:27 thorpej Exp $	*/
+/*	$NetBSD: file.h,v 1.92 2023/04/22 13:53:02 riastradh Exp $	*/
 
 /*-
  * Copyright (c) 2009 The NetBSD Foundation, Inc.
@@ -63,6 +63,8 @@
 #ifndef _SYS_FILE_H_
 #define	_SYS_FILE_H_
 
+#include <sys/types.h>
+
 #include <sys/fcntl.h>
 #include <sys/unistd.h>
 
@@ -71,12 +73,13 @@
 #include <sys/mutex.h>
 #include <sys/condvar.h>
 
-struct proc;
-struct lwp;
-struct uio;
+struct flock;
 struct iovec;
-struct stat;
 struct knote;
+struct lwp;
+struct proc;
+struct stat;
+struct uio;
 struct uvm_object;
 
 struct fileops {
@@ -95,6 +98,11 @@ struct fileops {
 	int	(*fo_mmap)	(struct file *, off_t *, size_t, int, int *,
 				 int *, struct uvm_object **, int *);
 	int	(*fo_seek)	(struct file *, off_t, int, off_t *, int);
+	int	(*fo_advlock)	(struct file *, void *, int, struct flock *,
+				 int);
+	int	(*fo_fpathconf)	(struct file *, int, register_t *);
+	int	(*fo_posix_fadvise)
+				(struct file *, off_t, off_t, int);
 };
 
 union file_data {

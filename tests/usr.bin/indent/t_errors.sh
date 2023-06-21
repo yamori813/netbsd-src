@@ -1,5 +1,5 @@
 #! /bin/sh
-# $NetBSD: t_errors.sh,v 1.24 2022/04/22 21:21:20 rillig Exp $
+# $NetBSD: t_errors.sh,v 1.37 2023/06/14 19:05:40 rillig Exp $
 #
 # Copyright (c) 2021 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -100,7 +100,6 @@ option_tabsize_zero_body()
 atf_test_case 'option_tabsize_large'
 option_tabsize_large_body()
 {
-	# Integer overflow, on both ILP32 and LP64 platforms.
 	expect_error \
 	    'indent: Command line: argument "81" to option "-ts" must be between 1 and 80' \
 	    -ts81
@@ -181,15 +180,15 @@ atf_test_case 'option_special_missing_param'
 option_special_missing_param_body()
 {
 	expect_error \
-	    'indent: Command line: ``-cli'\'\'' requires an argument' \
+	    'indent: Command line: option "-cli" requires an argument' \
 	    -cli
 
 	expect_error \
-	    'indent: Command line: ``-T'\'\'' requires an argument' \
+	    'indent: Command line: option "-T" requires an argument' \
 	    -T
 
 	expect_error \
-	    'indent: Command line: ``-U'\'\'' requires an argument' \
+	    'indent: Command line: option "-U" requires an argument' \
 	    -U
 }
 
@@ -213,6 +212,28 @@ unterminated_comment_nowrap_body()
 	    -o 'inline:/*-\n\n' \
 	    -e 'inline:error: Standard Input:2: Unterminated comment\n' \
 	    "$indent" -st < comment.c
+}
+
+atf_test_case 'unterminated_char_constant'
+unterminated_char_constant_body()
+{
+	echo "char ch = 'x" > char.c
+
+	atf_check -s 'exit:1' \
+	    -o "inline:char ch = 'x\n" \
+	    -e 'inline:error: Standard Input:1: Unterminated literal\n' \
+	    "$indent" -st -di0 < char.c
+}
+
+atf_test_case 'unterminated_string_literal'
+unterminated_string_literal_body()
+{
+	echo 'const char str[] = "x' > string.c
+
+	atf_check -s 'exit:1' \
+	    -o 'inline:const char str[] = "x\n' \
+	    -e 'inline:error: Standard Input:1: Unterminated literal\n' \
+	    "$indent" -st -di0 < string.c
 }
 
 atf_test_case 'in_place_wrong_backup'
@@ -327,58 +348,8 @@ unexpected_closing_brace_decl_body()
 	    cat code.c
 }
 
-atf_test_case 'preprocessing_overflow'
-preprocessing_overflow_body()
-{
-	cat <<-\EOF > code.c
-		#if 1
-		#if 2
-		#if 3
-		#if 4
-		#if 5
-		#if 6
-		#endif 6
-		#endif 5
-		#endif 4
-		#endif 3
-		#endif 2
-		#endif 1
-		#endif too much
-	EOF
-	cat <<-\EOF > stderr.exp
-		error: code.c:6: #if stack overflow
-		error: code.c:12: Unmatched #endif
-		error: code.c:13: Unmatched #endif
-	EOF
-
-	atf_check -s 'exit:1' \
-	    -e 'file:stderr.exp' \
-	    "$indent" code.c
-}
-
-atf_test_case 'preprocessing_unrecognized'
-preprocessing_unrecognized_body()
-{
-	cat <<-\EOF > code.c
-		#unknown
-		# 3 "file.c"
-		#elif 3
-		#else
-	EOF
-	cat <<-\EOF > stderr.exp
-		error: code.c:1: Unrecognized cpp directive
-		error: code.c:2: Unrecognized cpp directive
-		error: code.c:3: Unmatched #elif
-		error: code.c:4: Unmatched #else
-	EOF
-
-	atf_check -s 'exit:1' \
-	    -e 'file:stderr.exp' \
-	    "$indent" code.c
-}
-
-atf_test_case 'unbalanced_parentheses_1'
-unbalanced_parentheses_1_body()
+atf_test_case 'unbalanced_parentheses'
+unbalanced_parentheses_body()
 {
 	cat <<-\EOF > code.c
 		int var =
@@ -396,30 +367,8 @@ unbalanced_parentheses_1_body()
 	    "$indent" code.c
 }
 
-atf_test_case 'unbalanced_parentheses_2'
-unbalanced_parentheses_2_body()
-{
-	# '({...})' is the GCC extension "Statement expression".
-	cat <<-\EOF > code.c
-		int var =
-		(
-		{
-		1
-		}
-		)
-		;
-	EOF
-	cat <<-\EOF > stderr.exp
-		error: code.c:3: Unbalanced parentheses
-		warning: code.c:6: Extra ')'
-	EOF
-
-	atf_check -s 'exit:1' -e 'file:stderr.exp' \
-	    "$indent" code.c
-}
-
-atf_test_case 'unbalanced_parentheses_3'
-unbalanced_parentheses_3_body()
+atf_test_case 'gcc_statement_expression'
+gcc_statement_expression_body()
 {
 	# '({...})' is the GCC extension "Statement expression".
 	cat <<-\EOF > code.c
@@ -438,10 +387,10 @@ unbalanced_parentheses_3_body()
 	    "$indent" code.c
 }
 
-atf_test_case 'search_stmt_comment_segv'
-search_stmt_comment_segv_body()
+atf_test_case 'crash_comment_after_controlling_expression'
+crash_comment_after_controlling_expression_body()
 {
-	# As of NetBSD indent.c 1.188 from 2021-10-30, indent crashes while
+	# Before 2023-05-11, indent crashed while
 	# trying to format the following artificial code.
 
 	printf '{if(expr\n)/*c*/;}\n' > code.c
@@ -449,24 +398,20 @@ search_stmt_comment_segv_body()
 	cat <<\EOF > code.exp
 {
 	if (expr
-		)		/* c */
-		;
+		) /* c */;
 }
 EOF
 
-	# TODO: actually produce code.exp instead of an assertion failure.
-	atf_check -s 'signal' -o 'ignore' -e 'match:assert' \
+	atf_check -o 'file:code.exp' \
 	    "$indent" code.c -st
 }
 
-atf_test_case 'search_stmt_fits_in_one_line'
-search_stmt_fits_in_one_line_body()
+atf_test_case 'comment_fits_in_one_line'
+comment_fits_in_one_line_body()
 {
-	# The comment is placed after 'if (0) ...', where it is processed
-	# by search_stmt_comment. That function redirects the input buffer to
-	# a temporary buffer that is not guaranteed to be terminated by '\n'.
-	# Before NetBSD pr_comment.c 1.91 from 2021-10-30, this produced an
-	# assertion failure in fits_in_one_line.
+	# The comment is placed after 'if (0) ...'. Before NetBSD pr_comment.c
+	# 1.91 from 2021-10-30, this produced an assertion failure in
+	# fits_in_one_line.
 	cat <<EOF > code.c
 int f(void)
 {
@@ -484,7 +429,7 @@ f(void)
 	if (0)
 		/*
 		 * 0123456789012345678901
-		  */ ;
+		 */;
 }
 EOF
 
@@ -492,53 +437,32 @@ EOF
 	    "$indent" -l34 code.c -st
 }
 
-
-atf_test_case 'compound_literal'
-compound_literal_body()
+atf_test_case 'stack_overflow'
+stack_overflow_body()
 {
-	# Test handling of compound literals (C99 6.5.2.5), as well as casts.
+	cat <<-EOF > code.c
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{
+	EOF
 
-	cat <<EOF > code.c
-void
-function(void)
-{
-	origin =
-	((int)
-	((-1)*
-	(struct point){0,0}
-	)
-	);
-}
-EOF
+	atf_check \
+	    -s 'exit:1' \
+	    -e 'inline:error: code.c:3: Stuff missing from end of file\n' \
+	    "$indent" code.c
 
-	sed '/^#/d' <<EOF > expected.out
-void
-function(void)
-{
-	origin =
-		    ((int)
-		     ((-1) *
-		      (struct point){
-# FIXME: the '{' is part of the expression, not a separate block.
-		0, 0
-# FIXME: the '}' is part of the expression, not a separate block.
-	}
-# FIXME: the ')' must be aligned with the corresponding '('.
-	)
-		    );
-}
-EOF
-	sed '/^#/d' <<EOF > expected.err
-# FIXME: The parentheses _are_ balanced, the '}' does not end the block.
-error: code.c:9: Unbalanced parentheses
-warning: code.c:10: Extra ')'
-# FIXME: There is no line 12 in the input file.
-warning: code.c:12: Extra ')'
-EOF
+	cat <<-EOF > code.c
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{ {{{{{{{{{{
+		{{{{{{{{{{ {{{{{{{{{{ {{{{{{{ {
+	EOF
 
-	atf_check -s 'exit:1' -o 'file:expected.out' -e 'file:expected.err' \
-	    "$indent" -nfc1 -ci12 code.c -st
+	atf_check \
+	    -s 'exit:1' \
+	    -e 'inline:error: code.c:3: Stuff missing from end of file\n' \
+	    "$indent" code.c
 }
+
 
 atf_init_test_cases()
 {
@@ -561,6 +485,8 @@ atf_init_test_cases()
 	atf_add_test_case 'option_indent_size_zero'
 	atf_add_test_case 'unterminated_comment_wrap'
 	atf_add_test_case 'unterminated_comment_nowrap'
+	atf_add_test_case 'unterminated_char_constant'
+	atf_add_test_case 'unterminated_string_literal'
 	atf_add_test_case 'in_place_wrong_backup'
 	atf_add_test_case 'argument_input_enoent'
 	atf_add_test_case 'argument_output_equals_input_name'
@@ -570,12 +496,9 @@ atf_init_test_cases()
 	atf_add_test_case 'unexpected_end_of_file'
 	atf_add_test_case 'unexpected_closing_brace_top_level'
 	atf_add_test_case 'unexpected_closing_brace_decl'
-	atf_add_test_case 'preprocessing_overflow'
-	atf_add_test_case 'preprocessing_unrecognized'
-	atf_add_test_case 'unbalanced_parentheses_1'
-	atf_add_test_case 'unbalanced_parentheses_2'
-	atf_add_test_case 'unbalanced_parentheses_3'
-	atf_add_test_case 'search_stmt_comment_segv'
-	atf_add_test_case 'search_stmt_fits_in_one_line'
-	atf_add_test_case 'compound_literal'
+	atf_add_test_case 'unbalanced_parentheses'
+	atf_add_test_case 'gcc_statement_expression'
+	atf_add_test_case 'crash_comment_after_controlling_expression'
+	atf_add_test_case 'comment_fits_in_one_line'
+	atf_add_test_case 'stack_overflow'
 }

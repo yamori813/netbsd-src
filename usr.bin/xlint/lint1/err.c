@@ -1,4 +1,4 @@
-/*	$NetBSD: err.c,v 1.193 2023/04/15 11:34:45 rillig Exp $	*/
+/*	$NetBSD: err.c,v 1.199 2023/06/09 15:36:31 rillig Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -37,7 +37,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID)
-__RCSID("$NetBSD: err.c,v 1.193 2023/04/15 11:34:45 rillig Exp $");
+__RCSID("$NetBSD: err.c,v 1.199 2023/06/09 15:36:31 rillig Exp $");
 #endif
 
 #include <limits.h>
@@ -406,7 +406,7 @@ static const char *const msgs[] = {
 	"maximum value %d of '%s' does not match maximum array index %d", /* 348 */
 	"non type argument to alignof is a GCC extension",	      /* 349 */
 	"'_Atomic' requires C11 or later",			      /* 350 */
-	"'extern' declaration of '%s' outside a header",	      /* 351 */
+	"missing%s header declaration for '%s'",		      /* 351 */
 	"nested 'extern' declaration of '%s'",			      /* 352 */
 };
 
@@ -419,18 +419,23 @@ static struct include_level {
 } *includes;
 
 void
-suppress_messages(char *ids)
+suppress_messages(const char *p)
 {
-	char *ptr, *end;
-	unsigned long id;
+	char *end;
 
-	for (ptr = strtok(ids, ","); ptr != NULL; ptr = strtok(NULL, ",")) {
-		id = strtoul(ptr, &end, 10);
-		if (*end != '\0' || ptr == end ||
-		    id >= sizeof(msgs) / sizeof(msgs[0]))
-			errx(1, "invalid error message id '%s'", ptr);
+	for (; ch_isdigit(*p); p = end + 1) {
+		unsigned long id = strtoul(p, &end, 10);
+		if ((*end != '\0' && *end != ',') ||
+		    id >= sizeof(msgs) / sizeof(msgs[0]) ||
+		    msgs[id][0] == '\0')
+			break;
+
 		is_suppressed[id] = true;
+
+		if (*end == '\0')
+			return;
 	}
+	errx(1, "invalid message ID '%.*s'", (int)strcspn(p, ","), p);
 }
 
 void
@@ -514,7 +519,7 @@ lbasename(const char *path)
 static void
 verror_at(int msgid, const pos_t *pos, va_list ap)
 {
-	const	char *fn;
+	const char *fn;
 
 	if (is_suppressed[msgid])
 		return;
@@ -530,7 +535,7 @@ verror_at(int msgid, const pos_t *pos, va_list ap)
 static void
 vwarning_at(int msgid, const pos_t *pos, va_list ap)
 {
-	const	char *fn;
+	const char *fn;
 
 	if (is_suppressed[msgid])
 		return;
@@ -567,7 +572,7 @@ vmessage_at(int msgid, const pos_t *pos, va_list ap)
 void
 (error_at)(int msgid, const pos_t *pos, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	va_start(ap, pos);
 	verror_at(msgid, pos, ap);
@@ -577,7 +582,7 @@ void
 void
 (error)(int msgid, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	va_start(ap, msgid);
 	verror_at(msgid, &curr_pos, ap);
@@ -587,7 +592,7 @@ void
 void
 assert_failed(const char *file, int line, const char *func, const char *cond)
 {
-	const	char *fn;
+	const char *fn;
 
 	/*
 	 * After encountering a parse error in the grammar, lint often does
@@ -615,7 +620,7 @@ assert_failed(const char *file, int line, const char *func, const char *cond)
 void
 (warning_at)(int msgid, const pos_t *pos, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	va_start(ap, pos);
 	vwarning_at(msgid, pos, ap);
@@ -625,7 +630,7 @@ void
 void
 (warning)(int msgid, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	va_start(ap, msgid);
 	vwarning_at(msgid, &curr_pos, ap);
@@ -645,7 +650,7 @@ void
 void
 (c99ism)(int msgid, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	if (allow_c99)
 		return;
@@ -662,7 +667,7 @@ void
 void
 (c11ism)(int msgid, ...)
 {
-	va_list	ap;
+	va_list ap;
 
 	/* FIXME: C11 mode has nothing to do with GCC mode. */
 	if (allow_c11 || allow_gcc)
@@ -675,7 +680,7 @@ void
 bool
 (gnuism)(int msgid, ...)
 {
-	va_list	ap;
+	va_list ap;
 	int severity = (!allow_gcc ? 1 : 0) +
 	    (!allow_trad && !allow_c99 ? 1 : 0);
 
@@ -700,6 +705,8 @@ static const char *queries[] = {
 	"redundant cast from '%s' to '%s' before assignment",	      /* Q7 */
 	"octal number '%.*s'",					      /* Q8 */
 	"parenthesized return value",				      /* Q9 */
+	"chained assignment with '%s' and '%s'",		      /* Q10 */
+	"static variable '%s' in function",			      /* Q11 */
 };
 
 bool any_query_enabled;		/* for optimizing non-query scenarios */
@@ -722,24 +729,22 @@ void
 }
 
 void
-enable_queries(const char *arg)
+enable_queries(const char *p)
 {
+	char *end;
 
-	for (const char *s = arg;;) {
-		const char *e = s + strcspn(s, ",");
-
-		char *end;
-		unsigned long id = strtoul(s, &end, 10);
-		if (!(ch_isdigit(s[0]) && end == e &&
-		      id < sizeof(queries) / sizeof(queries[0]) &&
-		      queries[id][0] != '\0'))
-			errx(1, "invalid query ID '%.*s'", (int)(e - s), s);
+	for (; ch_isdigit(*p); p = end + 1) {
+		unsigned long id = strtoul(p, &end, 10);
+		if ((*end != '\0' && *end != ',') ||
+		    id >= sizeof(queries) / sizeof(queries[0]) ||
+		    queries[id][0] == '\0')
+			break;
 
 		any_query_enabled = true;
 		is_query_enabled[id] = true;
 
-		if (*e == '\0')
-			break;
-		s = e + 1;
+		if (*end == '\0')
+			return;
 	}
+	errx(1, "invalid query ID '%.*s'", (int)strcspn(p, ","), p);
 }

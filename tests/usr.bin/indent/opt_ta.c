@@ -1,4 +1,4 @@
-/* $NetBSD: opt_ta.c,v 1.4 2022/04/24 09:04:12 rillig Exp $ */
+/* $NetBSD: opt_ta.c,v 1.6 2023/05/15 20:50:37 rillig Exp $ */
 
 /*
  * Tests for the option '-ta', which assumes that all identifiers that end in

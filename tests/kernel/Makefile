@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.70 2021/10/01 18:18:32 martin Exp $
+# $NetBSD: Makefile,v 1.72 2023/06/03 21:28:52 lukem Exp $
 
 NOMAN=		# defined
 
@@ -20,6 +20,7 @@ TESTS_C+=	t_ksem
 TESTS_C+=	t_sysctl
 TESTS_C+=	t_timeleft
 TESTS_C+=	t_zombie
+TESTS_C+=	t_open_pr_57260
 
 TESTS_SH=	t_umount
 TESTS_SH+=	t_umountstress
@@ -81,10 +82,8 @@ t_subr_prf.c: gen_t_subr_prf ${NETBSDSRCDIR}/sys/kern/subr_prf.c
 
 CPPFLAGS.t_subr_prf.c=	-Wno-pointer-sign	# XXX platform vs kernel SHA2
 
-.if defined(HAVE_GCC) && ${HAVE_GCC} >= 7 && ${ACTIVE_CC} == "gcc"
 # Test explicitly tests failure modes.
-CPPFLAGS.t_subr_prf.c+=	-Wno-error=format-truncation
-.endif
+CPPFLAGS.t_subr_prf.c+=	${CC_WNO_FORMAT_TRUNCATION}
 
 SANITIZER_RENAME_CLASSES+=		t_subr_prf
 SANITIZER_RENAME_FILES.t_subr_prf+=	t_subr_prf.c

@@ -1,4 +1,4 @@
-/*	$NetBSD: func.c,v 1.153 2023/04/15 11:34:45 rillig Exp $	*/
+/*	$NetBSD: func.c,v 1.156 2023/06/09 15:36:31 rillig Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -37,7 +37,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID)
-__RCSID("$NetBSD: func.c,v 1.153 2023/04/15 11:34:45 rillig Exp $");
+__RCSID("$NetBSD: func.c,v 1.156 2023/06/09 15:36:31 rillig Exp $");
 #endif
 
 #include <stdlib.h>
@@ -220,9 +220,9 @@ check_statement_reachable(void)
 void
 begin_function(sym_t *fsym)
 {
-	int	n;
-	bool	dowarn;
-	sym_t	*arg, *sym, *rdsym;
+	int n;
+	bool dowarn;
+	sym_t *arg, *sym, *rdsym;
 
 	funcsym = fsym;
 
@@ -287,8 +287,7 @@ begin_function(sym_t *fsym)
 
 	/*
 	 * We must also remember the position. s_def_pos is overwritten
-	 * if this is an old-style definition and we had already a
-	 * prototype.
+	 * if this is an old-style definition, and we had already a prototype.
 	 */
 	dcs->d_func_def_pos = fsym->s_def_pos;
 
@@ -370,8 +369,8 @@ check_missing_return_value(void)
 void
 end_function(void)
 {
-	sym_t	*arg;
-	int	n;
+	sym_t *arg;
+	int n;
 
 	if (reached) {
 		cstmt->c_had_return_noval = true;
@@ -380,7 +379,7 @@ end_function(void)
 
 	/*
 	 * This warning is printed only if the return value was implicitly
-	 * declared to be int. Otherwise the wrong return statement
+	 * declared to be int. Otherwise, the wrong return statement
 	 * has already printed a warning.
 	 */
 	if (cstmt->c_had_return_noval && cstmt->c_had_return_value &&
@@ -486,9 +485,9 @@ static void
 check_case_label(tnode_t *tn, control_statement *cs)
 {
 	case_label_t *cl;
-	val_t	*v;
-	val_t	nv;
-	tspec_t	t;
+	val_t *v;
+	val_t nv;
+	tspec_t t;
 
 	if (cs == NULL) {
 		/* case not in switch */
@@ -623,7 +622,8 @@ check_controlling_expression(tnode_t *tn)
 
 	if (tn != NULL && Tflag && !is_typeok_bool_compares_with_zero(tn)) {
 		/* controlling expression must be bool, not '%s' */
-		error(333, tspec_name(tn->tn_type->t_tspec));
+		error(333, tn->tn_type->t_is_enum ? type_name(tn->tn_type)
+		    : tspec_name(tn->tn_type->t_tspec));
 	}
 
 	return tn;
@@ -686,8 +686,8 @@ if3(bool els)
 void
 switch1(tnode_t *tn)
 {
-	tspec_t	t;
-	type_t	*tp;
+	tspec_t t;
+	type_t *tp;
 
 	if (tn != NULL)
 		tn = cconv(tn);
@@ -742,8 +742,8 @@ switch1(tnode_t *tn)
 void
 switch2(void)
 {
-	int	nenum = 0, nclab = 0;
-	sym_t	*esym;
+	int nenum = 0, nclab = 0;
+	sym_t *esym;
 	case_label_t *cl;
 
 	lint_assert(cstmt->c_switch_type != NULL);
@@ -945,8 +945,8 @@ for1(tnode_t *tn1, tnode_t *tn2, tnode_t *tn3)
 void
 for2(void)
 {
-	pos_t	cpos, cspos;
-	tnode_t	*tn3;
+	pos_t cpos, cspos;
+	tnode_t *tn3;
 
 	if (cstmt->c_continue)
 		set_reached(true);
@@ -1362,7 +1362,7 @@ bitfieldtype(int n)
 /*
  * PROTOLIB in conjunction with LINTLIBRARY can be used to handle
  * prototypes like function definitions. This is done if the argument
- * to PROTOLIB is nonzero. Otherwise prototypes are handled normally.
+ * to PROTOLIB is nonzero. Otherwise, prototypes are handled normally.
  */
 void
 protolib(int n)

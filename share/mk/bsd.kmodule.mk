@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.kmodule.mk,v 1.81 2022/08/07 23:42:09 riastradh Exp $
+#	$NetBSD: bsd.kmodule.mk,v 1.84 2023/06/03 21:26:28 lukem Exp $
 
 # We are not building this with PIE
 MKPIE=no
@@ -38,8 +38,7 @@ CWARNFLAGS.clang+=	-Wno-error=constant-conversion
 CFLAGS+=	-fno-strict-aliasing
 CWARNFLAGS+=	-Wno-pointer-sign -Wno-attributes
 CWARNFLAGS+=	-Wno-type-limits
-CWARNFLAGS.gcc+=	${GCC_NO_ADDR_OF_PACKED_MEMBER}
-CWARNFLAGS.clang+=	-Wno-error=address-of-packed-member
+CWARNFLAGS+=	${CC_WNO_ADDRESS_OF_PACKED_MEMBER}
 
 # XXX This is a workaround for platforms that have relative relocations
 # that, when relocated by the module loader, result in addresses that
@@ -59,7 +58,7 @@ CFLAGS+=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 9:? -mno-pltseq :}
 .elif ${MACHINE_CPU} == "vax"
 CFLAGS+=	-fno-pic
 .elif ${MACHINE_CPU} == "riscv"
-CFLAGS+=	-fPIC -Wa,-fno-pic
+CFLAGS+=	-mcmodel=medany
 .elif ${MACHINE_ARCH} == "mips64eb" && !defined(BSD_MK_COMPAT_FILE)
 CFLAGS+=	-mabi=64
 AFLAGS+=	-mabi=64

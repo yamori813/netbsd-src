@@ -1,4 +1,4 @@
-/*	$NetBSD: parse.c,v 1.696 2023/02/15 06:52:58 rillig Exp $	*/
+/*	$NetBSD: parse.c,v 1.702 2023/06/20 09:25:33 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -91,7 +91,7 @@
  *	Parse_Error	Report a parse error, a warning or an informational
  *			message.
  *
- *	Parse_MainName	Returns a list of the single main target to create.
+ *	Parse_MainName	Populate the list of targets to create.
  */
 
 #include <sys/types.h>
@@ -105,7 +105,15 @@
 #include "pathnames.h"
 
 /*	"@(#)parse.c	8.3 (Berkeley) 3/19/94"	*/
-MAKE_RCSID("$NetBSD: parse.c,v 1.696 2023/02/15 06:52:58 rillig Exp $");
+MAKE_RCSID("$NetBSD: parse.c,v 1.702 2023/06/20 09:25:33 rillig Exp $");
+
+/* Detects a multiple-inclusion guard in a makefile. */
+typedef enum {
+	GS_START,		/* at the beginning of the file */
+	GS_COND,		/* after the guard condition */
+	GS_DONE,		/* after the closing .endif */
+	GS_NO			/* the file is not guarded */
+} GuardState;
 
 /*
  * A file being read.
@@ -127,6 +135,9 @@ typedef struct IncludedFile {
 				 * loop; either empty or ends with '\n' */
 	char *buf_ptr;		/* next char to be read */
 	char *buf_end;		/* buf_end[-1] == '\n' */
+
+	GuardState guardState;
+	Guard *guard;
 
 	struct ForLoop *forLoop;
 } IncludedFile;
@@ -241,10 +252,7 @@ SearchPath *defSysIncPath;	/* default for sysIncPath */
 
 /*
  * The parseKeywords table is searched using binary search when deciding
- * if a target or source is special. The 'spec' field is the ParseSpecial
- * type of the keyword (SP_NOT if the keyword isn't special as a target) while
- * the 'op' field is the operator to apply to the list of targets if the
- * keyword is used as a source ("0" if the keyword isn't special as a source)
+ * if a target or source is special.
  */
 static const struct {
 	const char name[17];
@@ -302,6 +310,8 @@ static const struct {
 
 enum PosixState posix_state = PS_NOT_YET;
 
+static HashTable /* full file name -> Guard */ guards;
+
 static IncludedFile *
 GetInclude(size_t i)
 {
@@ -309,7 +319,7 @@ GetInclude(size_t i)
 	return Vector_Get(&includes, i);
 }
 
-/* The file that is currently being read. */
+/* The makefile that is currently being read. */
 static IncludedFile *
 CurFile(void)
 {
@@ -387,8 +397,11 @@ PrintStackTrace(bool includingInnermost)
 		const char *fname = entry->name.str;
 		char dirbuf[MAXPATHLEN + 1];
 
-		if (fname[0] != '/' && strcmp(fname, "(stdin)") != 0)
-			fname = realpath(fname, dirbuf);
+		if (fname[0] != '/' && strcmp(fname, "(stdin)") != 0) {
+			const char *realPath = realpath(fname, dirbuf);
+			if (realPath != NULL)
+				fname = realPath;
+		}
 
 		if (entry->forLoop != NULL) {
 			char *details = ForLoop_Details(entry->forLoop);
@@ -642,7 +655,7 @@ TryApplyDependencyOperator(GNode *gn, GNodeType op)
 
 	if (op == OP_DOUBLEDEP && (gn->type & OP_OPMASK) == OP_DOUBLEDEP) {
 		/*
-		 * If the node was of the left-hand side of a '::' operator,
+		 * If the node was on the left-hand side of a '::' operator,
 		 * we need to create a new instance of it for the children
 		 * and commands on this dependency line since each of these
 		 * dependency groups has its own attributes and commands,
@@ -1197,6 +1210,24 @@ FindInQuotPath(const char *file)
 	return fullname;
 }
 
+static bool
+SkipGuarded(const char *fullname)
+{
+	Guard *guard = HashTable_FindValue(&guards, fullname);
+	if (guard != NULL && guard->kind == GK_VARIABLE
+	    && GNode_ValueDirect(SCOPE_GLOBAL, guard->name) != NULL)
+		goto skip;
+	if (guard != NULL && guard->kind == GK_TARGET
+	    && Targ_FindNode(guard->name) != NULL)
+		goto skip;
+	return false;
+
+skip:
+	DEBUG2(PARSE, "Skipping '%s' because '%s' is defined\n",
+	    fullname, guard->name);
+	return true;
+}
+
 /*
  * Handle one of the .[-ds]include directives by remembering the current file
  * and pushing the included file on the stack.  After the included file has
@@ -1230,6 +1261,9 @@ IncludeFile(const char *file, bool isSystem, bool depinc, bool silent)
 			Parse_Error(PARSE_FATAL, "Could not find %s", file);
 		return;
 	}
+
+	if (SkipGuarded(fullname))
+		return;
 
 	if ((fd = open(fullname, O_RDONLY)) == -1) {
 		if (!silent)
@@ -2174,6 +2208,8 @@ Parse_PushInput(const char *name, unsigned lineno, unsigned readLines,
 	curFile->forBodyReadLines = readLines;
 	curFile->buf = buf;
 	curFile->depending = doing_depend;	/* restore this on EOF */
+	curFile->guardState = forLoop == NULL ? GS_START : GS_NO;
+	curFile->guard = NULL;
 	curFile->forLoop = forLoop;
 
 	if (forLoop != NULL && !For_NextIteration(forLoop, &curFile->buf))
@@ -2315,6 +2351,13 @@ ParseEOF(void)
 	}
 
 	Cond_EndFile();
+
+	if (curFile->guardState == GS_DONE)
+		HashTable_Set(&guards, curFile->name.str, curFile->guard);
+	else if (curFile->guard != NULL) {
+		free(curFile->guard->name);
+		free(curFile->guard);
+	}
 
 	FStr_Done(&curFile->name);
 	Buf_Done(&curFile->buf);
@@ -2616,8 +2659,10 @@ static char *
 ReadHighLevelLine(void)
 {
 	char *line;
+	CondResult condResult;
 
 	for (;;) {
+		IncludedFile *curFile = CurFile();
 		line = ReadLowLevelLine(LK_NONEMPTY);
 		if (posix_state == PS_MAYBE_NEXT_LINE)
 			posix_state = PS_NOW_OR_NEVER;
@@ -2626,10 +2671,24 @@ ReadHighLevelLine(void)
 		if (line == NULL)
 			return NULL;
 
+		if (curFile->guardState != GS_NO
+		    && ((curFile->guardState == GS_START && line[0] != '.')
+			|| curFile->guardState == GS_DONE))
+			curFile->guardState = GS_NO;
 		if (line[0] != '.')
 			return line;
 
-		switch (Cond_EvalLine(line)) {
+		condResult = Cond_EvalLine(line);
+		if (curFile->guardState == GS_START) {
+			Guard *guard;
+			if (condResult == CR_TRUE
+			    && (guard = Cond_ExtractGuard(line)) != NULL) {
+				curFile->guardState = GS_COND;
+				curFile->guard = guard;
+			} else
+				curFile->guardState = GS_NO;
+		}
+		switch (condResult) {
 		case CR_FALSE:	/* May also mean a syntax error. */
 			if (!SkipIrrelevantBranches())
 				return NULL;
@@ -2700,9 +2759,13 @@ ParseLine_ShellCommand(const char *p)
 }
 
 static void
-HandleBreak(void)
+HandleBreak(const char *arg)
 {
 	IncludedFile *curFile = CurFile();
+
+	if (arg[0] != '\0')
+		Parse_Error(PARSE_FATAL,
+		    "The .break directive does not take arguments");
 
 	if (curFile->forLoop != NULL) {
 		/* pretend we reached EOF */
@@ -2742,7 +2805,7 @@ ParseDirective(char *line)
 	arg = cp;
 
 	if (Substring_Equals(dir, "break"))
-		HandleBreak();
+		HandleBreak(arg);
 	else if (Substring_Equals(dir, "undef"))
 		Var_Undef(arg);
 	else if (Substring_Equals(dir, "export"))
@@ -2778,6 +2841,23 @@ Parse_VarAssign(const char *line, bool finishDependencyGroup, GNode *scope)
 	Parse_Var(&var, scope);
 	free(var.varname);
 	return true;
+}
+
+void
+Parse_GuardElse(void)
+{
+	IncludedFile *curFile = CurFile();
+	if (cond_depth == curFile->condMinDepth + 1)
+		curFile->guardState = GS_NO;
+}
+
+void
+Parse_GuardEndif(void)
+{
+	IncludedFile *curFile = CurFile();
+	if (cond_depth == curFile->condMinDepth
+	    && curFile->guardState == GS_COND)
+		curFile->guardState = GS_DONE;
 }
 
 static char *
@@ -2970,6 +3050,7 @@ Parse_Init(void)
 	sysIncPath = SearchPath_New();
 	defSysIncPath = SearchPath_New();
 	Vector_Init(&includes, sizeof(IncludedFile));
+	HashTable_Init(&guards);
 }
 
 /* Clean up the parsing module. */
@@ -2977,6 +3058,8 @@ void
 Parse_End(void)
 {
 #ifdef CLEANUP
+	HashIter hi;
+
 	Lst_DoneCall(&targCmds, free);
 	assert(targets == NULL);
 	SearchPath_Free(defSysIncPath);
@@ -2984,14 +3067,18 @@ Parse_End(void)
 	SearchPath_Free(parseIncPath);
 	assert(includes.len == 0);
 	Vector_Done(&includes);
+	HashIter_Init(&hi, &guards);
+	while (HashIter_Next(&hi) != NULL) {
+		Guard *guard = hi.entry->value;
+		free(guard->name);
+		free(guard);
+	}
+	HashTable_Done(&guards);
 #endif
 }
 
 
-/*
- * Return a list containing the single main target to create.
- * If no such target exists, we Punt with an obnoxious error message.
- */
+/* Populate the list with the single main target to create, or error out. */
 void
 Parse_MainName(GNodeList *mainList)
 {

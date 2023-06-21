@@ -1,4 +1,4 @@
-/* $NetBSD: lsym_preprocessing.c,v 1.5 2022/04/24 10:36:37 rillig Exp $ */
+/* $NetBSD: lsym_preprocessing.c,v 1.15 2023/06/16 23:19:01 rillig Exp $ */
 
 /*
  * Tests for the token lsym_preprocessing, which represents a '#' that starts
@@ -74,22 +74,7 @@
 #endif /* outer endif comment */
 //indent end
 
-//indent run
-#if 0
-#else
-#endif
-
-#if 0				/* if comment */
-#else				/* else comment */
-#endif				/* endif comment */
-
-#if 0				/* outer if comment */
-/* $ XXX: The indentation is removed, which can get confusing */
-#if nested			/* inner if comment */
-#else				/* inner else comment */
-#endif				/* inner endif comment */
-#endif				/* outer endif comment */
-//indent end
+//indent run-equals-input
 
 
 //indent input
@@ -204,12 +189,156 @@ int		unary_plus =
 #endif/* comment */
 //indent end
 
-//indent run
-#if 0				/* comment */
-#else				/* comment */
-#endif				/* comment */
+//indent run-equals-input
 
-#if 0				/* comment */
-#else				/* comment */
-#endif				/* comment */
+
+/*
+ * Multi-line comments in preprocessing lines.
+ */
+//indent input
+#define eol_comment		// EOL
+
+#define no_wrap_comment		/* line 1
+				 * line 2
+				 * line 3
+				 */
+
+#define fixed_comment		/*- line 1
+				 * line 2
+				 * line 3
+				 */
+
+#define two_comments /* 1 */ /* 2 */ /*3*/
+#define three_comments		/* first */ /* second */ /*third*/
+//indent end
+
+//indent run-equals-input
+
+
+/*
+ * Do not touch multi-line macro definitions.
+ */
+//indent input
+#define do_once(stmt)		\
+do {				\
+	stmt;			\
+} while (/* constant condition */ false)
+//indent end
+
+//indent run-equals-input
+
+
+/*
+ * The 'INDENT OFF' state is global, it does not depend on the preprocessing
+ * directives, otherwise the declarations for 'on' and 'after' would be moved
+ * to column 1.
+ */
+//indent input
+int first_line;
+	int before;
+#if 0
+/*INDENT OFF*/
+	int off;
+#else
+	int on;
+#endif
+	int after;
+//indent end
+
+//indent run -di0
+int first_line;
+int before;
+#if 0
+/*INDENT OFF*/
+	int off;
+#else
+	int on;
+#endif
+	int after;
+//indent end
+
+
+/*
+ * Before 2023-06-14, indent was limited to 5 levels of conditional compilation
+ * directives.
+ */
+//indent input
+#if 1
+#if 2
+#if 3
+#if 4
+#if 5
+#if 6
+#endif 6
+#endif 5
+#endif 4
+#endif 3
+#endif 2
+#endif 1
+//indent end
+
+//indent run-equals-input
+
+
+/*
+ * Unrecognized and unmatched preprocessing directives are preserved.
+ */
+//indent input
+#else
+#elif 0
+#elifdef var
+#endif
+
+#unknown
+# 3 "file.c"
+//indent end
+
+//indent run
+#else
+#elif 0
+#elifdef var
+#endif
+
+#unknown
+# 3 "file.c"
+// exit 1
+// error: Standard Input:1: Unmatched #else
+// error: Standard Input:2: Unmatched #elif
+// error: Standard Input:3: Unmatched #elifdef
+// error: Standard Input:4: Unmatched #endif
+//indent end
+
+
+/*
+ * The '#' can only occur at the beginning of a line, therefore indent does not
+ * care when it occurs in the middle of a line.
+ */
+//indent input
+int no = #;
+//indent end
+
+//indent run -di0
+int no =
+#;
+//indent end
+
+
+/*
+ * Preprocessing directives may be indented; indent moves them to the beginning
+ * of a line.
+ */
+//indent input
+#if 0
+	#if 1 \
+	 || 2
+	#endif
+#endif
+//indent end
+
+//indent run
+#if 0
+#if 1 \
+	 || 2
+#endif
+#endif
 //indent end

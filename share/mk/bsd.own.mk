@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.own.mk,v 1.1310 2023/04/18 20:11:34 christos Exp $
+#	$NetBSD: bsd.own.mk,v 1.1342 2023/06/10 16:08:41 lukem Exp $
 
 # This needs to be before bsd.init.mk
 .if defined(BSD_MK_COMPAT_FILE)
@@ -28,8 +28,11 @@ MACHINE_MIPS64= 	0
 #
 # Subdirectory used below ${RELEASEDIR} when building a release
 #
-.if ${MACHINE:Mevbarm} || ${MACHINE:Mevbmips} \
-	|| ${MACHINE:Mevbsh3}
+.if \
+    ${MACHINE:Mevbarm} || \
+    ${MACHINE:Mevbmips} || \
+    ${MACHINE:Mevbsh3} || \
+    ${MACHINE:Mriscv}
 RELEASEMACHINEDIR?=	${MACHINE}-${MACHINE_ARCH}
 .else
 RELEASEMACHINEDIR?=	${MACHINE}
@@ -98,7 +101,7 @@ MKGCCCMDS?=	no
 #
 # What binutils is used?
 #
-.if ${MACHINE_ARCH} != "mips64el"
+.if ${MACHINE_ARCH} != "mips64el" && ${MACHINE_ARCH} != "mips64eb"
 HAVE_BINUTILS?=	239
 .else
 HAVE_BINUTILS?=	234
@@ -128,7 +131,7 @@ EXTERNAL_GDB_SUBDIR=		/does/not/exist
 #
 # What OpenSSL is used?
 #
-HAVE_OPENSSL?=  11
+HAVE_OPENSSL?=	30
 
 .if ${HAVE_OPENSSL} == 30
 EXTERNAL_OPENSSL_SUBDIR=openssl
@@ -451,6 +454,7 @@ TOOL_GROFF_ENV= \
     GROFF_FONT_PATH=${GROFF_SHARE_PATH}/site-font:${GROFF_SHARE_PATH}/font \
     GROFF_TMAC_PATH=${GROFF_SHARE_PATH}/site-tmac:${GROFF_SHARE_PATH}/tmac
 TOOL_GROFF=		${TOOL_GROFF_ENV} ${TOOLDIR}/bin/${_TOOL_PREFIX}groff ${GROFF_FLAGS}
+TOOL_GROPS=		${TOOL_GROFF_ENV} ${TOOLDIR}/lib/groff/grops
 
 TOOL_HEXDUMP=		${TOOLDIR}/bin/${_TOOL_PREFIX}hexdump
 TOOL_HP300MKBOOT=	${TOOLDIR}/bin/${_TOOL_PREFIX}hp300-mkboot
@@ -528,11 +532,11 @@ TOOL_CXX.clang=		clang++
 TOOL_OBJC.clang=	clang
 
 # GCC supports C, C++, Fortran and Objective C
-TOOL_CC.gcc=	gcc
-TOOL_CPP.gcc=	cpp
-TOOL_CXX.gcc=	c++
-TOOL_FC.gcc=	gfortran
-TOOL_OBJC.gcc=	gcc
+TOOL_CC.gcc=		gcc
+TOOL_CPP.gcc=		cpp
+TOOL_CXX.gcc=		c++
+TOOL_FC.gcc=		gfortran
+TOOL_OBJC.gcc=		gcc
 
 # PCC supports C and Fortran
 TOOL_CC.pcc=		pcc
@@ -568,6 +572,7 @@ TOOL_GMAKE=		gmake
 TOOL_GPT=		gpt
 TOOL_GREP=		grep
 TOOL_GROFF=		groff
+TOOL_GROPS=		grops
 TOOL_HEXDUMP=		hexdump
 TOOL_HP300MKBOOT=	hp300-mkboot
 TOOL_HPPAMKBOOT=	hppa-mkboot
@@ -609,7 +614,7 @@ TOOL_PIC=		pic
 TOOL_PIGZ=		pigz
 TOOL_XZ=		xz
 TOOL_PKG_CREATE=	pkg_create
-TOOL_POWERPCMKBOOTIMAGE=	powerpc-mkbootimage
+TOOL_POWERPCMKBOOTIMAGE=powerpc-mkbootimage
 TOOL_PWD_MKDB=		pwd_mkdb
 TOOL_REFER=		refer
 TOOL_ROFF_ASCII=	nroff
@@ -844,13 +849,9 @@ MKGCC:= no
 .endif
 
 MKGDB.or1k=	no
-MKGDB.riscv32=	no
-MKGDB.riscv64=	no
 
 # No kernel modules for or1k or riscv (yet)
 MKKMOD.or1k=	no
-MKKMOD.riscv32=	no
-MKKMOD.riscv64=	no
 
 # No profiling for or1k (yet)
 MKPROFILE.or1k=	no
@@ -871,25 +872,30 @@ NOPROFILE=	# defined
 .endif
 
 #
-# GCC warnings with simple disables.  Use these with eg
-# COPTS.foo.c+= ${GCC_NO_STRINGOP_TRUNCATION}.
+# Clang and GCC compiler-specific options, usually to disable warnings.
+# The naming convention is "CC" + the compiler flag converted
+# to upper case, with '-' and '=' changed to '_' a la `tr -=a-z __A-Z`.
+# For variable naming purposes, treat -Werror=FLAG as -WFLAG,
+# and -Wno-error=FLAG as -Wno-FLAG (usually from Clang).
 #
-GCC_NO_FORMAT_TRUNCATION=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-format-truncation :}
-GCC_NO_FORMAT_OVERFLOW=		${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-format-overflow :}
-GCC_NO_STRINGOP_OVERFLOW=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-stringop-overflow :}
-GCC_NO_IMPLICIT_FALLTHRU=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-implicit-fallthrough :}
-GCC_NO_STRINGOP_TRUNCATION=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 8:? -Wno-stringop-truncation :}
-GCC_NO_CAST_FUNCTION_TYPE=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 8:? -Wno-cast-function-type :}
-GCC_NO_ADDR_OF_PACKED_MEMBER=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 9:? -Wno-address-of-packed-member :}
-GCC_NO_MAYBE_UNINITIALIZED=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 10:? -Wno-maybe-uninitialized :}
-GCC_NO_RETURN_LOCAL_ADDR=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 10:? -Wno-return-local-addr :}
+# E.g., CC_WNO_ADDRESS_OF_PACKED_MEMBER contains
+# both -Wno-error=address-of-packed-member for Clang,
+# and -Wno-address-of-packed-member for GCC 9+.
+#
+# Use these with e.g.
+#	COPTS.foo.c+= ${CC_WNO_ADDRESS_OF_PACKED_MEMBER}
+#
+CC_WNO_ADDRESS_OF_PACKED_MEMBER=${${ACTIVE_CC} == "clang" :? -Wno-error=address-of-packed-member :} \
+				${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 9:? -Wno-address-of-packed-member :}
 
-#
-# Clang warnings
-#
-CLANG_NO_ADDR_OF_PACKED_MEMBER=	${${ACTIVE_CC} == "clang" :? -Wno-error=address-of-packed-member :}
-
-NO_ADDR_OF_PACKED_MEMBER=	${CLANG_NO_ADDR_OF_PACKED_MEMBER} ${GCC_NO_ADDR_OF_PACKED_MEMBER}
+CC_WNO_CAST_FUNCTION_TYPE=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 8:? -Wno-cast-function-type :}
+CC_WNO_FORMAT_OVERFLOW=		${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-format-overflow :}
+CC_WNO_FORMAT_TRUNCATION=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-format-truncation :}
+CC_WNO_IMPLICIT_FALLTHROUGH=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-implicit-fallthrough :}
+CC_WNO_MAYBE_UNINITIALIZED=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 10:? -Wno-maybe-uninitialized :}
+CC_WNO_RETURN_LOCAL_ADDR=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 10:? -Wno-return-local-addr :}
+CC_WNO_STRINGOP_OVERFLOW=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 7:? -Wno-stringop-overflow :}
+CC_WNO_STRINGOP_TRUNCATION=	${${ACTIVE_CC} == "gcc" && ${HAVE_GCC:U0} >= 8:? -Wno-stringop-truncation :}
 
 #
 # The ia64 port is incomplete.
@@ -1019,22 +1025,31 @@ dependall:	.NOTMAIN realdepend .MAKE
 #
 # Source makefiles should set NO*, and not MK*, and must do so before
 # including bsd.own.mk.
+# Please keep alphabetically sorted with one entry per line.
 #
-.for var in \
-	NOCOMPAT NOCRYPTO NODOC NOHTML NOINFO NOLIBCSANITIZER NOLINKLIB \
-	NOLINT NOMAN NONLS NOOBJ NOPIC NOPICINSTALL NOPROFILE NOSHARE \
-	NOSTATICLIB NODEBUGLIB NOSANITIZER NORELRO
+_NOVARS= \
+	NOCOMPAT \
+	NODEBUGLIB \
+	NODOC \
+	NOHTML \
+	NOINFO \
+	NOLIBCSANITIZER \
+	NOLINKLIB \
+	NOLINT \
+	NOMAN \
+	NONLS \
+	NOOBJ \
+	NOPIC \
+	NOPICINSTALL \
+	NOPROFILE \
+	NORELRO \
+	NOSANITIZER \
+	NOSHARE \
+	NOSTATICLIB
+
+.for var in ${_NOVARS}
 .if defined(${var})
 MK${var:S/^NO//}:=	no
-.endif
-.endfor
-
-#
-# Older-style variables that enabled behaviour when set.
-#
-.for var in MANZ UNPRIVED UPDATE
-.if defined(${var})
-MK${var}:=	yes
 .endif
 .endfor
 
@@ -1131,6 +1146,9 @@ MKPIE?=		no
 #
 # RELRO is enabled on i386, amd64, and aarch64 by default
 #
+# sync with NORELRO in compat/*/*/bsd.*.mk for the relro-enabled 64-bit
+# platforms with relro-disabled 32-bit compat
+#
 .if ${MACHINE} == "i386" || \
     ${MACHINE} == "amd64" || \
     ${MACHINE_ARCH:Maarch64*}
@@ -1147,36 +1165,61 @@ MKSTATICPIE?=	no
 
 #
 # MK* options which default to "yes".
+# Please keep alphabetically sorted with one entry per line.
 #
 _MKVARS.yes= \
 	MKARGON2 \
 	MKATF \
 	MKBINUTILS \
 	MKBSDTAR \
-	MKCOMPLEX MKCVS MKCXX \
-	MKDOC MKDTC \
+	MKCLEANSRC \
+	MKCLEANVERIFY \
+	MKCOMPLEX \
+	MKCVS \
+	MKCXX \
+	MKDOC \
+	MKDTC \
 	MKDYNAMICROOT \
-	MKGCC MKGDB MKGROFF \
-	MKHESIOD MKHTML \
-	MKIEEEFP MKINET6 MKINFO MKIPFILTER MKISCSI \
+	MKGCC \
+	MKGDB \
+	MKGROFF \
+	MKHESIOD \
+	MKHTML \
+	MKIEEEFP \
+	MKINET6 \
+	MKINFO \
+	MKIPFILTER \
+	MKISCSI \
 	MKKERBEROS \
 	MKKMOD \
-	MKLDAP MKLIBSTDCXX MKLINKLIB MKLVM \
-	MKMAN MKMANDOC \
-	MKMDNS \
+	MKLDAP \
+	MKLIBSTDCXX \
+	MKLINKLIB \
+	MKLVM \
 	MKMAKEMANDB \
+	MKMAN \
+	MKMANDOC \
+	MKMDNS \
 	MKNLS \
 	MKNPF \
 	MKOBJ \
-	MKPAM MKPERFUSE \
-	MKPF MKPIC MKPICLIB MKPOSTFIX MKPROFILE \
+	MKPAM \
+	MKPF \
+	MKPIC \
+	MKPICLIB \
+	MKPOSTFIX \
+	MKPROFILE \
 	MKRUMP \
-	MKSHARE MKSKEY MKSTATICLIB \
+	MKSHARE \
+	MKSKEY \
+	MKSTATICLIB \
+	MKSTRIPSYM \
 	MKUNBOUND \
 	MKX11FONTS \
 	MKYP
+
 .for var in ${_MKVARS.yes}
-${var}?=	${${var}.${MACHINE_ARCH}:Uyes}
+${var}?=	${${var}.${MACHINE_ARCH}:U${${var}.${MACHINE}:Uyes}}
 .endfor
 
 #
@@ -1294,30 +1337,52 @@ MKDEBUGKERNEL?=${MKKDEBUG:Uno}
 MKDEBUGTOOLS?=${MKTOOLSDEBUG:Uno}
 
 #
-# MK* options which default to "no".  Note that MKZFS has a different
-# default for some platforms, see above.  Please keep alphabetically
-# sorted with at most one letter per line.
+# MK* options which default to "no".
+# Note that MKZFS has a different default for some platforms, see above.
+# Please keep alphabetically sorted with one entry per line.
 #
 _MKVARS.no= \
 	MKAMDGPUFIRMWARE \
 	MKARZERO \
 	MKBSDGREP \
-	MKCATPAGES MKCOMPATTESTS MKCOMPATX11 MKCTF \
-	MKDEBUG MKDEBUGLIB MKDTB MKDTRACE \
+	MKCATPAGES \
+	MKCOMPATTESTS \
+	MKCOMPATX11 \
+	MKCTF \
+	MKDEBUG \
+	MKDEBUGLIB \
+	MKDEPINCLUDES \
+	MKDTB \
+	MKDTRACE \
 	MKFIRMWARE \
 	MKGROFFHTMLDOC \
+	MKHOSTOBJ \
 	MKKYUA \
-	MKLIBCXX MKLLD MKLLDB MKLLVM MKLLVMRT MKLINT \
-	MKMANZ MKMCLINKER \
-	MKNOUVEAUFIRMWARE MKNSD \
+	MKLIBCXX \
+	MKLINT \
+	MKLLVM \
+	MKLLVMRT \
+	MKMANZ \
+	MKNOUVEAUFIRMWARE \
+	MKNSD \
 	MKOBJDIRS \
-	MKPCC MKPICINSTALL MKPIGZGZIP \
-	MKRADEONFIRMWARE MKREPRO \
-	MKSLJIT MKSOFTFLOAT MKSTRIPIDENT \
-	MKTEGRAFIRMWARE MKTPM \
-	MKUNPRIVED MKUPDATE \
-	MKX11 MKX11MOTIF MKXORG_SERVER \
+	MKPCC \
+	MKPICINSTALL \
+	MKPIGZGZIP \
+	MKRADEONFIRMWARE \
+	MKREPRO \
+	MKSLJIT \
+	MKSOFTFLOAT \
+	MKSTRIPIDENT \
+	MKTEGRAFIRMWARE \
+	MKTPM \
+	MKUNPRIVED \
+	MKUPDATE \
+	MKX11 \
+	MKX11MOTIF \
+	MKXORG_SERVER \
 	MKZFS
+
 .for var in ${_MKVARS.no}
 ${var}?=	${${var}.${MACHINE_ARCH}:U${${var}.${MACHINE}:Uno}}
 .endfor
@@ -1731,14 +1796,17 @@ _MKSHECHO?=	echo
 _MKMSG_BUILD?=		${_MKMSG} "  build "
 _MKMSG_CREATE?=		${_MKMSG} " create "
 _MKMSG_COMPILE?=	${_MKMSG} "compile "
+_MKMSG_EXECUTE?=	${_MKMSG} "execute "
 _MKMSG_FORMAT?=		${_MKMSG} " format "
 _MKMSG_INSTALL?=	${_MKMSG} "install "
 _MKMSG_LINK?=		${_MKMSG} "   link "
 _MKMSG_LEX?=		${_MKMSG} "    lex "
 _MKMSG_REMOVE?=		${_MKMSG} " remove "
+_MKMSG_REGEN?=		${_MKMSG} "  regen "
 _MKMSG_YACC?=		${_MKMSG} "   yacc "
 
 _MKSHMSG_CREATE?=	${_MKSHMSG} " create "
+_MKSHMSG_FORMAT?=	${_MKSHMSG} " format "
 _MKSHMSG_INSTALL?=	${_MKSHMSG} "install "
 
 _MKTARGET_BUILD?=	${_MKMSG_BUILD} ${.CURDIR:T}/${.TARGET}

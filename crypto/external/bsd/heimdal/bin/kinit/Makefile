@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.2 2011/05/25 19:21:17 he Exp $
+# $NetBSD: Makefile,v 1.4 2023/06/20 17:23:02 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
@@ -12,8 +12,9 @@ SRCS= kinit.c
 
 CPPFLAGS+= -I${HEIMDIST}/lib/ntlm
 
-LDADD+= -lkafs -lsl -lheimntlm
-DPADD+= ${LIBKAFS} ${LIBSL} ${LIBHEIMNTLM}
+PROGDPLIBS+= ${DPLIBKAFS} ${DPLIBSL} ${DPLIBHEIMNTLM}
+LDADD+= -lcrypto
+DPSDD+= ${LIBCRYPTO}
 
 .include <${HEIMBASE}/Makefile.rules.inc>
 .include <bsd.prog.mk>

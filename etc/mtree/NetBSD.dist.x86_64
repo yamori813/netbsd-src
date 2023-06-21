@@ -1,4 +1,4 @@
-#	$NetBSD: NetBSD.dist.x86_64,v 1.16 2022/05/15 21:41:56 mrg Exp $
+#	$NetBSD: NetBSD.dist.x86_64,v 1.19 2023/05/16 13:20:38 christos Exp $
 
 ./usr/include/dev/nvmm
 ./usr/include/dev/nvmm/x86

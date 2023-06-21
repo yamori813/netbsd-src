@@ -1,4 +1,4 @@
-/* $NetBSD: lsym_unary_op.c,v 1.5 2022/04/24 10:36:37 rillig Exp $ */
+/* $NetBSD: lsym_unary_op.c,v 1.12 2023/06/17 22:09:24 rillig Exp $ */
 
 /*
  * Tests for the token lsym_unary_op, which represents a unary operator.
@@ -8,6 +8,12 @@
  *
  * In a type name, the "unary operator" '*' represents the derivation of a
  * pointer type.
+ *
+ * See also:
+ *	lsym_binary_op.c
+ *	lsym_postfix_op.c
+ *	C11 6.4.6 "Punctuators"
+ *	C11 6.5 "Expressions"
  */
 
 //indent input
@@ -53,4 +59,60 @@ int var = p -> member;
 
 //indent run -di0
 int var = p->member;
+//indent end
+
+
+//indent input
+void
+unary_operators(void)
+{
+	++prefix_increment;
+	--prefix_decrement;
+	int *address = &lvalue;
+	int dereferenced = *address;
+	int positive = +number;
+	int negative = -number;
+	bool negated = !condition;
+}
+//indent end
+
+//indent run-equals-input -di0
+
+
+/*
+ * Ensure that a '*' is not interpreted as unary operator in situations that
+ * may look like a cast expression.
+ */
+//indent input
+{
+	sbuf_t *sb = *(sbuf_t **)sp;
+	return (int)(a * (float)b);
+	a = (2 * b == c);
+}
+//indent end
+
+//indent run-equals-input -di0
+
+
+/* All asterisks from a pointer type are merged into a single token. */
+//indent input
+{
+char*
+*
+*
+*x;
+char
+*
+*
+*
+*x;
+}
+//indent end
+
+//indent run
+{
+	char	    ****x;
+	char
+		    ****x;
+}
 //indent end

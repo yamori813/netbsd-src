@@ -1,17 +1,24 @@
 #!  /usr/bin/lua
--- $NetBSD: check-expect.lua,v 1.3 2022/04/15 09:33:20 rillig Exp $
+-- $NetBSD: check-expect.lua,v 1.6 2023/06/01 20:56:35 rillig Exp $
 
 --[[
 
 usage: lua ./check-expect.lua *.mk
 
-Check that each text from an '# expect: ...' comment in the .mk source files
-occurs in the corresponding .exp file, in the same order as in the .mk file.
+Check that the various 'expect' comments in the .mk files produce the
+expected text in the corresponding .exp file.
 
-Check that each text from an '# expect[+-]offset: ...' comment in the .mk
-source files occurs in the corresponding .exp file and refers back to the
-correct line in the .mk file.
+# expect: <line>
+        All of these lines must occur in the .exp file, in the same order as
+        in the .mk file.
 
+# expect-reset
+        Search the following 'expect:' comments from the top of the .exp
+        file again.
+
+# expect[+-]offset: <message>
+        Each message must occur in the .exp file and refer back to the
+        source line in the .mk file.
 ]]
 
 
@@ -47,7 +54,7 @@ local function collect_lineno_diagnostics(exp_lines)
   for _, line in ipairs(exp_lines) do
     ---@type string | nil, string, string
     local l_fname, l_lineno, l_msg =
-      line:match("^make: \"([^\"]+)\" line (%d+): (.*)")
+      line:match('^make: "([^"]+)" line (%d+): (.*)')
     if l_fname ~= nil then
       local location = ("%s:%d"):format(l_fname, l_lineno)
       if by_location[location] == nil then
@@ -108,6 +115,15 @@ local function check_mk(mk_fname)
       if not found then
         print_error("error: %s:%d: %s must contain '%s'",
           mk_fname, mk_lineno, exp_fname, text)
+      end
+    end
+  end
+
+  -- XXX: The messages are not sorted in any meaningful way.
+  for location, messages in pairs(by_location) do
+    for _, message in ipairs(messages) do
+      if message ~= "" and location:find(".mk:") then
+        print_error("missing: %s: # expect+1: %s", location, message)
       end
     end
   end

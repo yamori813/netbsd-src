@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.4 2019/10/13 07:28:05 mrg Exp $
+# $NetBSD: Makefile,v 1.6 2023/06/03 09:09:01 lukem Exp $
 
 .include <bsd.own.mk>
 
@@ -26,6 +26,8 @@ LIBDPLIBS+=	crypto		${OPENSSL}/lib/libcrypto
 LIBDPLIBS+=	z		${NETBSDSRCDIR}/lib/libz
 LIBDPLIBS+=	bz2		${NETBSDSRCDIR}/lib/libbz2
 
-COPTS.crypto.c+=	${GCC_NO_STRINGOP_OVERFLOW}
+COPTS.crypto.c+=	${CC_WNO_STRINGOP_OVERFLOW}
+COPTS.openssl_crypto.c+=-Wno-error=deprecated-declarations
+COPTS.symmetric.c+=-Wno-error=deprecated-declarations
 
 .include <bsd.lib.mk>

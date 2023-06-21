@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.2 2011/05/25 19:21:18 he Exp $
+# $NetBSD: Makefile,v 1.4 2023/06/20 17:23:03 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
@@ -14,8 +14,9 @@ CPPFLAGS+= 				\
 	-I${HEIMDIST}/lib/krb5		\
 	-I${HEIMDIST}/lib/ipc
 
-LDADD+= -lkdc -lhdb
-DPADD+= ${LIBKDC} ${LIBHDB}
+PROGDPLIBS+= ${DPLIBASN1} ${DPLIBKDC} ${DPLIBHDB}
+LDADD+=-lcrypto
+DPADD+=${LIBCRYPTO}
 
 .include <${HEIMBASE}/Makefile.rules.inc>
 .include <bsd.prog.mk>

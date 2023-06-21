@@ -1,4 +1,4 @@
-/*	$NetBSD: emul.c,v 1.197 2023/02/26 07:27:14 skrll Exp $	*/
+/*	$NetBSD: emul.c,v 1.199 2023/04/22 13:53:44 riastradh Exp $	*/
 
 /*
  * Copyright (c) 2007-2011 Antti Kantee.  All Rights Reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: emul.c,v 1.197 2023/02/26 07:27:14 skrll Exp $");
+__KERNEL_RCSID(0, "$NetBSD: emul.c,v 1.199 2023/04/22 13:53:44 riastradh Exp $");
 
 #include <sys/param.h>
 #include <sys/cprng.h>
@@ -324,6 +324,21 @@ rump_fstrans_lwp_dtor(struct lwp *l)
 
 }
 __weak_alias(fstrans_lwp_dtor,rump_fstrans_lwp_dtor);
+
+static int
+rump_filt_fsattach(struct knote *kn)
+{
+
+	return EOPNOTSUPP;
+}
+
+struct filterops rump_fs_filtops = {
+	.f_attach = rump_filt_fsattach,
+};
+__weak_alias(fs_filtops,rump_fs_filtops);
+
+struct pool_cache *rump_pnbuf_cache;
+__weak_alias(pnbuf_cache,rump_pnbuf_cache);
 
 /*
  * Provide weak aliases for tty routines used by printf.

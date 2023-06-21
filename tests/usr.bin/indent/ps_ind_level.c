@@ -1,10 +1,13 @@
-/* $NetBSD: ps_ind_level.c,v 1.6 2022/04/24 09:04:12 rillig Exp $ */
+/* $NetBSD: ps_ind_level.c,v 1.9 2023/06/15 09:19:07 rillig Exp $ */
 
 /*
  * The indentation of the very first line of a file determines the
- * indentation of the remaining code. Even if later code has a smaller
- * indentation, it is nevertheless indented to the level given by the first
- * line of code.
+ * indentation of the remaining code. This mode is meant for code snippets from
+ * function bodies. At this level, function definitions are not recognized
+ * properly.
+ *
+ * Even if later code has a smaller indentation, it is nevertheless indented to
+ * the level given by the first line of code.
  *
  * In this particular test, the indentation is set to 5 and the tabulator
  * width is set to 8, to demonstrate an off-by-one error in
@@ -18,24 +21,21 @@
 			int indented_by_24;
 
 void function_in_column_1(void){}
+
+			#if indented
+#endif
 //indent end
 
 /* 5 spaces indentation, 8 spaces per tabulator */
 //indent run -i5 -ts8
 		    int		    indented_by_24;
 
-		    void	    function_in_column_1(void){
+		    void	    function_in_column_1(void) {
 		    }
+
+#if indented
+#endif
 //indent end
-/*
- * In the above function declaration, the space between '){' is missing. This
- * is because the tokenizer only recognizes function definitions if they start
- * at indentation level 0, but this declaration starts at indentation level 4,
- * due to the indentation in line 1. It's an edge case that is probably not
- * worth fixing.
- *
- * See 'in_func_def_params = true'.
- */
 
 
 /*
@@ -54,7 +54,7 @@ label:;
 //indent run -i8 -ts8 -di0
 			int indent_by_24;
 
-			void function(void){
+			void function(void) {
 		label:		;
 			}
 //indent end
@@ -116,3 +116,18 @@ int    level_0;
      }
 }
 //indent end
+
+
+/*
+ * Having function definitions indented to the right is not supported. In that
+ * case, indent does not recognize it as a function definition, and it doesn't
+ * indent the old-style parameter declarations one level further to the right.
+ */
+//indent input
+			int		old_style(a)
+			int		a;
+			{
+			}
+//indent end
+
+//indent run-equals-input

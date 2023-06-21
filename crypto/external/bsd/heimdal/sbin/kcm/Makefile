@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.2 2011/05/25 19:21:19 he Exp $
+# $NetBSD: Makefile,v 1.4 2023/06/20 17:23:04 christos Exp $
 
 .include <bsd.own.mk>
 .include <${.CURDIR}/../../Makefile.inc>
@@ -25,10 +25,12 @@ SRCS= \
 	renew.c		\
 	sessions.c
 
-CPPFLAGS+= -I${HEIMDIST}/lib/ipc
+CPPFLAGS+=				\
+	-I${HEIMDIST}/lib/ipc
 
-LDADD+=	-lkafs -lheimntlm -lutil
-DPADD+=	${LIBKAFS} ${LIBHEIMNTLM} ${LIBUTIL}
+PROGDPLIBS+=	${DPLIBKAFS} ${DPLIBHEIMNTLM}
+LDADD+=	-lcrypto -lutil
+DPADD+=	${LIBCRYPTO} ${LIBUTIL}
 
 .include <${HEIMBASE}/Makefile.rules.inc>
 .include <bsd.prog.mk>

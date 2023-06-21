@@ -1,4 +1,4 @@
-/*	$NetBSD: rtld.c,v 1.212 2022/09/13 10:18:58 riastradh Exp $	 */
+/*	$NetBSD: rtld.c,v 1.214 2023/06/04 23:42:38 riastradh Exp $	 */
 
 /*
  * Copyright 1996 John D. Polstra.
@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID("$NetBSD: rtld.c,v 1.212 2022/09/13 10:18:58 riastradh Exp $");
+__RCSID("$NetBSD: rtld.c,v 1.214 2023/06/04 23:42:38 riastradh Exp $");
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -1026,7 +1026,7 @@ __strong_alias(__dlopen,dlopen)
 void *
 dlopen(const char *name, int mode)
 {
-	Obj_Entry **old_obj_tail = _rtld_objtail;
+	Obj_Entry **old_obj_tail;
 	Obj_Entry *obj = NULL;
 	int flags = _RTLD_DLOPEN;
 	bool nodelete;
@@ -1034,9 +1034,11 @@ dlopen(const char *name, int mode)
 	sigset_t mask;
 	int result;
 
-	dbg(("dlopen of %s %d", name, mode));
+	dbg(("dlopen of %s 0x%x", name, mode));
 
 	_rtld_exclusive_enter(&mask);
+
+	old_obj_tail = _rtld_objtail;
 
 	flags |= (mode & RTLD_GLOBAL) ? _RTLD_GLOBAL : 0;
 	flags |= (mode & RTLD_NOLOAD) ? _RTLD_NOLOAD : 0;
@@ -1088,6 +1090,9 @@ dlopen(const char *name, int mode)
 	}
 	_rtld_debug.r_state = RT_CONSISTENT;
 	_rtld_debug_state();
+
+	dbg(("dlopen of %s 0x%x returned %p%s%s%s", name, mode, obj,
+	    obj ? "" : " (", obj ? "" : error_message, obj ? "" : ")"));
 
 	_rtld_exclusive_exit(&mask);
 
@@ -1563,6 +1568,7 @@ _rtld_error(const char *fmt,...)
 
 	va_start(ap, fmt);
 	xvsnprintf(buf, sizeof buf, fmt, ap);
+	dbg(("%s: %s", __func__, buf));
 	error_message = buf;
 	va_end(ap);
 }

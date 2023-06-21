@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.lib.mk,v 1.390 2023/02/07 04:53:54 mrg Exp $
+#	$NetBSD: bsd.lib.mk,v 1.394 2023/06/03 21:24:57 lukem Exp $
 #	@(#)bsd.lib.mk	8.3 (Berkeley) 4/22/94
 
 .include <bsd.init.mk>
@@ -69,7 +69,13 @@ LIBDO.${_lib}!=	cd "${_dir}" && ${PRINTOBJDIR}
 LDADD+=		-l${_lib}
 .else
 LDADD+=		-L${LIBDO.${_lib}} -l${_lib}
-DPADD+=		${LIBDO.${_lib}}/lib${_lib}.so	# Don't use _LIB_PREFIX
+.if exists(${LIBDO.${_lib}}/lib${_lib}_pic.a)
+DPADD+=         ${LIBDO.${_lib}}/lib${_lib}_pic.a
+.elif exists(${LIBDO.${_lib}}/lib${_lib}.so)
+DPADD+=         ${LIBDO.${_lib}}/lib${_lib}.so
+.else
+DPADD+=         ${LIBDO.${_lib}}/lib${_lib}.a
+.endif
 .endif
 .endfor
 .endif									# }
@@ -219,7 +225,7 @@ LIBSTRIPOBJCOBJS=	yes
 .if !defined(FFLAGS) || empty(FFLAGS:M*-g*)
 LIBSTRIPFOBJS=	yes
 .endif
-.if !defined(CSHLIBFLAGS) || empty(CSHLIBFLAGS:M*-g*) 
+.if !defined(CSHLIBFLAGS) || empty(CSHLIBFLAGS:M*-g*)
 LIBSTRIPSHLIBOBJS=	yes
 .endif
 
@@ -422,37 +428,7 @@ _LIBS=${_LIB.a}
 _LIBS=
 .endif
 
-.if ${LIBISPRIVATE} != "no" \
-   && (defined(USE_COMBINE) && ${USE_COMBINE} == "yes" \
-   && !defined(NOCOMBINE))						# {
-.for f in ${SRCS:N*.h:N*.sh:C/\.[yl]$/.c/g}
-COMBINEFLAGS.${LIB}.$f := ${CPPFLAGS.$f:D1} ${CPUFLAGS.$f:D2} ${COPTS.$f:D3} ${OBJCOPTS.$f:D4} ${CXXFLAGS.$f:D5}
-.if empty(COMBINEFLAGS.${LIB}.${f}) && !defined(NOCOMBINE.$f)
-COMBINESRCS+=	${f}
-NODPSRCS+=	${f}
-.else
-OBJS+=  	${f:R:S/$/.o/}
-.endif
-.endfor
-
-.if !empty(COMBINESRCS)
-OBJS+=		${_LIB}_combine.o
-${_LIB}_combine.o: ${COMBINESRCS}
-	${_MKTARGET_COMPILE}
-	${COMPILE.c} -MD --combine ${.ALLSRC} -o ${.TARGET}
-.if defined(LIBSTRIPOBJS)
-	${OBJCOPY} ${OBJCOPYLIBFLAGS} ${.TARGET}
-.endif
-
-CLEANFILES+=	${_LIB}_combine.d
-
-.if exists("${_LIB}_combine.d")
-.include "${_LIB}_combine.d"
-.endif
-.endif   # empty(XSRCS.${LIB})
-.else							# } {
 OBJS+=${SRCS:N*.h:N*.sh:R:S/$/.o/g}
-.endif							# }
 
 STOBJS+=${OBJS}
 
@@ -587,7 +563,7 @@ _LIBLDOPTS+=	-Wl,-rpath,${SHLIBDIR} \
 _LIBLDOPTS+=	-Wl,-rpath-link,${DESTDIR}${SHLIBINSTALLDIR} \
 		-L=${SHLIBINSTALLDIR}
 .endif
-.if ${MKSTRIPSYM:Uyes} == "yes"
+.if ${MKSTRIPSYM} != "no"
 _LIBLDOPTS+=	-Wl,-x
 .else
 _LIBLDOPTS+=	-Wl,-X
@@ -816,7 +792,7 @@ ${_DEST.OBJ}/${_LIB.so.full}: ${_LIB.so.full}
 	    ${.ALLSRC} ${.TARGET}
 .if ${_LIBSODIR} != ${LIBDIR}
 	${INSTALL_SYMLINK} -l r ${_DEST.OBJ}/${_LIB.so.full} \
-	    ${_DEST.LIB}/${_LIB.so.full} 
+	    ${_DEST.LIB}/${_LIB.so.full}
 .endif
 .if defined(SHLIB_FULLVERSION) && defined(SHLIB_MAJOR) && \
     "${SHLIB_FULLVERSION}" != "${SHLIB_MAJOR}"
@@ -845,7 +821,7 @@ ${_DEST.DEBUG}/${_LIB.so.debug}: ${_LIB.so.debug}
 	    ${.ALLSRC} ${.TARGET}
 .if ${_LIBSODIR} != ${LIBDIR}
 	${INSTALL_SYMLINK} -l r ${_DEST.DEBUG}/${_LIB.so.debug} \
-	    ${_DEST.ODEBUG}/${_LIB.so.debug} 
+	    ${_DEST.ODEBUG}/${_LIB.so.debug}
 .endif
 .endif
 

@@ -1,4 +1,4 @@
-/* $NetBSD: indent_off_on.c,v 1.8 2022/04/24 09:04:12 rillig Exp $ */
+/* $NetBSD: indent_off_on.c,v 1.15 2023/06/04 22:20:04 rillig Exp $ */
 
 /*
  * Tests for the comments 'INDENT OFF' and 'INDENT ON', which temporarily
@@ -15,16 +15,12 @@
 {}
 //indent end
 
-/*
- * XXX: It is asymmetric that 'INDENT OFF' is kept as is, while 'INDENT ON'
- * gets enclosed with spaces.
- */
 //indent run
 {
 }
-/* $ FIXME: This empty line must stay. */
+
 /*INDENT OFF*/
-/* INDENT ON */
+/*INDENT ON*/
 
 {
 }
@@ -42,10 +38,10 @@
 //indent run
 {
 }
-/* $ FIXME: This empty line must stay. */
-/* $ FIXME: This empty line must stay. */
+
+
 /*INDENT OFF*/
-/* INDENT ON */
+/*INDENT ON*/
 //indent end
 
 
@@ -56,15 +52,11 @@
 {}
 //indent end
 
-/*
- * XXX: It is asymmetric that 'INDENT OFF' is indented, while 'INDENT ON'
- * is aligned.
- */
 //indent run
 {
 }
  /* INDENT OFF */
-/* INDENT ON */
+ /* INDENT ON */
 {
 }
 //indent end
@@ -77,15 +69,11 @@
 {}
 //indent end
 
-/*
- * XXX: It is asymmetric that 'INDENT OFF' is indented, while 'INDENT ON'
- * is aligned.
- */
 //indent run
 {
 }
 	/* INDENT OFF */
-/* INDENT ON */
+	/* INDENT ON */
 {
 }
 //indent end
@@ -107,7 +95,7 @@ int   decl   ;
 int decl;
 /*INDENTOFF*/
 int   decl   ;
-/* INDENTON */
+/*INDENTON*/
 int decl;
 //indent end
 
@@ -124,15 +112,11 @@ int   decl   ;
 int   decl   ;
 //indent end
 
-/*
- * XXX: It is asymmetric that 'INDENT OFF' is indented, while 'INDENT ON'
- * is pushed to the start of the line.
- */
 //indent run -di0
 int decl;
 /*		INDENT		OFF		*/
 int   decl   ;
-/* INDENT		ON		*/
+/*		INDENT		ON		*/
 int decl;
 //indent end
 
@@ -149,11 +133,9 @@ int format( void ) {{{
 /*INDENT OFF*/
 /* No formatting takes place here. */
 int format( void ) {{{
-/* $ XXX: Why is the INDENT ON comment indented? */
-/* $ XXX: Why does the INDENT ON comment get spaces, but not the OFF comment? */
-			/* INDENT ON */
-}
-}
+/*INDENT ON*/
+		}
+	}
 }
 //indent end
 
@@ -184,15 +166,11 @@ void indent_still_on ( void ) ;	/* due to the extra comment to the right */
 //indent run
 /* INDENT OFF */
 void indent_off ( void ) ;
-/* $ XXX: The double space from the below comment got merged to a single */
-/* $ XXX: space even though the comment might be regarded to be still in */
-/* $ XXX: the OFF section. */
-/* INDENT */
+/*  INDENT */
 void		indent_on(void);
 /* INDENT OFF */
 void indent_off ( void ) ;
-/* $ XXX: The below comment got moved from column 9 to column 1. */
-/* INDENT ON */
+	/* INDENT ON */
 void		indent_on(void);	/* the comment may be indented */
 /* INDENT		OFF					*/
 void indent_off ( void ) ;
@@ -204,9 +182,10 @@ void indent_still_off ( void ) ;	/* due to the extra '*' at the end */
 void		indent_on(void);
 /* INDENT: OFF */
 void		indent_still_on(void);	/* due to the colon in the middle */
-/* $ The extra comment got moved to the left since there is no code in */
-/* $ that line. */
-/* INDENT OFF *//* extra comment */
+/* $ The extra comment got moved to a separate line, but indenting is still */
+/* $ on because the 'INDENT OFF' comment was not in a line of its own. */
+/* INDENT OFF */
+/* extra comment */
 void		indent_still_on(void);	/* due to the extra comment to the
 					 * right */
 //indent end
@@ -256,4 +235,41 @@ int still_on;
 int still_on;
 /* INDENT OFF */
 int   finally_off   ;
+//indent end
+
+
+/*
+ * Ensure that in 'INDENT OFF' mode, no blank line is added between lines, even
+ * when requested via the -bacc option.
+ */
+//indent input
+/* INDENT OFF */
+int declaration;
+#if 0
+#endif
+int declaration;
+/* INDENT ON */
+//indent end
+
+//indent run-equals-input -bacc
+
+
+/*
+ * If an 'INDENT OFF' comment directly follows a line continuation, the line
+ * continuation is dropped but the rest of the line is still formatted.
+ */
+//indent input
+int x ; \
+/* INDENT OFF */
+  int y ;
+/* INDENT ON */
+int z ;
+//indent end
+
+//indent run
+int		x;
+/* INDENT OFF */
+  int y ;
+/* INDENT ON */
+int		z;
 //indent end

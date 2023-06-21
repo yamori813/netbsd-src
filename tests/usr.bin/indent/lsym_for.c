@@ -1,4 +1,4 @@
-/* $NetBSD: lsym_for.c,v 1.4 2022/04/24 10:36:37 rillig Exp $ */
+/* $NetBSD: lsym_for.c,v 1.7 2023/06/08 21:18:54 rillig Exp $ */
 
 /*
  * Tests for the token lsym_for, which represents the keyword 'for' that
@@ -87,3 +87,34 @@ function(void)
 //indent end
 
 //indent run-equals-input
+
+
+/* Ensure that the '*' after 'list_item' is a unary operator. */
+//indent input
+{
+	for (const list_item *i = first; i != NULL; i = i->next) {
+	}
+	for (list_item **i = first; i != NULL; i = i->next) {
+	}
+	for (list_item *const *i = first; i != NULL; i = i->next) {
+	}
+	for (const char *const *i = first; i != NULL; i = i->next) {
+	}
+}
+//indent end
+
+//indent run
+{
+// $ FIXME: There should be no space after the '*'.
+	for (const list_item * i = first; i != NULL; i = i->next) {
+	}
+// $ FIXME: There should be no space after the '*'.
+	for (list_item * *i = first; i != NULL; i = i->next) {
+	}
+// $ FIXME: There should be no space after the '*'.
+	for (list_item * const *i = first; i != NULL; i = i->next) {
+	}
+	for (const char *const *i = first; i != NULL; i = i->next) {
+	}
+}
+//indent end

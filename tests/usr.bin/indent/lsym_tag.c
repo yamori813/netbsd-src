@@ -1,4 +1,4 @@
-/* $NetBSD: lsym_tag.c,v 1.5 2022/04/24 10:36:37 rillig Exp $ */
+/* $NetBSD: lsym_tag.c,v 1.10 2023/06/17 22:09:24 rillig Exp $ */
 
 /*
  * Tests for the token lsym_tag, which represents one of the keywords
@@ -113,4 +113,67 @@ struct   /* comment */   tag var;
 
 //indent run -di0
 struct /* comment */ tag var;
+//indent end
+
+
+/*
+ * Ensure that the names of struct members are all indented the same.
+ * Before 2023-05-15, the indentation depended on their type name.
+ */
+//indent input
+struct outer {
+	enum {
+		untagged_constant,
+	} untagged_member,
+	  second_untagged_member;
+	enum tag_name {
+		tagged_constant,
+	} tagged_member,
+	  second_tagged_member;
+};
+//indent end
+
+//indent run-equals-input -di0
+
+
+/*
+ * The initializer of an enum constant needs to be indented like any other
+ * initializer, especially the continuation lines.
+ */
+//indent input
+enum multi_line {
+	ml1 = 1
+	    + 2
+	    + offsetof(struct s, member)
+	    + 3,
+	ml2 = 1
+	    + 2
+	    + offsetof(struct s, member)
+	    + 3,
+};
+//indent end
+
+//indent run-equals-input -ci4
+
+//indent run-equals-input -ci4 -nlp
+
+
+/*
+ * When 'typedef' or a tag is followed by a name, that name marks a type and a
+ * following '*' marks a pointer type.
+ */
+//indent input
+{
+	// $ Syntactically invalid but shows that '*' is not multiplication.
+	a = struct x * y;
+	a = (struct x * y)z;
+}
+//indent end
+
+//indent run
+{
+	// $ Everything before the '*' is treated as a declaration.
+	a = struct x   *y;
+	a = (struct x *y)z;
+}
 //indent end
