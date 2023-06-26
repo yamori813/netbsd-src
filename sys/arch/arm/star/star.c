@@ -418,12 +418,12 @@ star_build_devmap(struct pmap_devmap *devmap, int ndevmap)
 	for (n = 0, i = 0; star_soc_devtable[i].size != 0; i++) {
 		if ((CPU_IS_STR8100() && star_soc_devtable[i].has_str8100) ||
 		    (CPU_IS_STR9100() && star_soc_devtable[i].has_str9100)) {
-
 			devmap[n].pd_pa = star_soc_devtable[i].paddr;
 			devmap[n].pd_va = STAR_IO_P2V(star_soc_devtable[i].paddr);
 			devmap[n].pd_size = star_soc_devtable[i].size;
 			devmap[n].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-			devmap[n].pd_cache = PTE_NOCACHE;
+//			devmap[n].pd_cache = PTE_NOCACHE;
+			devmap[n].pd_flags = DEVMAP_FLAGS;
 
 			n++;
 			if (n >= ndevmap)
