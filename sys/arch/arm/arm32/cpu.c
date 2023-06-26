@@ -105,7 +105,9 @@ cpu_attach(device_t dv, cpuid_t id)
 		 * Get other sysregs for BP. APs information is grabbed in
 		 * cpu_init_secondary_processor.
 		 */
+#if !defined(CPU_ARM9E)
 		ci->ci_actlr = armreg_auxctl_read();
+#endif
 		ci->ci_revidr = armreg_revidr_read();
 	} else {
 #ifdef MULTIPROCESSOR
