@@ -461,7 +461,7 @@ consinit(void)
 	    CCA_MISC_BASE + MISC_CORECTL, v);
 
 #endif
-        if (m83comcnattach(&m86_bs_tag, comcnaddr, comcnspeed,
+        if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
 //                        165000000, COM_TYPE_NORMAL, comcnmode))
                         165000000, COM_TYPE_16550_NOERS, comcnmode))
                 panic("Serial console can not be initialized.");

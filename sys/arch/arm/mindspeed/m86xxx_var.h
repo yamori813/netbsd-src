@@ -3,7 +3,7 @@
 #ifndef _ARM_MINDSPEED_M86VAR_H
 #define _ARM_MINDSPEED_M86VAR_H
 
-extern struct bus_space m86_bs_tag;
+extern struct bus_space m83_bs_tag;
 
 struct apb_attach_args {
 	const char	*apba_name;
