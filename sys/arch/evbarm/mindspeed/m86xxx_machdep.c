@@ -1,4 +1,4 @@
-/*	$NetBSD: m86xxx_machdep.c,v 1.28 2023/04/21 15:04:47 skrll Exp $	*/
+/*	$NetBSD$	*/
 
 /*-
  * Copyright (c) 2012 The NetBSD Foundation, Inc.
@@ -33,7 +33,7 @@
 #define IDM_PRIVATE
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: m86xxx_machdep.c,v 1.28 2023/04/21 15:04:47 skrll Exp $");
+__KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_arm_debug.h"
 #include "opt_console.h"
@@ -66,6 +66,7 @@ __KERNEL_RCSID(0, "$NetBSD: m86xxx_machdep.c,v 1.28 2023/04/21 15:04:47 skrll Ex
 #define CCA_PRIVATE
 
 #include <arm/cortex/scu_reg.h>
+#include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
 
 #if NCOM == 0
@@ -83,8 +84,6 @@ extern int _end[];
 extern int KERNEL_BASE_phys[];
 extern int KERNEL_BASE_virt[];
 
-extern struct bus_space m83_bs_tag;
-
 BootConfig bootconfig;
 //static char bootargs[MAX_BOOT_STRING];
 char *boot_args = NULL;
@@ -98,13 +97,13 @@ static void m86xxx_system_reset(void);
 #define _S(s)   (((s) + L1_S_SIZE - 1) & ~(L1_S_SIZE-1))
 
 #ifndef CONADDR
-#define CONADDR	0x96400000
+#define CONADDR		UART_BASEADDR
 #endif
 #ifndef CONSPEED
-#define CONSPEED B115200
+#define CONSPEED	B115200
 #endif
 #ifndef CONMODE
-#define CONMODE ((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
+#define CONMODE	((TTYDEF_CFLAG & ~(CSIZE | CSTOPB | PARENB)) | CS8) /* 8N1 */
 #endif
 
 void m86xxx_mpstart(void);
@@ -161,18 +160,9 @@ static struct consdev earlycons = {
  */
 
 static const struct pmap_devmap m86xxx_devmap[] = {
-/*
-    {
-	0xdf000000,
-        _A(0x96400000),
-        _S(L1_S_SIZE),
-        VM_PROT_READ|VM_PROT_WRITE,
-        PTE_NOCACHE,
-    },
-*/
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE,
-		0x96400000,
+		UART_BASEADDR,
 		L1_S_SIZE
 	),
 #if 0
@@ -471,7 +461,7 @@ consinit(void)
 	    CCA_MISC_BASE + MISC_CORECTL, v);
 
 #endif
-        if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
+        if (m83comcnattach(&m86_bs_tag, comcnaddr, comcnspeed,
 //                        165000000, COM_TYPE_NORMAL, comcnmode))
                         165000000, COM_TYPE_16550_NOERS, comcnmode))
                 panic("Serial console can not be initialized.");
