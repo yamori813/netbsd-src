@@ -143,10 +143,10 @@ makeoptions	DEBUG="-g"	# compile full symbol table
 makeoptions	COPY_SYMTAB=1
 
 ## USB Debugging options
-options USB_DEBUG
-options EHCI_DEBUG
-options OHCI_DEBUG
-options UHUB_DEBUG
+#options USB_DEBUG
+#options EHCI_DEBUG
+#options OHCI_DEBUG
+#options UHUB_DEBUG
 
 
 # Valid options for BOOT_ARGS:
@@ -183,29 +183,29 @@ com*		at bcmcca? channel 1
 
 # ChipCommonB Peripherals
 bcmccb0		at mainbus?		# ChipCommonB
-bcmpax*		at bcmccb? port ? flags 2 # use bounce buffers
-pci*		at bcmpax?
-ppb*		at pci? dev ? function ?
-pci*		at ppb?
+#bcmpax*		at bcmccb? port ? flags 2 # use bounce buffers
+#pci*		at bcmpax?
+#ppb*		at pci? dev ? function ?
+#pci*		at ppb?
 
-ahcisata*	at pci? dev ? function ?
-atabus* 	at ahcisata? channel ?
+#ahcisata*	at pci? dev ? function ?
+#atabus* 	at ahcisata? channel ?
 #options 	ATADEBUG
-wd*		at atabus? drive ?
-wm*		at pci? dev ? function ?
-makphy*		at mii?
-ukphy*		at mii?
+#wd*		at atabus? drive ?
+#wm*		at pci? dev ? function ?
+#makphy*		at mii?
+#ukphy*		at mii?
 
 bcmmdio0	at bcmccb0
 bcmeth*		at bcmccb? port ?
 
 # SDHC controllers
-sdhc0		at bcmccb0
-sdmmc*		at sdhc?		# SD/MMC bus
-ld*		at sdmmc?
+#sdhc0		at bcmccb0
+#sdmmc*		at sdhc?		# SD/MMC bus
+#ld*		at sdmmc?
 
 # Random Number Generator
-bcmrng0		at bcmccb0
+#bcmrng0		at bcmccb0
 
 # NAND controller
 #bcmnand0	at bcmccb0
@@ -224,31 +224,31 @@ bcmrng0		at bcmccb0
 #flash4		at nand0 offset 0x680000 size 0			# filesystem
 
 # I2C Controller
-bcmi2c0 	at bcmccb0
-iic*		at bcmi2c?
+#bcmi2c0 	at bcmccb0
+#iic*		at bcmi2c?
 
 # NAND Controller
-bcmnand0	at bcmccb0
-nand*		at nandbus?
-flash*		at nand?
+#bcmnand0	at bcmccb0
+#nand*		at nandbus?
+#flash*		at nand?
 
 # Watchdog timers
 #bcmwdt*	at bcmccb0
 
 # On-board USB
-bcmusb*		at bcmccb0
-ohci*		at bcmusb0
-usb*		at ohci?
-ehci*		at bcmusb0
-usb*		at ehci?
-uhub*		at usb?
-uhub*		at uhub? port ?
-umass*		at uhub? port ? configuration ? interface ?
-scsibus*	at scsi?
-sd*		at scsibus? target ? lun ?
+#bcmusb*		at bcmccb0
+#ohci*		at bcmusb0
+#usb*		at ohci?
+#ehci*		at bcmusb0
+#usb*		at ehci?
+#uhub*		at usb?
+#uhub*		at uhub? port ?
+#umass*		at uhub? port ? configuration ? interface ?
+#scsibus*	at scsi?
+#sd*		at scsibus? target ? lun ?
 
 # USB Ethernet adapters
-axe*		at uhub? port ? configuration ? interface ?
+#axe*		at uhub? port ? configuration ? interface ?
 
 # Hardware clocking and power management
 
