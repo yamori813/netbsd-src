@@ -1,15 +1,16 @@
-#	$NetBSD: std.bcm53xx,v 1.20 2019/05/18 08:49:23 skrll Exp $
+#	$NetBSD$
 #
-# standard NetBSD/evbarm for BCM5301X options
+# standard NetBSD/evbarm for M86XXX options
 
 machine		evbarm arm
 include 	"arch/evbarm/conf/std.evbarm"
 
-# Pull in BCM53xx config definitions.
+# Pull in M86XXX config definitions.
 include		"arch/evbarm/conf/files.m86xxx"
 
 options 	ARM_GENERIC_TODR
-options 	ARM_INTR_IMPL="<arch/arm/broadcom/bcm53xx_intr.h>"
+options		ARM_HAS_VBAR
+options 	ARM_INTR_IMPL="<arch/arm/mindspeed/m86xxx_intr.h>"
 options 	COM_TOLERANCE=40
 options 	CORTEX_PMC
 options 	EVBARM_BOARDTYPE="m86xxx"
@@ -28,7 +29,7 @@ options 	__HAVE_PCI_CONF_HOOK
 
 makeoptions	BOARDMKFRAG="${THISARM}/conf/mk.m86xxx"
 makeoptions	BOARDTYPE="m86xxx"
-makeoptions	KERNEL_BASE_VIRT="0xc3008000"
+makeoptions	KERNEL_BASE_VIRT="0x83008000"
 makeoptions	LOADADDRESS="0x03008000"
 
 # Prevent the addition of a command line -DKERNEL_BASE_VOFFSET= as it

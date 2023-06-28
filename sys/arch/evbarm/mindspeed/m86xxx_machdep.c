@@ -29,20 +29,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define CCA_PRIVATE
-#define IDM_PRIVATE
-
 #include <sys/cdefs.h>
 __KERNEL_RCSID(0, "$NetBSD$");
 
 #include "opt_arm_debug.h"
 #include "opt_console.h"
 #include "opt_evbarm_boardtype.h"
-#include "opt_broadcom.h"
 #include "opt_kgdb.h"
+#include "opt_broadcom.h"
 #include "com.h"
 #include "pci.h"
-#include "bcmrng_ccb.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -63,8 +59,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <machine/autoconf.h>
 #include <machine/bootconfig.h>
 
-#define CCA_PRIVATE
-
 #include <arm/cortex/scu_reg.h>
 #include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
@@ -76,25 +70,21 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/comreg.h>
 #include <dev/ic/comvar.h>
 
-#define KERNEL_IO_VBASE		VM_KERNEL_IO_BASE
+#define	KERNEL_VM_BASE		(KERNEL_BASE + 0x40000000)
 #define KERNEL_VM_SIZE		0x0C000000
-#define	KERNEL_VM_BASE		(KERNEL_BASE + 0x01000000)
+#define KERNEL_IO_VBASE		VM_KERNEL_IO_BASE
 
 extern int _end[];
 extern int KERNEL_BASE_phys[];
 extern int KERNEL_BASE_virt[];
 
 BootConfig bootconfig;
-//static char bootargs[MAX_BOOT_STRING];
 char *boot_args = NULL;
 
 /* filled in before cleaning bss. keep in .data */
 u_int uboot_args[4] __attribute__((__section__(".data")));
 
 static void m86xxx_system_reset(void);
-
-#define _A(a)   ((a) & ~L1_S_OFFSET)
-#define _S(s)   (((s) + L1_S_SIZE - 1) & ~(L1_S_SIZE-1))
 
 #ifndef CONADDR
 #define CONADDR		UART_BASEADDR
@@ -161,9 +151,14 @@ static struct consdev earlycons = {
 
 static const struct pmap_devmap m86xxx_devmap[] = {
 	DEVMAP_ENTRY(
-		KERNEL_IO_VBASE,
+		KERNEL_IO_VBASE,	/* 0xf0000000 */
 		UART_BASEADDR,
-		L1_S_SIZE
+		0x00010000
+	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x00100000,
+		A9_PERIPH_BASE,
+		0x00100000
 	),
 #if 0
 	DEVMAP_ENTRY(
@@ -328,8 +323,6 @@ initarm(void *arg)
 	/* Talk to the user */
 	printf("\nNetBSD/evbarm (" ___STRING(EVBARM_BOARDTYPE) ") booting ...\n");
 
-//	bootargs[0] = '\0';
-
 #if defined(VERBOSE_INIT_ARM) || 1
 	printf("initarm: Configuring system");
 #ifdef MULTIPROCESSOR
@@ -348,6 +341,7 @@ initarm(void *arg)
 	if ((memsize >> 20) > MEMSIZE)
 		memsize = MEMSIZE*1024*1024;
 #endif
+	memsize = MEMSIZE*1024*1024;
 	const bool bigmem_p = (memsize >> 20) > 256;
 
 #ifdef __HAVE_MM_MD_DIRECT_MAPPED_PHYS
@@ -462,18 +456,20 @@ consinit(void)
 
 #endif
         if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
-//                        165000000, COM_TYPE_NORMAL, comcnmode))
-                        165000000, COM_TYPE_16550_NOERS, comcnmode))
+//                        250000000, COM_TYPE_NORMAL, comcnmode))
+                        250000000, COM_TYPE_16550_NOERS, comcnmode))
                 panic("Serial console can not be initialized.");
 }
 
 static void
 m86xxx_system_reset(void)
 {
-/*
-	bus_space_write_4(m86xxx_ioreg_bst, m86xxx_ioreg_bsh,
-	    MISC_WATCHDOG, 1);
-*/
+	bus_space_handle_t bsh;
+	bus_space_map(&m83_bs_tag, APB_GPIO_BASE, 0x20000, 0, &bsh);
+	bus_space_write_4(&m83_bs_tag, bsh, 0x00, 0);
+	while (1);
+	/* not reach here */
+	bus_space_unmap(&m83_bs_tag, bsh, 0x20000);
 }
 
 

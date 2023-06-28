@@ -15,11 +15,16 @@ file	arch/arm/broadcom/bcm53xx_board.c
 file	arch/arm/broadcom/bcmgen_space.c
 file	arch/arm/mindspeed/m83xxx_space.c
 
-#defparam opt_broadcom.h				MEMSIZE
+defparam opt_broadcom.h				MEMSIZE
 #defflag opt_broadcom.h				BCM53XX_CONSOLE_EARLY
 #defflag opt_broadcom.h				BCMETH_COUNTERS
 #defflag opt_broadcom.h				BCM563XX
 #defflag opt_broadcom.h				BCM5301X
+
+# c2k AXI/AHB bus interface and SoC domains
+device	axi { [addr=-1], [size=0], [irq=-1], [irqbase=-1]} : bus_space_generic
+attach	axi at mainbus
+file	arch/arm/mindspeed/m86xxx_axi.c		axi
 
 # ChipCommonA attach point
 device	bcmcca { [channel=-1] } : bus_space_generic, gpiobus, sysmon_wdog
