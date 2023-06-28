@@ -174,6 +174,8 @@ arml2cc0	at armperiph? flags 0	# ARM PL310 L2CC
 arma9tmr0	at armperiph?		# A9 Global Timer
 arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
 
+axi0		at mainbus?		# AXI
+
 # ChipCommonA Peripherals
 bcmcca0		at mainbus?		# ChipCommonA
 #options 	CONADDR=0x18000300, CONSPEED=115200

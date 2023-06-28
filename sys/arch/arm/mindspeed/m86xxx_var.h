@@ -5,6 +5,16 @@
 
 extern struct bus_space m83_bs_tag;
 
+struct axi_attach_args {
+	const char	*aa_name;
+	bus_space_tag_t	aa_iot;
+	bus_dma_tag_t	aa_dmat;
+	bus_addr_t	aa_addr;
+	bus_size_t	aa_size;
+	int		aa_irq;
+	int		aa_irqbase;
+};
+
 struct apb_attach_args {
 	const char	*apba_name;
 	bus_space_tag_t	apba_memt;
