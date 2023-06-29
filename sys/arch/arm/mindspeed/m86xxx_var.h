@@ -35,4 +35,6 @@ struct ahb_attach_args {
 	int		ahba_irqbase;
 };
 
+void	m86xxx_device_register(device_t, void *);
+
 #endif	/* _ARM_MINDSPEED_M86VAR_H */
