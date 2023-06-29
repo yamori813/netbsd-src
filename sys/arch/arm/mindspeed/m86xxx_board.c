@@ -550,7 +550,7 @@ m86xxx_cpu_hatch(struct cpu_info *ci)
 void
 m86xxx_device_register(device_t self, void *aux)
 {
-//	prop_dictionary_t dict = device_properties(self);
+	prop_dictionary_t dict = device_properties(self);
 
 	if (device_is_a(self, "armperiph")
 	    && device_is_a(device_parent(self), "mainbus")) {
@@ -574,8 +574,9 @@ m86xxx_device_register(device_t self, void *aux)
 		 * This clock always runs at (arm_clk div 2) and only goes
 		 * to timers that are part of the A9 MP core subsystem.
 		 */
-//                prop_dictionary_set_uint32(dict, "frequency",
+                prop_dictionary_set_uint32(dict, "frequency",
 //		    cpu_softc.cpu_clk.clk_cpu / 2);
+		    900 * 1000 * 1000 / 2);
 		return;
 	}
 
