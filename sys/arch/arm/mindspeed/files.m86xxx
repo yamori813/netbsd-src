@@ -13,6 +13,7 @@ file	arch/arm/arm32/irq_dispatch.S
 
 file	arch/arm/broadcom/bcm53xx_board.c
 file	arch/arm/broadcom/bcmgen_space.c
+file	arch/arm/mindspeed/m86xxx_board.c
 file	arch/arm/mindspeed/m83xxx_space.c
 
 defparam opt_broadcom.h				MEMSIZE

@@ -155,11 +155,13 @@ static const struct pmap_devmap m86xxx_devmap[] = {
 		UART_BASEADDR,
 		0x00010000
 	),
+#if 0
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE + 0x00100000,
 		A9_PERIPH_BASE,
 		0x00100000
 	),
+#endif
 #if 0
 	DEVMAP_ENTRY(
 		KERNEL_IO_IOREG_VBASE,
@@ -378,7 +380,7 @@ initarm(void *arg)
 
 	cpu_reset_address = m86xxx_system_reset;
 	/* we've a specific device_register routine */
-//	evbarm_device_register = m86xxx_device_register;
+	evbarm_device_register = m86xxx_device_register;
 	if (bigmem_p) {
 		/*
 		 * If we have more than 256MB
