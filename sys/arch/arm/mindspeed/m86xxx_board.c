@@ -469,11 +469,6 @@ m86xxx_bootstrap(vaddr_t iobase)
 	struct m86xxx_chip_state bcs;
 	int error;
 
-#ifdef BCM53XX_CONSOLE_EARLY
-	com_base = iobase + CCA_UART0_BASE;
-	cn_tab = &m86xxx_earlycons;
-#endif
-
 	m86xxx_ioreg_bsh = (bus_space_handle_t) iobase;
 	error = bus_space_map(m86xxx_ioreg_bst, BCM53XX_IOREG_PBASE,
 	    BCM53XX_IOREG_SIZE, 0, &m86xxx_ioreg_bsh);
