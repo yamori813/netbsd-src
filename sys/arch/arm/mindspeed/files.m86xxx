@@ -13,6 +13,7 @@ file	arch/arm/arm32/irq_dispatch.S
 
 file	arch/arm/mindspeed/m86xxx_board.c
 file	arch/arm/mindspeed/m83xxx_space.c
+file	arch/arm/mindspeed/m83xxx_dma.c
 
 defparam opt_m86.h				MEMSIZE
 
@@ -74,4 +75,8 @@ file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 device  c2ge: ether, ifnet, arp, mii, mii_phy
 attach  c2ge at axi
 file    arch/arm/mindspeed/if_c2ge.c		c2ge
+
+# USB3 Host Controller (XHCI)
+attach xhci at axi with xhci_axi
+file    arch/arm/mindspeed/m86xxx_xhci.c        xhci_axi
 

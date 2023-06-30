@@ -15,26 +15,6 @@ struct axi_attach_args {
 	int		aa_intrbase;
 };
 
-struct apb_attach_args {
-	const char	*apba_name;
-	bus_space_tag_t	apba_memt;
-	bus_dma_tag_t	apba_dmat;
-	bus_addr_t	apba_addr;
-	bus_size_t	apba_size;
-	int		apba_intr;
-	int		apba_irqbase;
-};
-
-struct ahb_attach_args {
-	const char	*ahba_name;
-	bus_space_tag_t	ahba_memt;
-	bus_dma_tag_t	ahba_dmat;
-	bus_addr_t	ahba_addr;
-	bus_size_t	ahba_size;
-	int		ahba_intr;
-	int		ahba_irqbase;
-};
-
 void	m86xxx_device_register(device_t, void *);
 
 #endif	/* _ARM_MINDSPEED_M86VAR_H */
