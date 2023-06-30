@@ -11,8 +11,8 @@ struct axi_attach_args {
 	bus_dma_tag_t	aa_dmat;
 	bus_addr_t	aa_addr;
 	bus_size_t	aa_size;
-	int		aa_irq;
-	int		aa_irqbase;
+	int		aa_intr;
+	int		aa_intrbase;
 };
 
 struct apb_attach_args {

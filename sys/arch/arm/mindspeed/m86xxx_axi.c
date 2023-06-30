@@ -113,8 +113,8 @@ axi_critical_search(device_t parent, struct cfdata *cf,
 	aa->aa_name = cf->cf_name;
 	aa->aa_addr = cf->cf_loc[AXICF_ADDR];
 	aa->aa_size = cf->cf_loc[AXICF_SIZE];
-	aa->aa_irq = cf->cf_loc[AXICF_IRQ];
-	aa->aa_irqbase = cf->cf_loc[AXICF_IRQBASE];
+	aa->aa_intr = cf->cf_loc[AXICF_INTR];
+	aa->aa_intrbase = cf->cf_loc[AXICF_IRQBASE];
 
 	if (config_probe(parent, cf, aux))
 		config_attach(parent, cf, aux, axi_print, CFARGS_NONE);
@@ -134,8 +134,8 @@ axi_search(device_t parent, struct cfdata *cf, const int *ldesc __unused,
 
 	aa->aa_addr = cf->cf_loc[AXICF_ADDR];
 	aa->aa_size = cf->cf_loc[AXICF_SIZE];
-	aa->aa_irq = cf->cf_loc[AXICF_IRQ];
-	aa->aa_irqbase = cf->cf_loc[AXICF_IRQBASE];
+	aa->aa_intr = cf->cf_loc[AXICF_INTR];
+	aa->aa_intrbase = cf->cf_loc[AXICF_IRQBASE];
 
 	if (config_probe(parent, cf, aux))
 		config_attach(parent, cf, aux, axi_print, CFARGS_NONE);
@@ -155,10 +155,10 @@ axi_print(void *aux, const char *name __unused)
 			aprint_normal("-0x%lx",
 			    aa->aa_addr + aa->aa_size-1);
 	}
-	if (aa->aa_irq != AXICF_IRQ_DEFAULT)
-		aprint_normal(" intr %d", aa->aa_irq);
-	if (aa->aa_irqbase != AXICF_IRQBASE_DEFAULT)
-		aprint_normal(" irqbase %d", aa->aa_irqbase);
+	if (aa->aa_intr != AXICF_INTR_DEFAULT)
+		aprint_normal(" intr %d", aa->aa_intr);
+	if (aa->aa_intrbase != AXICF_IRQBASE_DEFAULT)
+		aprint_normal(" intrbase %d", aa->aa_intrbase);
 
 	return (UNCONF);
 }
