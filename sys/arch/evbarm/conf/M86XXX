@@ -20,7 +20,6 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 #makeoptions	DEFCOPTS="-O0"
 #options 	UVMHIST
 #options 	UVMHIST_PRINT,A9WDT_PERIOD_DEFAULT=30
-#options 	BCM53XX_CONSOLE_EARLY
 options 	BCMETH_COUNTERS
 #options 	MULTIPROCESSOR
 options 	CPU_CORTEX
@@ -132,7 +131,7 @@ options 	DIAGNOSTIC	# internal consistency checks
 options 	DEBUG
 #options 	LOCKDEBUG	# Enable lock debugging
 #options 	UVMHIST		# kernhist for uvm/pmap subsystems
-options 	VERBOSE_INIT_ARM # verbose bootstraping messages
+#options 	VERBOSE_INIT_ARM # verbose bootstraping messages
 options 	DDB		# in-kernel debugger
 options 	DDB_ONPANIC=1
 options 	DDB_HISTORY_SIZE=100	# Enable history editing in DDB
@@ -175,16 +174,18 @@ arma9tmr0	at armperiph?		# A9 Global Timer
 arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
 
 axi0		at mainbus?		# AXI
+com*		at axi? addr 0x96400000 intr 59
+c2ge0		at axi? addr 0xc0200000
 
 # ChipCommonA Peripherals
-bcmcca0		at mainbus?		# ChipCommonA
+#bcmcca0		at mainbus?		# ChipCommonA
 #options 	CONADDR=0x18000300, CONSPEED=115200
-options 	CONSPEED=115200
-com0		at bcmcca? channel 0
-com*		at bcmcca? channel 1
+#options 	CONSPEED=115200
+#com0		at bcmcca? channel 0
+#com*		at bcmcca? channel 1
 
 # ChipCommonB Peripherals
-bcmccb0		at mainbus?		# ChipCommonB
+#bcmccb0		at mainbus?		# ChipCommonB
 #bcmpax*		at bcmccb? port ? flags 2 # use bounce buffers
 #pci*		at bcmpax?
 #ppb*		at pci? dev ? function ?
@@ -198,8 +199,8 @@ bcmccb0		at mainbus?		# ChipCommonB
 #makphy*		at mii?
 #ukphy*		at mii?
 
-bcmmdio0	at bcmccb0
-bcmeth*		at bcmccb? port ?
+#bcmmdio0	at bcmccb0
+#bcmeth*		at bcmccb? port ?
 
 # SDHC controllers
 #sdhc0		at bcmccb0

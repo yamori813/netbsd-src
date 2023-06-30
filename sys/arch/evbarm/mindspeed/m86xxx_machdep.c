@@ -311,6 +311,7 @@ initarm(void *arg)
 
 //	m86xxx_cpu_softc_init(curcpu());
 //	m86xxx_print_clocks();
+	cortex_pmc_ccnt_init();
 
 #if NBCMRNG_CCB > 0
 	/*

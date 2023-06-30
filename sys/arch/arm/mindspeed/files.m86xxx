@@ -23,15 +23,17 @@ defparam opt_broadcom.h				MEMSIZE
 #defflag opt_broadcom.h				BCM5301X
 
 # c2k AXI/AHB bus interface and SoC domains
-device	axi { [addr=-1], [size=0], [irq=-1], [irqbase=-1]} : bus_space_generic
+device	axi { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	axi at mainbus
 file	arch/arm/mindspeed/m86xxx_axi.c		axi
+attach	com at axi with m86xxx_com
+file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 
 # ChipCommonA attach point
-device	bcmcca { [channel=-1] } : bus_space_generic, gpiobus, sysmon_wdog
-attach	bcmcca at mainbus
-attach	com at bcmcca with com_cca
-file	arch/arm/broadcom/bcm53xx_cca.c		bcmcca|com_cca	needs-flag
+#device	bcmcca { [channel=-1] } : bus_space_generic, gpiobus, sysmon_wdog
+#attach	bcmcca at mainbus
+#attach	com at bcmcca with com_cca
+#file	arch/arm/broadcom/bcm53xx_cca.c		bcmcca|com_cca	needs-flag
 
 # ChipCommonB attach point
 device	bcmccb { [port=-1], [mdio=-1], [phy=-1] } : bus_space_generic
@@ -73,3 +75,9 @@ file	arch/arm/broadcom/bcm53xx_eth.c		bcmeth_ccb
 # External Mass Media Controller (SDHC)
 #attach	sdhc at bcmccb with sdhc_ccb
 #file	arch/arm/broadcom/bcm53xx_sdhc.c	sdhc_ccb
+
+# Ethernet
+device  c2ge: ether, ifnet, arp, mii, mii_phy
+attach  c2ge at axi
+file    arch/arm/mindspeed/if_c2ge.c		c2ge
+
