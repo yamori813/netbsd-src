@@ -40,8 +40,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
 
-//#include "bus_dma_generic.h"
-
 extern struct arm32_bus_dma_tag m83_bus_dma_tag;
 
 struct axi_softc {
@@ -80,11 +78,7 @@ axi_attach(device_t parent __unused, device_t self, void *aux __unused)
 
 	sc = device_private(self);
 	sc->sc_iot = &m83_bs_tag;
-#if NBUS_DMA_GENERIC > 0
 	sc->sc_dmat = &m83_bus_dma_tag;
-#else
-	sc->sc_dmat = 0;
-#endif
 
 	aa.aa_name = "axi";
 	aa.aa_iot = sc->sc_iot;
