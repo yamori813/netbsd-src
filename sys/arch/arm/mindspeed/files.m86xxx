@@ -11,16 +11,10 @@ file	arch/arm/arm32/arm32_kvminit.c
 file	arch/arm/arm32/arm32_reboot.c
 file	arch/arm/arm32/irq_dispatch.S
 
-file	arch/arm/broadcom/bcm53xx_board.c
-file	arch/arm/broadcom/bcmgen_space.c
 file	arch/arm/mindspeed/m86xxx_board.c
 file	arch/arm/mindspeed/m83xxx_space.c
 
-defparam opt_broadcom.h				MEMSIZE
-#defflag opt_broadcom.h				BCM53XX_CONSOLE_EARLY
-#defflag opt_broadcom.h				BCMETH_COUNTERS
-#defflag opt_broadcom.h				BCM563XX
-#defflag opt_broadcom.h				BCM5301X
+defparam opt_m86.h				MEMSIZE
 
 # c2k AXI/AHB bus interface and SoC domains
 device	axi { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
@@ -36,10 +30,10 @@ file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 #file	arch/arm/broadcom/bcm53xx_cca.c		bcmcca|com_cca	needs-flag
 
 # ChipCommonB attach point
-device	bcmccb { [port=-1], [mdio=-1], [phy=-1] } : bus_space_generic
-attach	bcmccb at mainbus
-file	arch/arm/broadcom/bcm53xx_ccb.c		bcmccb
-file	arch/arm/broadcom/bcm53xx_idm.c		bcmccb
+#device	bcmccb { [port=-1], [mdio=-1], [phy=-1] } : bus_space_generic
+#attach	bcmccb at mainbus
+#file	arch/arm/broadcom/bcm53xx_ccb.c		bcmccb
+#file	arch/arm/broadcom/bcm53xx_idm.c		bcmccb
 
 #device	bcmpax : pcibus
 #attach	bcmpax at bcmccb with bcmpax_ccb
@@ -57,13 +51,13 @@ file	arch/arm/broadcom/bcm53xx_idm.c		bcmccb
 #attach	bcmrng at bcmccb with bcmrng_ccb
 #file	arch/arm/broadcom/bcm53xx_rng.c		bcmrng_ccb	needs-flag
 
-device	bcmmdio : mii
-attach	bcmmdio at bcmccb with bcmmdio_ccb
-file	arch/arm/broadcom/bcm53xx_mdio.c	bcmmdio_ccb
+#device	bcmmdio : mii
+#attach	bcmmdio at bcmccb with bcmmdio_ccb
+#file	arch/arm/broadcom/bcm53xx_mdio.c	bcmmdio_ccb
 
-device	bcmeth { } : ether, ifnet, arp
-attach	bcmeth at bcmccb with bcmeth_ccb
-file	arch/arm/broadcom/bcm53xx_eth.c		bcmeth_ccb
+#device	bcmeth { } : ether, ifnet, arp
+#attach	bcmeth at bcmccb with bcmeth_ccb
+#file	arch/arm/broadcom/bcm53xx_eth.c		bcmeth_ccb
 
 # USB2 Host Controller (EHCI)
 #device	bcmusb { }

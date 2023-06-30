@@ -32,7 +32,7 @@
 #define _ARM_BROADCOM_BCM53XX_INTR_H_
 
 #ifdef _KERNEL_OPT
-//#include "opt_broadcom.h"
+#include "opt_m86.h"
 #endif
 
 #define	PIC_MAXSOURCES			256
