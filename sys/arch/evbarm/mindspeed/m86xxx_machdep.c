@@ -36,7 +36,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include "opt_console.h"
 #include "opt_evbarm_boardtype.h"
 #include "opt_kgdb.h"
-#include "opt_broadcom.h"
+#include "opt_m86.h"
 #include "com.h"
 #include "pci.h"
 

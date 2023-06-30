@@ -29,7 +29,7 @@
  */
 
 #include "opt_arm_debug.h"
-#include "opt_broadcom.h"
+#include "opt_m86.h"
 #include "arml2cc.h"
 
 #define	_ARM32_BUS_DMA_PRIVATE
