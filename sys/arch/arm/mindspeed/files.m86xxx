@@ -1,6 +1,6 @@
-#	$NetBSD: files.bcm53xx,v 1.5 2018/09/21 12:04:06 skrll Exp $
+#	$NetBSD$
 #
-# Configuration info for Broadcom BCM5301X ARM Peripherals
+# Configuration info for Mindspeed M86XXX ARM Peripherals
 #
 
 include "arch/arm/pic/files.pic"
