@@ -216,14 +216,6 @@ static const struct boot_physmem bp_first256 = {
 
 #define BCM53xx_ROM_CPU_ENTRY	0xffff0400
 
-#ifdef MULTIPROCESSOR
-void m86xxx_cpu_hatch(struct cpu_info *ci);
-void
-m86xxx_cpu_hatch(struct cpu_info *ci)
-{
-}
-#endif
-
 void
 m86xxx_mpstart(void)
 {

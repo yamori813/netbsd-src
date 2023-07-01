@@ -24,7 +24,6 @@ options 	BCMETH_COUNTERS
 #options 	MULTIPROCESSOR
 options 	CPU_CORTEX
 options 	MEMSIZE=256
-options 	BCM5301X
 #options 	PMAPCOUNTERS
 options 	BUSDMA_COUNTERS
 makeoptions	KERNEL_BASE_PHYS="0x03008000"
