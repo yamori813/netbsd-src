@@ -298,7 +298,7 @@ initarm(void *arg)
 	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m86xxx_devmap);
 
 	VPRINTF("bootstrap\n");
-	m86xxx_bootstrap(KERNEL_IO_VBASE + 0x00100000 + 0x0B0000);
+	m86xxx_bootstrap(KERNEL_IO_VBASE + 0x00100000);
 
 #ifdef MULTIPROCESSOR
 	uint32_t scu_cfg = bus_space_read_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,

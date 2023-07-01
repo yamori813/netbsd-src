@@ -64,7 +64,7 @@ static uint32_t readl(int off);
 static uint32_t readl(int off)
 {
 
-	return *(uint32_t *)(baseaddr + off);
+	return *(uint32_t *)(baseaddr + 0x0B0000 + off);
 }
 
 static uint32_t readl2(int off);
