@@ -165,6 +165,11 @@ static const struct pmap_devmap m86xxx_devmap[] = {
 		AXI_IRAM_BASE,
 		0x00100000
 	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x00300000,
+		A9_PERIPH_BASE,
+		0x00100000
+	),
 #if 0
 	DEVMAP_ENTRY(
 		KERNEL_IO_IOREG_VBASE,
@@ -211,10 +216,19 @@ static const struct boot_physmem bp_first256 = {
 
 #define BCM53xx_ROM_CPU_ENTRY	0xffff0400
 
+#ifdef MULTIPROCESSOR
+void m86xxx_cpu_hatch(struct cpu_info *ci);
+void
+m86xxx_cpu_hatch(struct cpu_info *ci)
+{
+}
+#endif
+
 void
 m86xxx_mpstart(void)
 {
 #ifdef MULTIPROCESSOR
+#if 0
 	/*
 	 * Invalidate all SCU cache tags. That is, for all cores (0-3)
 	 */
@@ -266,6 +280,7 @@ m86xxx_mpstart(void)
                             cpuindex);
                 }
         }
+#endif
 #endif /* MULTIPROCESSOR */
 }
 
@@ -301,8 +316,8 @@ initarm(void *arg)
 	m86xxx_bootstrap(KERNEL_IO_VBASE + 0x00100000);
 
 #ifdef MULTIPROCESSOR
-	uint32_t scu_cfg = bus_space_read_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    ARMCORE_SCU_BASE + SCU_CFG);
+	uint32_t scu_cfg = *(uint32_t *)(KERNEL_IO_VBASE + 0x00300000 +
+	    SCU_CFG);
 	arm_cpu_max = 1 + (scu_cfg & SCU_CFG_CPUMAX);
 	membar_producer();
 #endif
@@ -332,20 +347,20 @@ initarm(void *arg)
 #if defined(VERBOSE_INIT_ARM) || 1
 	printf("initarm: Configuring system");
 #ifdef MULTIPROCESSOR
+#if 0
 	printf(" (%u cpu%s, hatched %#x)",
 	    arm_cpu_max + 1, arm_cpu_max + 1 ? "s" : "",
 	    arm_cpu_hatched);
+#endif
 #endif
 	printf(", CLIDR=%010o CTR=%#x PMUSERSR=%#x",
 	    armreg_clidr_read(), armreg_ctr_read(), armreg_pmuserenr_read());
 	printf("\n");
 #endif
 
-//	psize_t memsize = m86xxx_memprobe();
 	psize_t memsize;
-#ifdef MEMSIZE
-	if ((memsize >> 20) > MEMSIZE)
-		memsize = MEMSIZE*1024*1024;
+#ifndef MEMSIZE
+#error missing MEMSIZE
 #endif
 	memsize = MEMSIZE*1024*1024;
 	const bool bigmem_p = (memsize >> 20) > 256;
@@ -402,7 +417,7 @@ initarm(void *arg)
 	/*
 	 * initarm_common flushes cache if required before AP start
 	 */
-//	m86xxx_mpstart();
+	m86xxx_mpstart();
 
 	return sp;
 }
