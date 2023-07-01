@@ -48,99 +48,210 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <net/if.h>
 #include <net/if_ether.h>
 
-#define CCA_PRIVATE
-#define CRU_PRIVATE
-#define DDR_PRIVATE
-#define DMU_PRIVATE
-#define ARMCORE_PRIVATE
-#define SRAB_PRIVATE
-
 #include <arm/cortex/a9tmr_var.h>
-#include <arm/cortex/pl310_var.h>
 #include <arm/mainbus/mainbus.h>
 
 #include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
-
-
-bus_space_tag_t m86xxx_ioreg_bst = &m83_bs_tag;
-bus_space_handle_t m86xxx_ioreg_bsh;
-bus_space_tag_t m86xxx_armcore_bst = &m83_bs_tag;
-bus_space_handle_t m86xxx_armcore_bsh;
+#include <arm/mindspeed/m86xxx_clk.h>
 
 //static struct cpu_softc cpu_softc;
+struct m86xxx_clock_info clock_info;
 
-struct arm32_dma_range m86xxx_dma_ranges[] = {
-#ifdef BCM5301X
-	[0] = {
-		.dr_sysbase = 0x80000000,
-		.dr_busbase = 0x80000000,
-		.dr_len = 0x10000000,
-	}, [1] = {
-		.dr_sysbase = 0x90000000,
-		.dr_busbase = 0x90000000,
-	},
-#elif defined(BCM563XX)
-	[0] = {
-		.dr_sysbase = 0x60000000,
-		.dr_busbase = 0x60000000,
-		.dr_len = 0x20000000,
-	}, [1] = {
-		.dr_sysbase = 0x80000000,
-		.dr_busbase = 0x80000000,
-	},
+static vaddr_t baseaddr;
+
+static uint32_t readl(int off);
+static uint32_t readl(int off)
+{
+
+	return *(uint32_t *)(baseaddr + off);
+}
+
+static uint32_t readl2(int off);
+static uint32_t readl2(int off)
+{
+
+	return *(uint32_t *)(baseaddr + 0x100000 + off);
+}
+
+static uint32_t m86xxx_get_pll_freq(int pll_no);
+static uint32_t m86xxx_get_pll_freq(int pll_no)
+{
+	uint32_t p;
+	uint32_t od;
+	uint32_t m;
+	uint32_t k;
+	uint32_t s;
+	uint32_t pll_clk = 0;
+
+	if (pll_no < PLL3)
+	{
+		/* get NF, NR and OD values */
+		switch (pll_no)
+		{
+		case PLL0:
+			m = readl(PLL0_M_LSB) & 0xff;
+			m |= (readl(PLL0_M_MSB) & 0x3) << 8;
+			p = readl(PLL0_P) & 0x3f;
+			s = readl(PLL0_S) & 0x7;
+			od = (1 << s); // 2^s;
+			break;
+
+		case PLL1:
+			m = readl(PLL1_M_LSB) & 0xff;
+			m |= (readl(PLL1_M_MSB) & 0x3) << 8;
+			p = readl(PLL1_P) & 0x3f;
+			s = readl(PLL1_S) & 0x7;
+			od = (1 << s);
+			break;
+
+		case PLL2:
+			m = readl(PLL2_M_LSB) & 0xff;
+			m |= (readl(PLL2_M_MSB) & 0x3) << 8;
+			p = readl(PLL2_P) & 0x3f;
+			s = readl(PLL2_S) & 0x7;
+			od = (1 << s);
+			break;
+
+		default:
+			return 0;
+			break;
+		}
+
+		/*
+		 * Ref Clock divided by 1000000. It should be displayed
+		 * in MHz.
+		 */
+		pll_clk = ((CFG_REFCLKFREQ / 1000000) * m) / p / od ;
+	}
+	else if (pll_no == PLL3)
+	{
+		m = readl(PLL3_M_LSB) & 0xff;
+		m |= (readl(PLL3_M_MSB) & 0x3) << 8;
+		p = readl(PLL3_P) & 0x3f;
+		s = readl(PLL3_S) & 0x7;
+		k = readl(PLL3_K_LSB) & 0xff;
+		k |= (readl(PLL3_K_MSB) & 0xf) << 8;
+		od = (1 << s);
+
+		pll_clk = (((CFG_REFCLKFREQ / 1000000) * (m * 1024 + k)) /
+		    p / od + 1023) / 1024;
+	}
+
+	return pll_clk;
+}
+
+static inline uint32_t m86xxx_get_clk_freq(uint32_t ctrl_reg, uint32_t div_reg);
+static inline uint32_t m86xxx_get_clk_freq(uint32_t ctrl_reg, uint32_t div_reg)
+{
+	uint32_t pll_src;
+	uint32_t pll_clk;
+	uint32_t clk_div;
+	uint32_t clk_out;
+	int bypass = 0;
+
+	/* get PLL source */
+	pll_src = readl(ctrl_reg);
+	pll_src = (pll_src >> CLK_PLL_SRC_SHIFT) & CLK_PLL_SRC_MASK;
+
+	/*
+	 * get clock divider bypass value from IRAM Clock Divider registers
+	 * mirror location
+	 */
+	clk_div = read_clk_div_bypass_backup(div_reg);
+
+	if (clk_div & CLK_DIV_BYPASS)
+		bypass = 1;
+	else
+	{
+		clk_div = readl(div_reg);
+		clk_div &= 0x1f;
+	}
+
+	pll_clk = m86xxx_get_pll_freq(pll_src);
+
+	if (bypass)
+		clk_out = pll_clk;
+	else
+		clk_out = pll_clk / clk_div;
+
+	return clk_out;
+}
+
+static uint32_t m86xxx_get_arm_clk(void);
+static uint32_t m86xxx_get_arm_clk(void)
+{
+
+	return m86xxx_get_clk_freq(A9DP_CLK_CNTRL, A9DP_CLK_DIV_CNTRL);
+}
+
+static uint32_t m86xxx_get_axi_clk(void);
+static uint32_t m86xxx_get_axi_clk(void)
+{       
+
+	return m86xxx_get_clk_freq(AXI_CLK_CNTRL_0, AXI_CLK_DIV_CNTRL);
+}
+
+
+void
+m86xxx_bootstrap(vaddr_t iobase)
+{
+
+	baseaddr = iobase;
+
+	clock_info.clk_arm = m86xxx_get_arm_clk() * 1000 * 1000 * 2;
+	clock_info.clk_axi = m86xxx_get_axi_clk() * 1000 * 1000 * 2;
+}
+
+void
+m86xxx_device_register(device_t self, void *aux)
+{
+	prop_dictionary_t dict = device_properties(self);
+
+	if (device_is_a(self, "armperiph")
+	    && device_is_a(device_parent(self), "mainbus")) {
+		/*
+		 * XXX KLUDGE ALERT XXX
+		 * The iot mainbus supplies is completely wrong since it scales
+		 * addresses by 2.  The simplest remedy is to replace with our
+		 * bus space used for the armcore registers (which armperiph uses). 
+		 */
+		struct mainbus_attach_args * const mb = aux;
+		mb->mb_iot = &m83_bs_tag;
+		return;
+	}
+
+	/*
+	 * We need to tell the A9 Global/Watchdog Timer
+	 * what frequency it runs at.
+	 */
+	if (device_is_a(self, "arma9tmr") || device_is_a(self, "a9wdt")) {
+		/*
+		 * This clock always runs at (arm_clk div 2) and only goes
+		 * to timers that are part of the A9 MP core subsystem.
+		 */
+                prop_dictionary_set_uint32(dict, "frequency",
+//		    cpu_softc.cpu_clk.clk_cpu / 2);
+		    clock_info.clk_arm / 2);
+		return;
+	}
+
+#if 0 
+	if (device_is_a(self, "bcmeth")) {
+		const struct bcmccb_attach_args * const ccbaa = aux;
+		const uint8_t enaddr[ETHER_ADDR_LEN] = {
+			0x00, 0x01, 0x02, 0x03, 0x04,
+			0x05 + 2 * ccbaa->ccbaa_loc.loc_port,
+		};
+		prop_data_t pd = prop_data_create_data(enaddr, ETHER_ADDR_LEN);
+		KASSERT(pd != NULL);
+		if (prop_dictionary_set(device_properties(self), "mac-address", pd) == false) {
+			printf("WARNING: Unable to set mac-address property for %s\n", device_xname(self));
+		}
+		prop_object_release(pd);
+	}
 #endif
-};
-
-struct arm32_bus_dma_tag m86xxx_dma_tag = {
-	._ranges = m86xxx_dma_ranges,
-	._nranges = __arraycount(m86xxx_dma_ranges),
-	_BUS_DMAMAP_FUNCS,
-	_BUS_DMAMEM_FUNCS,
-	_BUS_DMATAG_FUNCS,
-};
-
-struct arm32_dma_range m86xxx_coherent_dma_ranges[] = {
-#ifdef BCM5301X
-	[0] = {
-		.dr_sysbase = 0x80000000,
-		.dr_busbase = 0x80000000,
-		.dr_len = 0x10000000,
-		.dr_flags = _BUS_DMAMAP_COHERENT,
-	}, [1] = {
-		.dr_sysbase = 0x90000000,
-		.dr_busbase = 0x90000000,
-	},
-#elif defined(BCM563XX)
-	[0] = {
-		.dr_sysbase = 0x60000000,
-		.dr_busbase = 0x60000000,
-		.dr_len = 0x20000000,
-		.dr_flags = _BUS_DMAMAP_COHERENT,
-	}, [1] = {
-		.dr_sysbase = 0x80000000,
-		.dr_busbase = 0x80000000,
-	},
-#endif
-};
-
-struct arm32_bus_dma_tag m86xxx_coherent_dma_tag = {
-	._ranges = m86xxx_coherent_dma_ranges,
-	._nranges = __arraycount(m86xxx_coherent_dma_ranges),
-	_BUS_DMAMAP_FUNCS,
-	_BUS_DMAMEM_FUNCS,
-	_BUS_DMATAG_FUNCS,
-};
-
-#ifdef _ARM32_NEED_BUS_DMA_BOUNCE
-struct arm32_bus_dma_tag m86xxx_bounce_dma_tag = {
-	._ranges = m86xxx_coherent_dma_ranges,
-	._nranges = 1,
-	_BUS_DMAMAP_FUNCS,
-	_BUS_DMAMEM_FUNCS,
-	_BUS_DMATAG_FUNCS,
-};
-#endif
+}
 
 #if 0
 psize_t
@@ -464,52 +575,6 @@ m86xxx_print_clocks(void)
 }
 
 void
-m86xxx_bootstrap(vaddr_t iobase)
-{
-	struct m86xxx_chip_state bcs;
-	int error;
-
-	m86xxx_ioreg_bsh = (bus_space_handle_t) iobase;
-	error = bus_space_map(m86xxx_ioreg_bst, BCM53XX_IOREG_PBASE,
-	    BCM53XX_IOREG_SIZE, 0, &m86xxx_ioreg_bsh);
-	if (error)
-		panic("%s: failed to map BCM53xx %s registers: %d",
-		    __func__, "io", error);
-
-	m86xxx_armcore_bsh = (bus_space_handle_t) iobase + BCM53XX_IOREG_SIZE;
-	error = bus_space_map(m86xxx_armcore_bst, BCM53XX_ARMCORE_PBASE,
-	    BCM53XX_ARMCORE_SIZE, 0, &m86xxx_armcore_bsh);
-	if (error)
-		panic("%s: failed to map BCM53xx %s registers: %d",
-		    __func__, "armcore", error);
-
-	curcpu()->ci_softc = &cpu_softc;
-
-	m86xxx_get_chip_ioreg_state(&bcs, m86xxx_ioreg_bst, m86xxx_ioreg_bsh);
-	m86xxx_get_chip_armcore_state(&bcs, m86xxx_armcore_bst, m86xxx_armcore_bsh);
-
-	struct m86xxx_clock_info * const clk = &cpu_softc.cpu_clk;
-
-	m86xxx_clock_init(clk);
-	m86xxx_lcpll_clock_init(clk, bcs.bcs_lcpll_control1,
-	    bcs.bcs_lcpll_control2);
-	m86xxx_genpll_clock_init(clk, bcs.bcs_genpll_control5,
-	    bcs.bcs_genpll_control6, bcs.bcs_genpll_control7);
-	m86xxx_usb_clock_init(clk, bcs.bcs_usb2_control);
-	m86xxx_get_ddr_freq(clk, bcs.bcs_ddr_phy_ctl_pll_status,
-	    bcs.bcs_ddr_phy_ctl_pll_dividers);
-	m86xxx_get_cpu_freq(clk, bcs.bcs_armcore_clk_pllarma,
-	    bcs.bcs_armcore_clk_pllarmb, bcs.bcs_armcore_clk_policy);
-
-	curcpu()->ci_data.cpu_cc_freq = clk->clk_cpu;
-
-#if NARML2CC > 0
-	arml2cc_init(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    ARMCORE_L2C_BASE);
-#endif
-}
-
-void
 m86xxx_dma_bootstrap(psize_t memsize)
 {
 	if (memsize <= 256*1024*1024) {
@@ -540,59 +605,7 @@ m86xxx_cpu_hatch(struct cpu_info *ci)
 	a9tmr_init_cpu_clock(ci);
 }
 #endif
-#endif
 
-void
-m86xxx_device_register(device_t self, void *aux)
-{
-	prop_dictionary_t dict = device_properties(self);
-
-	if (device_is_a(self, "armperiph")
-	    && device_is_a(device_parent(self), "mainbus")) {
-		/*
-		 * XXX KLUDGE ALERT XXX
-		 * The iot mainbus supplies is completely wrong since it scales
-		 * addresses by 2.  The simplest remedy is to replace with our
-		 * bus space used for the armcore registers (which armperiph uses). 
-		 */
-		struct mainbus_attach_args * const mb = aux;
-		mb->mb_iot = m86xxx_armcore_bst;
-		return;
-	}
-
-	/*
-	 * We need to tell the A9 Global/Watchdog Timer
-	 * what frequency it runs at.
-	 */
-	if (device_is_a(self, "arma9tmr") || device_is_a(self, "a9wdt")) {
-		/*
-		 * This clock always runs at (arm_clk div 2) and only goes
-		 * to timers that are part of the A9 MP core subsystem.
-		 */
-                prop_dictionary_set_uint32(dict, "frequency",
-//		    cpu_softc.cpu_clk.clk_cpu / 2);
-		    900 * 1000 * 1000 / 2);
-		return;
-	}
-
-#if 0 
-	if (device_is_a(self, "bcmeth")) {
-		const struct bcmccb_attach_args * const ccbaa = aux;
-		const uint8_t enaddr[ETHER_ADDR_LEN] = {
-			0x00, 0x01, 0x02, 0x03, 0x04,
-			0x05 + 2 * ccbaa->ccbaa_loc.loc_port,
-		};
-		prop_data_t pd = prop_data_create_data(enaddr, ETHER_ADDR_LEN);
-		KASSERT(pd != NULL);
-		if (prop_dictionary_set(device_properties(self), "mac-address", pd) == false) {
-			printf("WARNING: Unable to set mac-address property for %s\n", device_xname(self));
-		}
-		prop_object_release(pd);
-	}
-#endif
-}
-
-#if 0
 #ifdef SRAB_BASE
 static kmutex_t srab_lock __cacheline_aligned;
 
