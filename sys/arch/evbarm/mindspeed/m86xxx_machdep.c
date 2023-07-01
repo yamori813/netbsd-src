@@ -153,15 +153,18 @@ static const struct pmap_devmap m86xxx_devmap[] = {
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE,	/* 0xf0000000 */
 		UART_BASEADDR,
-		0x00010000
-	),
-#if 0
-	DEVMAP_ENTRY(
-		KERNEL_IO_VBASE + 0x00100000,
-		A9_PERIPH_BASE,
 		0x00100000
 	),
-#endif
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x00100000,
+		AXI_APB_CFG_BASE,
+		0x00100000
+	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x00200000,
+		AXI_IRAM_BASE,
+		0x00100000
+	),
 #if 0
 	DEVMAP_ENTRY(
 		KERNEL_IO_IOREG_VBASE,
@@ -295,7 +298,7 @@ initarm(void *arg)
 	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, m86xxx_devmap);
 
 	VPRINTF("bootstrap\n");
-//	m86xxx_bootstrap(KERNEL_IO_IOREG_VBASE);
+	m86xxx_bootstrap(KERNEL_IO_VBASE + 0x00100000 + 0x0B0000);
 
 #ifdef MULTIPROCESSOR
 	uint32_t scu_cfg = bus_space_read_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
@@ -458,9 +461,8 @@ consinit(void)
 	    CCA_MISC_BASE + MISC_CORECTL, v);
 
 #endif
-        if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
-//                        250000000, COM_TYPE_NORMAL, comcnmode))
-                        250000000, COM_TYPE_16550_NOERS, comcnmode))
+	if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
+	    clock_info.clk_axi, COM_TYPE_16550_NOERS, comcnmode))
                 panic("Serial console can not be initialized.");
 }
 

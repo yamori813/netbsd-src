@@ -105,7 +105,7 @@ m86xxx_com_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	memt = axia->aa_iot;
 	iobase = axia->aa_addr;
-	sc->sc_frequency = COMCERTO_AXI_FREQ;
+	sc->sc_frequency = clock_info.clk_axi;
 	sc->sc_type = COM_TYPE_16550_NOERS;
 //	sc->sc_type = COM_TYPE_TEGRA;
 //	sc->sc_type = COM_TYPE_NORMAL;

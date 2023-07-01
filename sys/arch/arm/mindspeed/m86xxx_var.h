@@ -15,6 +15,14 @@ struct axi_attach_args {
 	int		aa_intrbase;
 };
 
+struct m86xxx_clock_info {
+	uint32_t clk_arm;
+	uint32_t clk_axi;
+};
+
+extern struct m86xxx_clock_info clock_info;
+
+void	m86xxx_bootstrap(vaddr_t iobase);
 void	m86xxx_device_register(device_t, void *);
 
 #endif	/* _ARM_MINDSPEED_M86VAR_H */
