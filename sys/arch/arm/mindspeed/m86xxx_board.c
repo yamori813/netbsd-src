@@ -254,6 +254,14 @@ m86xxx_device_register(device_t self, void *aux)
 #endif
 }
 
+#ifdef MULTIPROCESSOR
+void
+m86xxx_cpu_hatch(struct cpu_info *ci)
+{
+	a9tmr_init_cpu_clock(ci);
+}
+#endif
+
 #if 0
 psize_t
 m86xxx_memprobe(void)
@@ -598,14 +606,6 @@ m86xxx_dma_bootstrap(psize_t memsize)
 	KASSERT(m86xxx_bounce_dma_tag._ranges[0].dr_flags == _BUS_DMAMAP_COHERENT);
 #endif
 }
-
-#ifdef MULTIPROCESSOR
-void
-m86xxx_cpu_hatch(struct cpu_info *ci)
-{
-	a9tmr_init_cpu_clock(ci);
-}
-#endif
 
 #ifdef SRAB_BASE
 static kmutex_t srab_lock __cacheline_aligned;
