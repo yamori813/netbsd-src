@@ -202,6 +202,8 @@ m86xxx_bootstrap(vaddr_t iobase)
 	/* XXX why double value? */
 	clock_info.clk_arm = m86xxx_get_arm_clk() * 1000 * 1000 * 2;
 	clock_info.clk_axi = m86xxx_get_axi_clk() * 1000 * 1000 * 2;
+
+	curcpu()->ci_data.cpu_cc_freq = clock_info.clk_arm;
 }
 
 void
