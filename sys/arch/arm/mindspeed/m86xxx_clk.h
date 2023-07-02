@@ -368,3 +368,17 @@ enum {
 #define write_clk_div_bypass_backup(val, reg) writel(val, reg - CLK_REG_DIV_BUG_BASE + IRAM_CLK_REG_MIRROR)
 */
 
+#define CLK_DOMAIN_MASK			(1<<0)
+#define CLK_DOMAIN_SPI_I2C_MASK		(1<<5)
+#define CLK_DOMAIN_TDMNTG_MASK		(1<<4)
+#define CLK_DOMAIN_UART_MASK		(1<<6)
+#define CLK_DOMAIN_PCIE0_MASK		(1<<0)
+#define CLK_DOMAIN_PCIE1_MASK		(1<<1)
+#define CLK_DOMAIN_IPSEC_SPACC_MASK	(1<<2)
+#define CLK_DOMAIN_DPI_CIE_MASK		(1<<5)
+#define CLK_DOMAIN_DPI_DECOMP_MASK	(1<<6)
+#define CLK_DOMAIN_USB0_MASK		(1<<3)
+#define CLK_DOMAIN_USB1_MASK		(1<<4)
+#define CLK_DOMAIN_DUS_MASK		(1<<0)
+#define CLK_DOMAIN_SATA_MASK		(1<<2)
+

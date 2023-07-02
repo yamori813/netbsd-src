@@ -67,11 +67,25 @@ static uint32_t readl(int off)
 	return *(uint32_t *)(baseaddr + 0x0B0000 + off);
 }
 
+static void writel(int off, uint32_t val);
+static void writel(int off, uint32_t val)
+{
+
+	*(uint32_t *)(baseaddr + 0x0B0000 + off) = val;
+}
+
 static uint32_t readl2(int off);
 static uint32_t readl2(int off)
 {
 
 	return *(uint32_t *)(baseaddr + 0x100000 + off);
+}
+
+static void writel_uphy(int off, uint32_t val);
+static void writel_uphy(int off, uint32_t val)
+{
+
+	*(uint32_t *)(baseaddr + 0x0a0000 + off) = val;
 }
 
 static uint32_t m86xxx_get_pll_freq(int pll_no);
@@ -204,6 +218,39 @@ m86xxx_bootstrap(vaddr_t iobase)
 	clock_info.clk_axi = m86xxx_get_axi_clk() * 1000 * 1000 * 2;
 
 	curcpu()->ci_data.cpu_cc_freq = clock_info.clk_arm;
+
+	uint32_t reg = readl(AXI_CLK_CNTRL_2);
+	reg |= (CLK_DOMAIN_USB0_MASK | CLK_DOMAIN_USB1_MASK);
+	writel(AXI_CLK_CNTRL_2, reg);
+
+	reg = readl(USB_RST_CNTRL);
+	reg |= USB1_PHY_RESET_BIT;
+	writel(USB_RST_CNTRL, reg);
+	reg = readl(USB_RST_CNTRL);
+	reg |= USB1_UTMI_RESET_BIT;
+	writel(USB_RST_CNTRL, reg);
+	reg = readl(AXI_RESET_2);
+	reg |= USB1_AXI_RESET_BIT;
+	writel(AXI_RESET_2, reg);
+
+#if 0
+	writel_uphy(0x20, 0x420E82A8);	/* 24MHz */
+#else
+	writel_uphy(0x20, 0x420E82A9);	/* 48MHz */
+#endif
+	writel_uphy(0x24, 0x69C34F53);
+	writel_uphy(0x28, 0x0005D815);
+	writel_uphy(0x2C, 0x00000801);
+
+	reg = readl(USB_RST_CNTRL);
+	reg &= ~USB1_PHY_RESET_BIT;
+	writel(USB_RST_CNTRL, reg);
+	reg = readl(USB_RST_CNTRL);
+	reg &= ~USB1_UTMI_RESET_BIT;
+	writel(USB_RST_CNTRL, reg);
+	reg = readl(AXI_RESET_2);
+	reg &= ~USB1_AXI_RESET_BIT;
+	writel(AXI_RESET_2, reg);
 }
 
 void
