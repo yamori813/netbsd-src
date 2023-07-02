@@ -140,10 +140,11 @@ options 	DB_MAX_LINE=INT_MAX
 makeoptions	DEBUG="-g"	# compile full symbol table
 makeoptions	COPY_SYMTAB=1
 
-## USB Debugging options
+# USB Debugging options
 #options USB_DEBUG
 #options EHCI_DEBUG
 #options OHCI_DEBUG
+#options XHCI_DEBUG
 #options UHUB_DEBUG
 
 
@@ -181,83 +182,8 @@ xhci*		at axi? addr 0x9f000000 intr 54
 usb*            at xhci?
 uhub*		at usb?
 uhub*		at uhub? port ?
-
-
-# ChipCommonA Peripherals
-#bcmcca0		at mainbus?		# ChipCommonA
-#options 	CONADDR=0x18000300, CONSPEED=115200
-#options 	CONSPEED=115200
-#com0		at bcmcca? channel 0
-#com*		at bcmcca? channel 1
-
-# ChipCommonB Peripherals
-#bcmccb0		at mainbus?		# ChipCommonB
-#bcmpax*		at bcmccb? port ? flags 2 # use bounce buffers
-#pci*		at bcmpax?
-#ppb*		at pci? dev ? function ?
-#pci*		at ppb?
-
-#ahcisata*	at pci? dev ? function ?
-#atabus* 	at ahcisata? channel ?
-#options 	ATADEBUG
-#wd*		at atabus? drive ?
-#wm*		at pci? dev ? function ?
-#makphy*		at mii?
-#ukphy*		at mii?
-
-#bcmmdio0	at bcmccb0
-#bcmeth*		at bcmccb? port ?
-
-# SDHC controllers
-#sdhc0		at bcmccb0
-#sdmmc*		at sdhc?		# SD/MMC bus
-#ld*		at sdmmc?
-
-# Random Number Generator
-#bcmrng0		at bcmccb0
-
-# NAND controller
-#bcmnand0	at bcmccb0
-
-# NAND layer
-#nand0		at nandbus?
-
-# use the bad block table
-#options NAND_BBT
-
-# Define flash partitions for board
-#flash0		at nand0 offset 0x000000 size 0x080000 readonly 1 # X-Loader
-#flash1		at nand0 offset 0x080000 size 0x1e0000 readonly 1 # U-Boot
-#flash2		at nand0 offset 0x260000 size 0x020000 readonly 1 # UB Env
-#flash3		at nand0 offset 0x280000 size 0x400000		# kernel
-#flash4		at nand0 offset 0x680000 size 0			# filesystem
-
-# I2C Controller
-#bcmi2c0 	at bcmccb0
-#iic*		at bcmi2c?
-
-# NAND Controller
-#bcmnand0	at bcmccb0
-#nand*		at nandbus?
-#flash*		at nand?
-
-# Watchdog timers
-#bcmwdt*	at bcmccb0
-
-# On-board USB
-#bcmusb*		at bcmccb0
-#ohci*		at bcmusb0
-#usb*		at ohci?
-#ehci*		at bcmusb0
-#usb*		at ehci?
-#uhub*		at usb?
-#uhub*		at uhub? port ?
-#umass*		at uhub? port ? configuration ? interface ?
-#scsibus*	at scsi?
-#sd*		at scsibus? target ? lun ?
-
-# USB Ethernet adapters
-#axe*		at uhub? port ? configuration ? interface ?
+umass*		at uhub? port ? configuration ? interface ?
+kue*		at uhub? port ?	# Kawasaki LSI KL5KUSB101B based adapters
 
 # Hardware clocking and power management
 

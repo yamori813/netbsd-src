@@ -112,41 +112,39 @@ xhci_axi_attach(device_t parent, device_t self, void *aux)
 	intr_establish(aa->aa_intr, IPL_USB, IST_LEVEL,
 	    xhci_intr, sc);
 
-	m86xhci_init(sc);
-
 	int err = xhci_init(sc);
 	if (err) {
 		aprint_error("%s: init failed, error=%d\n", devname, err);
 		return;
 	}
 
+	m86xhci_init(sc);
+
 	/* Attach usb device. */
-	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint,
-	    CFARGS_NONE);
+	if (sc->sc_usb3nports != 0)
+		sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint,
+		    CFARGS_NONE);
+
+	if (sc->sc_usb2nports != 0)
+		sc->sc_child2 = config_found(self, &sc->sc_bus2, usbctlprint,
+		    CFARGS_NONE);
 
 	xhci_start(sc);
 }
 
-#define USBMODE		0xa8
-#define USBMODE_CM_HC	3
-#define USBMODE_SDIS	0x10
-
 static void
 m86xhci_init(struct xhci_softc *sc)
 {
-#if 0
 	uint32_t reg;
 
-	reg = EOREAD4(sc, EHCI_PORTSC(1));
-	reg &= ~(EHCI_PS_CSC | EHCI_PS_PEC | EHCI_PS_OCC);
-	reg |= EHCI_PS_PP | EHCI_PS_PE;
-	EOWRITE4(sc, EHCI_PORTSC(1), reg);
+	reg = bus_space_read_4(sc->sc_iot, sc->sc_ioh, 0xc200);
+	reg &= 0x7FFFFFFF;
+	bus_space_write_4(sc->sc_iot, sc->sc_ioh, 0xc200, reg);
+	reg = bus_space_read_4(sc->sc_iot, sc->sc_ioh, 0xc2c0);
+	reg &= 0x7FFFFFFF;
+	bus_space_write_4(sc->sc_iot, sc->sc_ioh, 0xc2c0, reg);
+	bus_space_write_4(sc->sc_iot, sc->sc_ioh, 0xc110, 0x5Dc11000);
 
-	reg = USBMODE_CM_HC;
-	/* Set "Streaming disable mode"  to avoid Tx under run */
-	reg |= USBMODE_SDIS;
-	EWRITE4(sc, USBMODE, reg);
-#endif
 }
 
 CFATTACH_DECL2_NEW(xhci_axi, sizeof(struct xhci_softc),
