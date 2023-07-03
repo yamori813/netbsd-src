@@ -72,9 +72,9 @@ file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 #file	arch/arm/broadcom/bcm53xx_sdhc.c	sdhc_ccb
 
 # Ethernet
-device  c2ge: ether, ifnet, arp, mii, mii_phy
-attach  c2ge at axi
-file    arch/arm/mindspeed/if_c2ge.c		c2ge
+device  pge: ether, ifnet, arp, mii, mii_phy
+attach  pge at axi
+file    arch/arm/mindspeed/if_pge.c		pge
 
 # USB3 Host Controller (XHCI)
 attach xhci at axi with xhci_axi

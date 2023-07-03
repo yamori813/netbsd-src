@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Mindspeed Comcerto 2000 GEMAC Interface. based on ti/if_cpsw.c */
+/* Mindspeed Comcerto 2000 PFE GEMAC Interface. based on ti/if_cpsw.c */
 
 #include <sys/cdefs.h>
 __KERNEL_RCSID(1, "$NetBSD$");
@@ -57,29 +57,29 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/arswitchreg.h>
 */
 
-struct c2ge_softc {
+struct pge_softc {
 };
 
-static int c2ge_match(device_t, cfdata_t, void *);
-static void c2ge_attach(device_t, device_t, void *);
-static int c2ge_detach(device_t, int);
+static int pge_match(device_t, cfdata_t, void *);
+static void pge_attach(device_t, device_t, void *);
+static int pge_detach(device_t, int);
 
-CFATTACH_DECL_NEW(c2ge, sizeof(struct c2ge_softc),
-    c2ge_match, c2ge_attach, c2ge_detach, NULL);
+CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
+    pge_match, pge_attach, pge_detach, NULL);
 
 static int 
-c2ge_match(device_t parent, cfdata_t cf, void *aux)
+pge_match(device_t parent, cfdata_t cf, void *aux)
 {
 	return 0;
 }
 
 static void
-c2ge_attach(device_t parent, device_t self, void *aux)
+pge_attach(device_t parent, device_t self, void *aux)
 {
 }
 
 static int
-c2ge_detach(device_t self, int flags)
+pge_detach(device_t self, int flags)
 {
 
 	return 0;
