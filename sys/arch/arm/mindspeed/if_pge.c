@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Mindspeed Comcerto 2000 PFE GEMAC Interface. based on ti/if_cpsw.c */
+/* Mindspeed Comcerto 2000 PFE GEMAC Interface. */
 
 #include <sys/cdefs.h>
 __KERNEL_RCSID(1, "$NetBSD$");
@@ -49,33 +49,244 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
 
-/*
-#include <arm/mindspeed/m83xxx_reg.h>
-#include <arm/mindspeed/m83xxx_var.h>
-#include <arm/mindspeed/m83xxx_intc.h>
-#include <arm/mindspeed/if_cgereg.h>
-#include <arm/mindspeed/arswitchreg.h>
-*/
+#include <arm/mindspeed/m86xxx_reg.h>
+#include <arm/mindspeed/m86xxx_var.h>
+#include <arm/mindspeed/m86xxx_intr.h>
+#include <arm/mindspeed/if_pgereg.h>
 
-struct pge_softc {
-};
+typedef uint8_t u8;
+typedef uint32_t u32;
+//#define CBUS_BASE_ADDR 0
+
+#include <arm/mindspeed/pfe/c2000_eth.h>
+#include <arm/mindspeed/pfe/base/pfe.h>
+#include <arm/mindspeed/pfe/base/cbus.h>
+#include <arm/mindspeed/pfe/base/cbus/hif.h>
+
+#include <arm/mindspeed/arswitchreg.h>
+
+#define	PGE_TXFRAGS	16
+#define	MAX_FRAME_SIZE	2048
 
 static int pge_match(device_t, cfdata_t, void *);
 static void pge_attach(device_t, device_t, void *);
 static int pge_detach(device_t, int);
 
+static void pge_start(struct ifnet *);
+static int pge_ioctl(struct ifnet *, u_long, void *);
+static void pge_watchdog(struct ifnet *ifp);
+static int pge_init(struct ifnet *);
+static void pge_stop(struct ifnet *, int);
+
+static int pge_mii_readreg(device_t, int, int, uint16_t *);
+static int pge_mii_writereg(device_t, int, int, uint16_t);
+static void pge_mii_statchg(struct ifnet *);
+
+static int pge_new_rxbuf(struct pge_softc * const, const u_int);
+static void pge_tick(void *);
+
+static int pge_intr(void *);
+
+static int pge_alloc_dma(struct pge_softc *, size_t, void **,bus_dmamap_t *);
+
+static uint32_t pge_emac_base(struct pge_softc * const);
+
 CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
     pge_match, pge_attach, pge_detach, NULL);
+
+static uint32_t pge_emac_base(struct pge_softc * const sc)
+{
+	int addr;
+
+	if (device_unit(sc->sc_dev) == 0)
+		addr = EMAC1_BASE_ADDR;
+	else if (device_unit(sc->sc_dev) == 1)
+		addr = EMAC2_BASE_ADDR;
+	else
+		addr = EMAC3_BASE_ADDR;
+	
+	return addr;
+}
 
 static int 
 pge_match(device_t parent, cfdata_t cf, void *aux)
 {
-	return 0;
+	return 1;
 }
 
 static void
 pge_attach(device_t parent, device_t self, void *aux)
 {
+	struct axi_attach_args * const aa = aux;
+	struct pge_softc * const sc = device_private(self);
+	int i, error;
+	struct ethercom * const ec = &sc->sc_ec;
+	struct ifnet * const ifp = &ec->ec_if;
+	struct mii_data * const mii = &sc->sc_mii;
+	paddr_t paddr;
+
+	sc->sc_dev = self;
+	sc->sc_bst = aa->aa_iot;
+	sc->sc_bdt = aa->aa_dmat;
+	sc->sc_bss = 0x1000000;		/* 16M */
+
+	aprint_normal(": PFE GEMAC Interface\n");
+	aprint_naive("\n");
+
+	mutex_init(&sc->mtx, MUTEX_DEFAULT, IPL_NET);
+	callout_init(&sc->sc_tick_ch, 0);
+	callout_setfunc(&sc->sc_tick_ch, pge_tick, sc);
+	callout_schedule(&sc->sc_tick_ch, hz);
+
+	error = bus_space_map(aa->aa_iot, aa->aa_addr, sc->sc_bss,
+	    0, &sc->sc_bsh);
+	if (error) {
+		aprint_error_dev(sc->sc_dev,
+			"can't map registers: %d\n", error);
+		return;
+	}
+
+	sc->sc_ih = intr_establish(aa->aa_intr, IPL_NET, IST_LEVEL,
+	    pge_intr, sc);
+
+	sc->sc_enaddr[0] = 0xd4;
+	sc->sc_enaddr[1] = 0x94;
+	sc->sc_enaddr[2] = 0xa1;
+	sc->sc_enaddr[3] = 0x97;
+	sc->sc_enaddr[4] = 0x03;
+	sc->sc_enaddr[5] = 0x94 + device_unit(self);
+
+	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
+
+	for (i = 0; i < PGE_TX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES,
+		    PGE_TXFRAGS, MCLBYTES, 0, 0,
+		    &sc->sc_rdp->tx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create tx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->tx_mb[i] = NULL;
+	}
+
+	for (i = 0; i < PGE_RX_RING_CNT; i++) {
+		if ((error = bus_dmamap_create(sc->sc_bdt, MCLBYTES, 1,
+		    MCLBYTES, 0, 0, &sc->sc_rdp->rx_dm[i])) != 0) {
+			aprint_error_dev(sc->sc_dev,
+			    "unable to create rx DMA map: %d\n", error);
+		}
+		sc->sc_rdp->rx_mb[i] = NULL;
+	}
+
+	if (pge_alloc_dma(sc, sizeof(struct bufDesc) * PGE_RX_RING_CNT,
+	    (void **)&(sc->sc_rxdesc_ring), &(sc->sc_rxdesc_dmamap)) != 0)
+		return;
+
+	memset(sc->sc_rxdesc_ring, 0, sizeof(struct bufDesc) * PGE_RX_RING_CNT);
+
+	if (pge_alloc_dma(sc, sizeof(struct bufDesc) * PGE_TX_RING_CNT,
+	    (void **)&(sc->sc_txdesc_ring), &(sc->sc_txdesc_dmamap)) != 0)
+		return;
+
+	memset(sc->sc_txdesc_ring, 0, sizeof(struct bufDesc) * PGE_TX_RING_CNT);
+
+	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
+
+	for (i = 0; i < PGE_TX_RING_CNT; i++) {
+		sc->sc_txdesc_ring[i].data = 0;
+		if (i == PGE_TX_RING_CNT - 1)
+			sc->sc_txdesc_ring[i].next = (struct bufDesc *)paddr;
+		else
+			sc->sc_txdesc_ring[i].next = (struct bufDesc *)paddr +
+			    i + 1;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct bufDesc) * i,
+		    sizeof(struct bufDesc),
+		    BUS_DMASYNC_PREWRITE);
+	}
+
+	sc->sc_txpad = kmem_zalloc(ETHER_MIN_LEN, KM_SLEEP);
+	bus_dmamap_create(sc->sc_bdt, ETHER_MIN_LEN, 1, ETHER_MIN_LEN, 0,
+	    BUS_DMA_WAITOK, &sc->sc_txpad_dm);
+	bus_dmamap_load(sc->sc_bdt, sc->sc_txpad_dm, sc->sc_txpad,
+	    ETHER_MIN_LEN, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
+	    BUS_DMASYNC_PREWRITE);
+
+	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
+	    ether_sprintf(sc->sc_enaddr));
+
+	strlcpy(ifp->if_xname, device_xname(sc->sc_dev), IFNAMSIZ);
+	ifp->if_softc = sc;
+	ifp->if_capabilities = 0;
+	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+	ifp->if_start = pge_start;
+	ifp->if_ioctl = pge_ioctl;
+	ifp->if_init = pge_init;
+	ifp->if_stop = pge_stop;
+	ifp->if_watchdog = pge_watchdog;
+	IFQ_SET_READY(&ifp->if_snd);
+
+	pge_stop(ifp, 0);
+
+	mii->mii_ifp = ifp;
+	mii->mii_readreg = pge_mii_readreg;
+	mii->mii_writereg = pge_mii_writereg;
+	mii->mii_statchg = pge_mii_statchg;
+
+	sc->sc_ec.ec_mii = mii;
+	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
+
+	struct pfe pfe;
+	pfe_probe(&pfe);
+	aprint_normal_dev(sc->sc_dev, "EMAC1 network cfg: %x\n",
+	    pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_NETWORK_CONFIG));
+	aprint_normal_dev(sc->sc_dev, "EMAC2 network cfg: %x\n",
+	    pge_read_4(sc, EMAC2_BASE_ADDR + EMAC_NETWORK_CONFIG));
+	aprint_normal_dev(sc->sc_dev, "EMAC3 network cfg: %x\n",
+	    pge_read_4(sc, EMAC3_BASE_ADDR + EMAC_NETWORK_CONFIG));
+	aprint_normal_dev(sc->sc_dev, "HIF version: %x\n",
+	    pge_read_4(sc, HIF_VERSION));
+#if 0
+	if (device_unit(self) == 0) {
+		arswitch_writereg(self, AR8X16_REG_MODE,
+		    AR8X16_MODE_RGMII_PORT4_ISO);
+		/* work around for phy4 rgmii mode */
+		arswitch_writedbg(self, 4, 0x12, 0x480c);
+		/* rx delay */
+		arswitch_writedbg(self, 4, 0x0, 0x824e);
+		/* tx delay */
+		arswitch_writedbg(self, 4, 0x5, 0x3d47);
+		delay(1000);    /* 1ms, again to let things settle */ 
+/* not work strang behaviour ???
+		arswitch_writereg(self, AR8X16_REG_MASK_CTRL,
+		    AR8X16_MASK_CTRL_SOFT_RESET);
+		delay(1000);
+*/
+#ifdef _DEBUG
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT STS %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1)));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT CTRL %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 4));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(sc->sc_dev, "PORT VLAN %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
+#endif
+		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
+		    arswitch_readreg(self, AR8X16_REG_MODE));
+	}
+#endif
+
+	if_attach(ifp);
+	if_deferred_start_init(ifp, NULL);
+	ether_ifattach(ifp, sc->sc_enaddr);
+
+	/* The attach is successful. */
+	sc->sc_attached = true;
+
+	return;
 }
 
 static int
@@ -83,4 +294,475 @@ pge_detach(device_t self, int flags)
 {
 
 	return 0;
+}
+
+static int
+pge_alloc_dma(struct pge_softc *sc, size_t size, void **addrp,
+              bus_dmamap_t *mapp)
+{
+	bus_dma_segment_t seglist[1];
+	int nsegs, error;
+
+	if ((error = bus_dmamem_alloc(sc->sc_bdt, size, PAGE_SIZE, 0, seglist,
+	    1, &nsegs, M_WAITOK)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to allocate DMA buffer, error=%d\n", error);
+		goto fail_alloc;
+	}
+
+	if ((error = bus_dmamem_map(sc->sc_bdt, seglist, 1, size, addrp,
+	    BUS_DMA_NOWAIT | BUS_DMA_COHERENT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to map DMA buffer, error=%d\n",
+		    error);
+		goto fail_map;
+	}
+
+	if ((error = bus_dmamap_create(sc->sc_bdt, size, 1, size, 0,
+	    BUS_DMA_NOWAIT, mapp)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to create DMA map, error=%d\n", error);
+		goto fail_create;
+	}
+
+	if ((error = bus_dmamap_load(sc->sc_bdt, *mapp, *addrp, size, NULL,
+	    BUS_DMA_NOWAIT)) != 0) {
+		aprint_error_dev(sc->sc_dev,
+		    "unable to load DMA map, error=%d\n", error);
+		goto fail_load;
+	}
+
+	return 0;
+
+ fail_load:
+	bus_dmamap_destroy(sc->sc_bdt, *mapp);
+ fail_create:
+	bus_dmamem_unmap(sc->sc_bdt, *addrp, size);
+ fail_map:
+	bus_dmamem_free(sc->sc_bdt, seglist, 1);
+ fail_alloc:
+	return error;
+}
+
+static void
+pge_watchdog(struct ifnet *ifp)
+{
+	struct pge_softc *sc = ifp->if_softc;
+
+	device_printf(sc->sc_dev, "device timeout %d\n", sc->sc_txnext);
+
+	if_statinc(ifp, if_oerrors);
+}
+
+static int
+pge_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
+{
+/*
+	struct pge_softc * const sc = device_private(dev);
+	int result, wdata;
+
+	wdata = 0x60020000;
+	wdata |= ((phy << 23) | (reg << 18));
+	pge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(pge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
+	result = pge_read_4(sc, GEM_IP + GEM_PHY_MAN);
+
+	*val = (uint16_t)result;
+*/
+	return 0;
+}
+
+static int
+pge_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
+{
+/*
+	struct pge_softc * const sc = device_private(dev);
+	int wdata;
+
+	wdata = 0x50020000;
+	wdata |= ((phy << 23) | (reg << 18) | val);
+	pge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
+	while(!(pge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
+		;
+*/
+	return 0;
+}
+
+static void
+pge_mii_statchg(struct ifnet *ifp)
+{
+	return;
+}
+
+static int
+pge_new_rxbuf(struct pge_softc * const sc, const u_int i)
+{
+	struct pge_ring_data * const rdp = sc->sc_rdp;
+//	const u_int h = RXDESC_PREV(i);
+//	struct pge_cpdma_bd bd;
+//	uint32_t * const dw = bd.word;
+	struct mbuf *m;
+	int error = ENOBUFS;
+
+	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	if (m == NULL) {
+		goto reuse;
+	}
+
+	MCLGET(m, M_DONTWAIT);
+	if ((m->m_flags & M_EXT) == 0) {
+		m_freem(m);
+		goto reuse;
+	}
+
+	/* We have a new buffer, prepare it for the ring. */
+
+	if (rdp->rx_mb[i] != NULL)
+		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+
+	m->m_len = m->m_pkthdr.len = MCLBYTES;
+
+	rdp->rx_mb[i] = m;
+
+	error = bus_dmamap_load_mbuf(sc->sc_bdt, rdp->rx_dm[i], rdp->rx_mb[i],
+	    BUS_DMA_READ | BUS_DMA_NOWAIT);
+	if (error) {
+		device_printf(sc->sc_dev, "can't load rx DMA map %d: %d\n",
+		    i, error);
+	}
+
+	bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+	    0, rdp->rx_dm[i]->dm_mapsize, BUS_DMASYNC_PREREAD);
+
+	error = 0;
+
+reuse:
+	sc->sc_rxdesc_ring[i].data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
+//	sc->sc_rxdesc_ring[i].ctrl = MAX_FRAME_SIZE | BD_CTRL_DESC_EN |
+//	    BD_CTRL_PKT_INT_EN | BD_CTRL_DIR | BD_CTRL_LIFM;
+	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN | BD_CTRL_LIFM |
+	    BD_CTRL_DIR | BD_CTRL_DESC_EN |
+	    BD_BUF_LEN(rdp->rx_dm[i]->dm_segs[0].ds_len);
+	sc->sc_rxdesc_ring[i].status = 0;
+
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+	    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
+            BUS_DMASYNC_PREWRITE);
+
+	return error;
+}
+
+static int
+pge_init(struct ifnet *ifp)
+{
+	struct pge_softc * const sc = ifp->if_softc;
+	int i;
+	int reg;
+//	int mac;
+	paddr_t paddr;
+
+	pge_stop(ifp, 0);
+
+	sc->sc_txnext = 0;
+
+	/* Init circular RX list. */
+	for (i = 0; i < PGE_RX_RING_CNT; i++) {
+		pge_new_rxbuf(sc, i);
+	}
+	sc->sc_rxhead = 0;
+
+	/*
+	 * Give the transmit and receive rings to the chip.
+	 */
+	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
+	pge_write_4(sc, HIF_TX_BDP_ADDR, paddr);
+	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
+	pge_write_4(sc, HIF_RX_BDP_ADDR, paddr);
+
+	reg = (HIF_RX_POLL_CTRL_CYCLE << 16) | HIF_TX_POLL_CTRL_CYCLE;
+	pge_write_4(sc, HIF_POLL_CTRL, reg);
+
+	reg = HIF_CTRL_DMA_EN | HIF_CTRL_BDP_CH_START_WSTB;
+	pge_write_4(sc, HIF_RX_CTRL, reg);
+
+	reg = pge_read_4(sc, HIF_INT_ENABLE);
+	reg |= (HIF_INT_EN | HIF_RXPKT_INT_EN);
+	pge_write_4(sc, HIF_INT_ENABLE, reg);
+
+
+//	reg = pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_NETWORK_CONTROL);
+//	reg |= (EMAC_TX_ENABLE | EMAC_RX_ENABLE);
+//	pge_write_4(sc, EMAC1_BASE_ADDR + EMAC_NETWORK_CONTROL, reg);
+/*
+	mac = sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
+	    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24);
+	pge_write_4(sc, GEM_IP + GEM_LADDR1_BOT, mac);
+	mac = sc->sc_enaddr[4] | (sc->sc_enaddr[5] << 8);
+	pge_write_4(sc, GEM_IP + GEM_LADDR1_TOP, mac);
+*/
+
+	return 0;
+}
+
+static void
+pge_stop(struct ifnet *ifp, int disable)
+{
+	struct pge_softc * const sc = ifp->if_softc;
+	struct pge_ring_data * const rdp = sc->sc_rdp;
+	u_int i;
+//	int reg;
+
+	aprint_debug_dev(sc->sc_dev, "%s: ifp %p disable %d\n", __func__,
+	    ifp, disable);
+
+	if ((ifp->if_flags & IFF_RUNNING) == 0)
+		return;
+
+//	callout_stop(&sc->sc_tick_ch);
+	mii_down(&sc->sc_mii);
+
+/*
+	pge_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, 0);
+
+	reg = pge_read_4(sc, GEM_IP + GEM_NET_CONTROL);
+	reg &= ~(GEM_TX_EN | GEM_RX_EN);
+	pge_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
+*/
+
+	/* Release any queued transmit buffers. */
+	for (i = 0; i < PGE_TX_RING_CNT; i++) {
+		if (rdp->tx_mb[i] != NULL) {
+			bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
+			m_freem(rdp->tx_mb[i]);
+			rdp->tx_mb[i] = NULL;
+		}
+	}
+
+	ifp->if_flags &= ~IFF_RUNNING;
+	ifp->if_timer = 0;
+	sc->sc_txbusy = false;
+
+	if (!disable)
+		return;
+
+	for (i = 0; i < PGE_RX_RING_CNT; i++) {
+		bus_dmamap_unload(sc->sc_bdt, rdp->rx_dm[i]);
+		m_freem(rdp->rx_mb[i]);
+		rdp->rx_mb[i] = NULL;
+	}
+}
+
+static int
+pge_intr(void *arg)
+{
+printf("MORIORI intr");
+#if 0
+	struct pge_softc * const sc = arg;
+	int reg;
+
+	reg = pge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
+
+	if (reg & GEM_IRQ_RX_DONE)
+		pge_rxintr(arg);
+//	else
+	if (reg & GEM_IRQ_TX_DONE)
+		pge_txintr(arg);
+
+	pge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
+#endif
+
+	return 1;
+}
+
+static void
+pge_start(struct ifnet *ifp)
+{
+#if 0
+	struct pge_softc * const sc = ifp->if_softc;
+	struct pge_ring_data * const rdp = sc->sc_rdp;
+	struct mbuf *m;
+	bus_dmamap_t dm;
+	u_int seg;
+	u_int txfree;
+	int txstart = -1;
+	int error;
+	bool pad;
+	u_int mlen;
+	u_int len;
+	int i;
+
+	PGE_LOCK(sc);
+
+	if (__predict_false((ifp->if_flags & IFF_RUNNING) == 0)) {
+		device_printf(sc->sc_dev, "if not run\n");
+		return;
+	}
+	if (__predict_false(sc->sc_txbusy)) {
+		device_printf(sc->sc_dev, "txbusy\n");
+		return;
+	}
+
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    0, sizeof(struct tTXdesc) * PGE_TX_RING_CNT,
+	    BUS_DMASYNC_PREREAD);
+	txfree = 0;
+	for (i = 0;i < PGE_TX_RING_CNT; ++i) {
+		if(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK)
+			++txfree;
+	}
+
+	while (txfree > 0) {
+		len = 0;
+		IFQ_POLL(&ifp->if_snd, m);
+		if (m == NULL)
+			break;
+
+		dm = rdp->tx_dm[sc->sc_txnext];
+		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m,
+		    BUS_DMA_WRITE | BUS_DMA_NOWAIT);
+		if (error == EFBIG) {
+			device_printf(sc->sc_dev, "won't fit\n");
+			IFQ_DEQUEUE(&ifp->if_snd, m);
+			m_freem(m);
+			if_statinc(ifp, if_oerrors);
+			continue;
+		} else if (error != 0) {
+			device_printf(sc->sc_dev, "error\n");
+			break;
+		}
+		if (dm->dm_nsegs + 1 >= txfree) {
+			sc->sc_txbusy = true;
+			bus_dmamap_unload(sc->sc_bdt, dm);
+			break;
+		}
+
+		mlen = m_length(m);
+		pad = mlen < PGE_MIN_FRAMELEN;
+
+		KASSERT(rdp->tx_mb[sc->sc_txnext] == NULL);
+		rdp->tx_mb[sc->sc_txnext] = m;
+		IFQ_DEQUEUE(&ifp->if_snd, m);
+
+		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
+		    BUS_DMASYNC_PREWRITE);
+
+		if (txstart == -1)
+			txstart = sc->sc_txnext;
+		for (seg = 0; seg < dm->dm_nsegs; seg++) {
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			    dm->dm_segs[seg].ds_addr;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			    dm->dm_segs[seg].ds_len;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    (GEMTX_FCS | GEMTX_IE | GEMTX_POOLB);
+			len += dm->dm_segs[seg].ds_len;
+			if (!pad && (seg == dm->dm_nsegs - 1))
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_LAST;
+			if(seg == 0)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_BUFRET;
+			if (sc->sc_txnext == PGE_TX_RING_CNT - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_WRAP;
+
+			txfree--;
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+			    sizeof(struct tTXdesc) * sc->sc_txnext,
+			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
+			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
+		}
+		if (pad) {
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			    sc->sc_txpad_pa;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			    PGE_MIN_FRAMELEN - mlen;
+			len += PGE_MIN_FRAMELEN - mlen;
+			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE | GEMTX_POOLB);
+			if (sc->sc_txnext == PGE_TX_RING_CNT - 1)
+				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
+				    GEMTX_WRAP;
+			txfree--;
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+			    sizeof(struct tTXdesc) * sc->sc_txnext,
+			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
+			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
+		}
+		pge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
+		bpf_mtap(ifp, m, BPF_D_OUT);
+	}
+
+	if (txstart >= 0) {
+		ifp->if_timer = 300;	/* not immediate interrupt */
+	}
+
+	PGE_UNLOCK(sc);
+#endif
+}
+
+static int
+pge_ioctl(struct ifnet *ifp, u_long cmd, void *data)
+{
+	struct pge_softc * const sc = ifp->if_softc;
+	const int s = splnet();
+	int error = 0;
+	int reg;
+	uint32_t base;
+
+	base = pge_emac_base(sc);
+
+	switch (cmd) {
+	case SIOCSIFFLAGS:
+		if ((ifp->if_flags & (IFF_PROMISC | IFF_ALLMULTI)) != 0) {
+			reg = pge_read_4(sc, base + EMAC_NETWORK_CONFIG);
+			reg |= EMAC_ENABLE_COPY_ALL;
+			pge_write_4(sc, base + EMAC_NETWORK_CONFIG, reg);
+		} else {
+			reg = pge_read_4(sc, base + EMAC_NETWORK_CONFIG);
+			reg &= ~EMAC_ENABLE_COPY_ALL;
+			pge_write_4(sc, base + EMAC_NETWORK_CONFIG, reg);
+		}
+		break;
+	default:
+		error = ether_ioctl(ifp, cmd, data);
+		if (error == ENETRESET) {
+			error = 0;
+		}
+		break;
+	}
+
+	splx(s);
+
+	return error;
+}
+
+static void
+pge_tick(void *arg)
+{
+	struct pge_softc * const sc = arg;
+	uint32_t reg;
+
+/*
+	int use = 0;
+	int i;
+	for (i = 0; i < PGE_RX_RING_CNT; i++) {
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+	    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
+	    BUS_DMASYNC_PREREAD);
+	if(sc->sc_rxdesc_ring[i].ctrl & BD_CTRL_DESC_EN)
+		++use;
+	}
+	if(use) {
+	reg = pge_read_4(sc, HIF_RX_CTRL);
+	reg |= HIF_CTRL_BDP_CH_START_WSTB;
+	pge_write_4(sc, HIF_RX_CTRL, reg);
+	}
+*/
+	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR);
+//	reg = pge_read_4(sc, HIF_INT_SRC);
+	printf("reg=%x\n", reg);
+
+	callout_schedule(&sc->sc_tick_ch, hz);
 }
