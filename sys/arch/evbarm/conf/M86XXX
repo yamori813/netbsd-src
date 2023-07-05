@@ -175,7 +175,7 @@ arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
 
 axi0		at mainbus?		# AXI
 com*		at axi? addr 0x96400000 intr 59
-pge0		at axi? addr 0xc0200000
+pge0		at axi? addr 0x9c000000 intr 36
 xhci*		at axi? addr 0x9f000000 intr 54
 
 # USB bus support
