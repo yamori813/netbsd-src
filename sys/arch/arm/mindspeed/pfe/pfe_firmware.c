@@ -41,21 +41,21 @@
 typedef uint32_t u32;
 typedef uint8_t u8;
 
+/*
 #include <arm/mindspeed/if_pgereg.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
 #include <arm/mindspeed/pfe/hal.h>
 #include <arm/mindspeed/pfe/pfe_firmware.h>
-
-#if 0
-
+*/
 
 /** @file
  *  Contains all the functions to handle parsing and loading of PE firmware files.
  */
 
+#include "base/pfe.h"
+#include "c2000_eth.h"
 #include "hal.h"
 #include "pfe_firmware.h"
-#include "pfe/pfe.h"
 
 
 /* CLASS-PE ELF file content */
@@ -83,6 +83,7 @@ unsigned char util_fw_data[] = {
 * @return		0 on sucess, a negative value on error
 *
 */
+int pfe_load_elf(int pe_mask, const struct firmware *fw);
 int pfe_load_elf(int pe_mask, const struct firmware *fw)
 {
 	Elf32_Ehdr *elf_hdr = (Elf32_Ehdr *)fw->data;
@@ -196,7 +197,7 @@ int pfe_firmware_init(void)
 	tmu_enable(0xf);
 	class_enable();
 
-	gpi_enable(HGPI_BASE_ADDR);
+	gpi_enable((void *)HGPI_BASE_ADDR);
 
 
 err3:
@@ -218,4 +219,3 @@ void pfe_firmware_exit(void)
 	hif_tx_disable();
 	hif_rx_disable();
 }
-#endif

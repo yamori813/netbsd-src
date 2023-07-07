@@ -681,7 +681,7 @@ int pfe_probe(struct pfe *pfe)
     * by now pfe is,  
     * - out of reset + disabled + configured,
     * Fw loading should be done after pfe_hw_init() */
-//	pfe_firmware_init();
+	pfe_firmware_init();
 
 	init_done = 1;
 

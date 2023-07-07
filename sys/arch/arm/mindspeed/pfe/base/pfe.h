@@ -1,6 +1,12 @@
 #ifndef _PFE_H_
 #define _PFE_H_
 
+#include "../elf.h"
+#define be16_to_cpu(x) be16toh(x)
+#define be32_to_cpu(x) be32toh(x)
+#define cpu_to_be16(x) htobe16(x)
+#define cpu_to_be32(x) htobe32(x)
+
 #define CLASS_DMEM_BASE_ADDR(i)	(0x00000000 | ((i) << 20))
 #define CLASS_IMEM_BASE_ADDR(i)	(0x00000000 | ((i) << 20)) /* Only valid for mem access register interface */
 #define CLASS_DMEM_SIZE		0x00002000
@@ -148,8 +154,8 @@ struct pe_info
 void pe_lmem_read(u32 *dst, u32 len, u32 offset);
 void pe_lmem_write(u32 *src, u32 len, u32 offset);
 
-void pe_dmem_memcpy_to32(int id, u32 dst, const void *src, unsigned int len);
-void pe_pmem_memcpy_to32(int id, u32 dst, const void *src, unsigned int len);
+void pe_dmem_memcpy_to32(int id, u32 dst, void *src, unsigned int len);
+void pe_pmem_memcpy_to32(int id, u32 dst, void *src, unsigned int len);
 
 u32 pe_pmem_read(int id, u32 addr, u8 size);
 
@@ -176,7 +182,7 @@ u32 util_bus_read(u32 addr, u8 size);
 #define pe_mem_writew(id, val, addr)		pe_mem_write(id, val, addr, 2)
 #define pe_mem_writeb(id, val, addr)		pe_mem_write(id, val, addr, 1)
 
-//int pe_load_elf_section(int id, const void *data, Elf32_Shdr *shdr);
+int pe_load_elf_section(int id, void *data, Elf32_Shdr *shdr);
 
 void pfe_lib_init(void *cbus_base, void *ddr_base, unsigned long ddr_phys_base);
 void bmu_init(void *base, BMU_CFG *cfg);
