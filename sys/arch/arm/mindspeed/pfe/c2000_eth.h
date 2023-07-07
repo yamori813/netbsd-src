@@ -166,12 +166,12 @@ typedef struct c2000_eth_dev {
 	struct c2000_eth_platform_data *einfo;
 
 } c2000_eth_dev_t;
+#endif   /* NOTUSE */
 
 
 struct firmware {
 	u8 *data;
 };
-#endif   /* NOTUSE */
 
 
 int pfe_probe(struct pfe *pfe);

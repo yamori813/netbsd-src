@@ -73,6 +73,7 @@ extern struct pge_softc *pge_sc;
 #define printk(fmt, arg...)	aprint_normal_dev(pge_sc->sc_dev, fmt, ##arg)
 
 #define KERN_INFO
+#define KERN_ERR
 
 /*
  * register space access macros
@@ -92,7 +93,12 @@ writel(uint32_t const value, bus_size_t const offset)
 	    offset - CBUS_BASE_ADDR, value);
 }
 
-
+static inline void
+writew(uint16_t const value, bus_size_t const offset)
+{
+        bus_space_write_2(pge_sc->sc_bst, pge_sc->sc_bsh,
+	    offset - CBUS_BASE_ADDR, value);
+}
 #endif
 
 
