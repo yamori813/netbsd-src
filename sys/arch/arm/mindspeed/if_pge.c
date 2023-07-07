@@ -41,14 +41,6 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-#include <net/if.h>
-#include <net/if_ether.h>
-#include <net/if_media.h>
-#include <net/bpf.h>
-
-#include <dev/mii/mii.h>
-#include <dev/mii/miivar.h>
-
 #include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
 #include <arm/mindspeed/m86xxx_intr.h>
@@ -93,6 +85,8 @@ static uint32_t pge_emac_base(struct pge_softc * const);
 
 CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
     pge_match, pge_attach, pge_detach, NULL);
+
+extern struct pge_softc *pge_sc;
 
 static uint32_t pge_emac_base(struct pge_softc * const sc)
 {
@@ -212,6 +206,16 @@ pge_attach(device_t parent, device_t self, void *aux)
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
 	    BUS_DMASYNC_PREWRITE);
 
+	sc->sc_tmu = kmem_zalloc(TMU_LLM_SIZE, KM_SLEEP);
+	bus_dmamap_create(sc->sc_bdt, TMU_LLM_SIZE, 1, TMU_LLM_SIZE, 0,
+	    BUS_DMA_WAITOK, &sc->sc_tmu_dm);
+	bus_dmamap_load(sc->sc_bdt, sc->sc_tmu_dm, sc->sc_tmu,
+	    TMU_LLM_SIZE, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
+//	bus_dmamap_sync(sc->sc_bdt, sc->sc_tmu_dm, 0, TMU_LLM_SIZE,
+//	    BUS_DMASYNC_PREWRITE);
+	aprint_normal_dev(sc->sc_dev, "tmu %x %x\n", (int)sc->sc_tmu,
+	    (int) sc->sc_tmu_pa);
+
 	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
 	    ether_sprintf(sc->sc_enaddr));
 
@@ -236,8 +240,10 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
-	struct pfe pfe;
+	pge_sc = sc;
+	struct pfe pfe;   /* dummy */
 	pfe_probe(&pfe);
+/*
 	aprint_normal_dev(sc->sc_dev, "EMAC1 network cfg: %x\n",
 	    pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_NETWORK_CONFIG));
 	aprint_normal_dev(sc->sc_dev, "EMAC2 network cfg: %x\n",
@@ -246,6 +252,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 	    pge_read_4(sc, EMAC3_BASE_ADDR + EMAC_NETWORK_CONFIG));
 	aprint_normal_dev(sc->sc_dev, "HIF version: %x\n",
 	    pge_read_4(sc, HIF_VERSION));
+*/
 #if 0
 	if (device_unit(self) == 0) {
 		arswitch_writereg(self, AR8X16_REG_MODE,
@@ -476,20 +483,19 @@ pge_init(struct ifnet *ifp)
 	 * Give the transmit and receive rings to the chip.
 	 */
 	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
-	pge_write_4(sc, HIF_TX_BDP_ADDR, paddr);
+	pge_write_4(sc, HIF_TX_BDP_ADDR - CBUS_BASE_ADDR, paddr);
 	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
-	pge_write_4(sc, HIF_RX_BDP_ADDR, paddr);
+	pge_write_4(sc, HIF_RX_BDP_ADDR - CBUS_BASE_ADDR, paddr);
 
 	reg = (HIF_RX_POLL_CTRL_CYCLE << 16) | HIF_TX_POLL_CTRL_CYCLE;
-	pge_write_4(sc, HIF_POLL_CTRL, reg);
+	pge_write_4(sc, HIF_POLL_CTRL - CBUS_BASE_ADDR, reg);
 
 	reg = HIF_CTRL_DMA_EN | HIF_CTRL_BDP_CH_START_WSTB;
-	pge_write_4(sc, HIF_RX_CTRL, reg);
+	pge_write_4(sc, HIF_RX_CTRL - CBUS_BASE_ADDR, reg);
 
-	reg = pge_read_4(sc, HIF_INT_ENABLE);
+	reg = pge_read_4(sc, HIF_INT_ENABLE - CBUS_BASE_ADDR);
 	reg |= (HIF_INT_EN | HIF_RXPKT_INT_EN);
-	pge_write_4(sc, HIF_INT_ENABLE, reg);
-
+	pge_write_4(sc, HIF_INT_ENABLE - CBUS_BASE_ADDR, reg);
 
 //	reg = pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_NETWORK_CONTROL);
 //	reg |= (EMAC_TX_ENABLE | EMAC_RX_ENABLE);
@@ -760,8 +766,8 @@ pge_tick(void *arg)
 	pge_write_4(sc, HIF_RX_CTRL, reg);
 	}
 */
-	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR);
-//	reg = pge_read_4(sc, HIF_INT_SRC);
+	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
+//	reg = pge_read_4(sc, HIF_INT_SRC - CBUS_BASE_ADDR);
 	printf("reg=%x\n", reg);
 
 	callout_schedule(&sc->sc_tick_ch, hz);

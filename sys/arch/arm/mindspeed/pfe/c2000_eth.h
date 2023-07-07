@@ -47,7 +47,8 @@
 #define BMU2_DDR_SIZE		(DDR_BUF_SIZE * BMU2_BUF_COUNT)
 
 #define TMU_LLM_BASEADDR	(BMU2_DDR_BASEADDR + BMU2_DDR_SIZE)
-#define TMU_LLM_QUEUE_LEN	(16 * 256)			/**< Must be power of two and at least 16 * 8 = 128 bytes */
+//#define TMU_LLM_QUEUE_LEN	(16 * 256)			/**< Must be power of two and at least 16 * 8 = 128 bytes */
+#define TMU_LLM_QUEUE_LEN	(16 * 8)			/**< Must be power of two and at least 16 * 8 = 128 bytes */
 #define TMU_LLM_SIZE		(4 * 16 * TMU_LLM_QUEUE_LEN)	/**< (4 TMU's x 16 queues x queue_len) */
 
 #define HIF_RX_PKT_DDR_BASEADDR (TMU_LLM_BASEADDR + TMU_LLM_SIZE)

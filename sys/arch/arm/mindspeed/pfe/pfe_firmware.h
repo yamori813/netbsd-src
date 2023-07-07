@@ -28,73 +28,21 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _HAL_H_
-#define _HAL_H_
-
-#if defined(CONFIG_PLATFORM_PCI)  
-/* For ChipIT */
-
-#include <linux/types.h>
-#include <linux/elf.h>
-#include <linux/errno.h>
-#include <linux/pci.h>
-#include <asm/io.h>
-#include <linux/slab.h>
-#include <linux/firmware.h>
-
-#include "pfe_mod.h"
-
-#define free(x)  kfree(x)
-#define xzalloc(x)  kmalloc(x, GFP_DMA)
-#define printf  printk
-
-//#define dprint(fmt, arg...)	printk(fmt, ##arg)
-#define dprint(fmt, arg...)	
-
-#else
-
-/*
-#include <linux/types.h>
-#include <elf.h>
-#include <common.h>
-#include <errno.h>
-#include <asm/byteorder.h>
-#include <miidev.h>
-#include <malloc.h>
-#include <asm/io.h>
-*/
-
-#include <arm/mindspeed/if_pgereg.h>
-
-#include "c2000_eth.h"
-
-extern struct pge_softc *pge_sc;
-
-#define printk(fmt, arg...)	aprint_normal_dev(pge_sc->sc_dev, fmt, ##arg)
-
-#define KERN_INFO
-
-/*
- * register space access macros
+/** @file
+ *  Contains all the defines to handle parsing and loading of PE firmware files.
  */
 
-static inline uint32_t
-readl(bus_size_t const offset)
-{
-        return bus_space_read_4(pge_sc->sc_bst, pge_sc->sc_bsh,
-	    offset - CBUS_BASE_ADDR);
-}
+#ifndef __PFE_FIRMWARE_H__
+#define __PFE_FIRMWARE_H__
 
-static inline void
-writel(uint32_t const value, bus_size_t const offset)
-{
-        bus_space_write_4(pge_sc->sc_bst, pge_sc->sc_bsh,
-	    offset - CBUS_BASE_ADDR, value);
-}
+
+#define CLASS_FIRMWARE_FILENAME		"class_sbl_c2000_elf.fw"
+#define TMU_FIRMWARE_FILENAME		   "tmu_sbl_c2000_elf.fw"
+#define UTIL_FIRMWARE_FILENAME		"util_c2000_elf.fw" 
+
+
+int pfe_firmware_init(void);
+void pfe_firmware_exit(void);
 
 
 #endif
-
-
-#endif /* _HAL_H_ */
-

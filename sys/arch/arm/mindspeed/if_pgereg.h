@@ -29,6 +29,14 @@
 #ifndef __IF_PGEREG_H__
 #define	__IF_PGEREG_H__
 
+#include <net/if.h>
+#include <net/if_ether.h>
+#include <net/if_media.h>
+#include <net/bpf.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
+
 typedef struct bufDesc {
 	uint32_t ctrl;
 	uint32_t status;
@@ -50,6 +58,8 @@ typedef struct hif_header_s {
 #define	PGE_RX_RING_SIZE	sizeof(struct bufDesc) * CGE_RX_RING_CNT
 
 #define	PGE_MIN_FRAMELEN	(ETHER_MIN_LEN - ETHER_CRC_LEN)
+
+#define	PFE_DDR_SIZE		0xc0
 
 #define	PGE_TX_RING_ADDR(sc, i)	\
     ((sc)->pge_rdata.pge_tx_ring_paddr + sizeof(struct tTXdesc) * (i))
@@ -78,6 +88,9 @@ struct pge_softc {
 	void			*sc_txpad;
 	bus_dmamap_t		sc_txpad_dm;
 #define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
+	void			*sc_tmu;
+	bus_dmamap_t		sc_tmu_dm;
+#define sc_tmu_pa sc_tmu_dm->dm_segs[0].ds_addr
 	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
 	bool			sc_attached;
 	struct pge_ring_data	*sc_rdp;

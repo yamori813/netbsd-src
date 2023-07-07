@@ -45,7 +45,8 @@ extern unsigned long ddr_phys_base_addr;
 extern void *cbus_base_addr;
 #define CBUS_BASE_ADDR		cbus_base_addr
 #else
-#define CBUS_BASE_ADDR		0x9c000000
+//#define CBUS_BASE_ADDR		0x9c000000
+#define CBUS_BASE_ADDR		0
 #endif
 
 #define DDR_PHYS_BASE_ADDR	ddr_phys_base_addr

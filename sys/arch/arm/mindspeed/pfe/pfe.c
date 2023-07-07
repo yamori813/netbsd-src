@@ -40,22 +40,28 @@
 
 typedef uint32_t u32;
 typedef uint8_t u8;
-//#define CBUS_BASE_ADDR 0
 
+#include <arm/mindspeed/if_pgereg.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
+#include <arm/mindspeed/pfe/hal.h>
 
 void *cbus_base_addr;
 void *ddr_base_addr;
 unsigned long ddr_phys_base_addr;
+
+struct pge_softc *pge_sc;
 
 static struct pe_info pe[MAX_PE];
 
 /** Initializes the PFE library.
 * Must be called before using any of the library functions.
 *
-* @param[in] cbus_base		CBUS virtual base address (as mapped in the host CPU address space)
-* @param[in] ddr_base		DDR virtual base address (as mapped in the host CPU address space)
-* @param[in] ddr_phys_base	DDR physical base address (as mapped in platform)
+* @param[in] cbus_base		CBUS virtual base address
+*				(as mapped in the host CPU address space)
+* @param[in] ddr_base		DDR virtual base address
+*				(as mapped in the host CPU address space)
+* @param[in] ddr_phys_base	DDR physical base address
+*				(as mapped in platform)
 */
 void pfe_lib_init(void *cbus_base, void *ddr_base, unsigned long ddr_phys_base)
 {
@@ -668,6 +674,7 @@ void pe_lmem_write(u32 *src, u32 len, u32 offset)
 	if (len & 0x03)
 		class_bus_write(*src, PE_LMEM_BASE_ADDR + offset, (len & 0x03));
 }
+#endif   /* NOTUSE */
 
 /**************************** BMU ***************************/
 
@@ -689,7 +696,7 @@ void bmu_init(void *base, BMU_CFG *cfg)
 */
 void bmu_reset(void *base)
 {
-	writel(CORE_SW_RESET, base + BMU_CTRL);
+	writel(CORE_SW_RESET, (int)base + BMU_CTRL);
 }
 
 /** Enabled a BMU block.
@@ -697,7 +704,7 @@ void bmu_reset(void *base)
 */
 void bmu_enable(void *base)
 {
-	writel (CORE_ENABLE, base + BMU_CTRL);
+	writel (CORE_ENABLE, (int)base + BMU_CTRL);
 }
 
 /** Disables a BMU block.
@@ -705,7 +712,7 @@ void bmu_enable(void *base)
 */
 void bmu_disable(void *base)
 {
-	writel (CORE_DISABLE, base + BMU_CTRL);
+	writel (CORE_DISABLE, (int)base + BMU_CTRL);
 }
 
 /** Sets the configuration of a BMU block.
@@ -714,14 +721,14 @@ void bmu_disable(void *base)
 */
 void bmu_set_config(void *base, BMU_CFG *cfg)
 {	
-	writel (cfg->baseaddr, base + BMU_UCAST_BASE_ADDR);
-	writel (cfg->count & 0xffff, base + BMU_UCAST_CONFIG);
-	writel (cfg->size & 0xffff, base + BMU_BUF_SIZE);
-//	writel (BMU1_THRES_CNT, base + BMU_THRES);
+	writel (cfg->baseaddr, (int)base + BMU_UCAST_BASE_ADDR);
+	writel (cfg->count & 0xffff, (int)base + BMU_UCAST_CONFIG);
+	writel (cfg->size & 0xffff, (int)base + BMU_BUF_SIZE);
+//	writel (BMU1_THRES_CNT, (int)base + BMU_THRES);
 
 	/* Interrupts are never used */
-//	writel (0x0, base + BMU_INT_SRC);
-	writel (0x0, base + BMU_INT_ENABLE);
+//	writel (0x0, (int)base + BMU_INT_SRC);
+	writel (0x0, (int)base + BMU_INT_ENABLE);
 }
 
 /**************************** GEMAC ***************************/
@@ -737,12 +744,12 @@ void gemac_init(void *base, void *cfg)
 }
 
 /** GEMAC set speed.
-* @param[in] base	GEMAC base address
+* @param[in] (int)base	GEMAC base address
 * @param[in] speed	GEMAC speed (10, 100 or 1000 Mbps)
 */
 void gemac_set_speed(void *base, MAC_SPEED gem_speed)
 {
-	u32 val = readl(base + EMAC_NETWORK_CONFIG);
+	u32 val = readl((int)base + EMAC_NETWORK_CONFIG);
 
 	val = val & ~EMAC_SPEED_MASK;
 
@@ -773,27 +780,27 @@ void gemac_set_speed(void *base, MAC_SPEED gem_speed)
 		break;
 	}
 	
-	writel (val, base + EMAC_NETWORK_CONFIG);
+	writel (val, (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC set duplex.
-* @param[in] base	GEMAC base address
+* @param[in] (int)base	GEMAC base address
 * @param[in] duplex	GEMAC duplex mode (Full, Half)
 */
 void gemac_set_duplex(void *base, int duplex)
 {
-	u32 val = readl(base + EMAC_NETWORK_CONFIG);
+	u32 val = readl((int)base + EMAC_NETWORK_CONFIG);
 
 	if (duplex == DUPLEX_HALF)
 		val = (val & ~EMAC_DUPLEX_MASK) | EMAC_HALF_DUP;
 	else
 		val = (val & ~EMAC_DUPLEX_MASK) | EMAC_FULL_DUP;
   
-	writel (val, base + EMAC_NETWORK_CONFIG);
+	writel (val, (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC set mode.
-* @param[in] base	GEMAC base address
+* @param[in] (int)base	GEMAC base address
 * @param[in] mode	GEMAC operation mode (MII, RMII, RGMII, SGMII)
 */
 void gemac_set_mode(void *base, int mode)
@@ -801,33 +808,33 @@ void gemac_set_mode(void *base, int mode)
 	switch (mode)
 	{
 	case GMII:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_GMII_MODE_ENABLE, base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_GMII_MODE_ENABLE, (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), (int)base + EMAC_NETWORK_CONFIG);
 		break;
 
 	case RGMII:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_RGMII_MODE_ENABLE, base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_RGMII_MODE_ENABLE, (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), (int)base + EMAC_NETWORK_CONFIG);
 		break;
 
 	case RMII:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_RMII_MODE_ENABLE, base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_RMII_MODE_ENABLE, (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), (int)base + EMAC_NETWORK_CONFIG);
 		break;
 
 	case MII:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_MII_MODE_ENABLE, base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_MII_MODE_ENABLE, (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), (int)base + EMAC_NETWORK_CONFIG);
 		break;
 
 	case SGMII:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | (EMAC_RMII_MODE_DISABLE | EMAC_RGMII_MODE_DISABLE), base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_SGMII_MODE_ENABLE, base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | (EMAC_RMII_MODE_DISABLE | EMAC_RGMII_MODE_DISABLE), (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_SGMII_MODE_ENABLE, (int)base + EMAC_NETWORK_CONFIG);
 		break;
 
 	default:
-		writel ((readl(base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_MII_MODE_ENABLE, base + EMAC_CONTROL);
-		writel (readl(base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), base + EMAC_NETWORK_CONFIG);
+		writel ((readl((int)base + EMAC_CONTROL) & ~EMAC_MODE_MASK) | EMAC_MII_MODE_ENABLE, (int)base + EMAC_CONTROL);
+		writel (readl((int)base + EMAC_NETWORK_CONFIG) & (~EMAC_SGMII_MODE_ENABLE), (int)base + EMAC_NETWORK_CONFIG);
 		break;
 	}
 }
@@ -839,9 +846,9 @@ void gemac_enable_mdio(void *base)
 {
         u32 data;
 
-        data = readl(base + EMAC_NETWORK_CONTROL);
+        data = readl((int)base + EMAC_NETWORK_CONTROL);
         data |= EMAC_MDIO_EN;
-        writel(data, base + EMAC_NETWORK_CONTROL);
+        writel(data, (int)base + EMAC_NETWORK_CONTROL);
 }
 
 /** GEMAC Disable MDIO: Disable the Management interface.
@@ -851,9 +858,9 @@ void gemac_disable_mdio(void *base)
 {
         u32 data;
 
-        data = readl(base + EMAC_NETWORK_CONTROL);
+        data = readl((int)base + EMAC_NETWORK_CONTROL);
         data &= ~EMAC_MDIO_EN;
-        writel(data, base + EMAC_NETWORK_CONTROL);
+        writel(data, (int)base + EMAC_NETWORK_CONTROL);
 }
 
 /** GEMAC Set MDC clock division
@@ -864,10 +871,10 @@ void gemac_set_mdc_div(void *base, MAC_MDC_DIV gem_mdcdiv)
 {
         u32 data;
 
-        data = readl(base + EMAC_NETWORK_CONFIG);
+        data = readl((int)base + EMAC_NETWORK_CONFIG);
 	data &= ~(MDC_DIV_MASK << MDC_DIV_SHIFT);
         data |= (gem_mdcdiv & MDC_DIV_MASK) << MDC_DIV_SHIFT;
-        writel(data, base + EMAC_NETWORK_CONFIG);
+        writel(data, (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC reset function.
@@ -882,7 +889,7 @@ void gemac_reset(void *base)
 */
 void gemac_enable(void *base)
 {  
-	writel (readl(base + EMAC_NETWORK_CONTROL) | EMAC_TX_ENABLE | EMAC_RX_ENABLE, base + EMAC_NETWORK_CONTROL);
+	writel (readl((int)base + EMAC_NETWORK_CONTROL) | EMAC_TX_ENABLE | EMAC_RX_ENABLE, (int)base + EMAC_NETWORK_CONTROL);
 }
 
 /** GEMAC disable function.
@@ -890,7 +897,7 @@ void gemac_enable(void *base)
 */
 void gemac_disable(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONTROL) & ~(EMAC_TX_ENABLE | EMAC_RX_ENABLE), base + EMAC_NETWORK_CONTROL);
+	writel (readl((int)base + EMAC_NETWORK_CONTROL) & ~(EMAC_TX_ENABLE | EMAC_RX_ENABLE), (int)base + EMAC_NETWORK_CONTROL);
 }
 
 /** GEMAC set mac address configuration.
@@ -899,14 +906,14 @@ void gemac_disable(void *base)
 */
 void gemac_set_address(void *base, SPEC_ADDR *addr)
 { 
-	writel(addr->one.bottom,	base + EMAC_SPEC1_ADD_BOT);
-	writel(addr->one.top,		base + EMAC_SPEC1_ADD_TOP); 
-	writel(addr->two.bottom,	base + EMAC_SPEC2_ADD_BOT);
-	writel(addr->two.top,		base + EMAC_SPEC2_ADD_TOP);
-	writel(addr->three.bottom,	base + EMAC_SPEC3_ADD_BOT);
-	writel(addr->three.top,		base + EMAC_SPEC3_ADD_TOP);
-	writel(addr->four.bottom,	base + EMAC_SPEC4_ADD_BOT);
-	writel(addr->four.top,		base + EMAC_SPEC4_ADD_TOP);
+	writel(addr->one.bottom, (int)base + EMAC_SPEC1_ADD_BOT);
+	writel(addr->one.top, (int)base + EMAC_SPEC1_ADD_TOP); 
+	writel(addr->two.bottom, (int)base + EMAC_SPEC2_ADD_BOT);
+	writel(addr->two.top, (int)base + EMAC_SPEC2_ADD_TOP);
+	writel(addr->three.bottom, (int)base + EMAC_SPEC3_ADD_BOT);
+	writel(addr->three.top, (int)base + EMAC_SPEC3_ADD_TOP);
+	writel(addr->four.bottom, (int)base + EMAC_SPEC4_ADD_BOT);
+	writel(addr->four.top, (int)base + EMAC_SPEC4_ADD_TOP);
 } 
 
 /** GEMAC get mac address configuration.
@@ -918,14 +925,14 @@ SPEC_ADDR gemac_get_address(void *base)
 {
 	SPEC_ADDR addr;
 	
-	addr.one.bottom = 	readl(base + EMAC_SPEC1_ADD_BOT);
-	addr.one.top = 		readl(base + EMAC_SPEC1_ADD_TOP); 
-	addr.two.bottom =	readl(base + EMAC_SPEC2_ADD_BOT);
-	addr.two.top =		readl(base + EMAC_SPEC2_ADD_TOP);
-	addr.three.bottom =	readl(base + EMAC_SPEC3_ADD_BOT);
-	addr.three.top =	readl(base + EMAC_SPEC3_ADD_TOP);
-	addr.four.bottom =	readl(base + EMAC_SPEC4_ADD_BOT);
-	addr.four.top =		readl(base + EMAC_SPEC4_ADD_TOP);
+	addr.one.bottom = readl((int)base + EMAC_SPEC1_ADD_BOT);
+	addr.one.top = readl((int)base + EMAC_SPEC1_ADD_TOP); 
+	addr.two.bottom = readl((int)base + EMAC_SPEC2_ADD_BOT);
+	addr.two.top = readl((int)base + EMAC_SPEC2_ADD_TOP);
+	addr.three.bottom = readl((int)base + EMAC_SPEC3_ADD_BOT);
+	addr.three.top = readl((int)base + EMAC_SPEC3_ADD_TOP);
+	addr.four.bottom = readl((int)base + EMAC_SPEC4_ADD_BOT);
+	addr.four.top = readl((int)base + EMAC_SPEC4_ADD_TOP);
 	
 	return addr;
 }
@@ -938,42 +945,46 @@ SPEC_ADDR gemac_get_address(void *base)
 */
 void gemac_set_laddr1(void *base, MAC_ADDR *address)
 {
-	writel(address->bottom,		base + EMAC_SPEC1_ADD_BOT);
-	writel(address->top,		base + EMAC_SPEC1_ADD_TOP); 
+	writel(address->bottom,	(int)base + EMAC_SPEC1_ADD_BOT);
+	writel(address->top, (int)base + EMAC_SPEC1_ADD_TOP); 
 }
 
 
 void gemac_set_laddr2(void *base, MAC_ADDR *address)
 {
-	writel(address->bottom,		base + EMAC_SPEC2_ADD_BOT);
-	writel(address->top,		base + EMAC_SPEC2_ADD_TOP); 
+	writel(address->bottom, (int)base + EMAC_SPEC2_ADD_BOT);
+	writel(address->top, (int)base + EMAC_SPEC2_ADD_TOP); 
 }
 
 
 void gemac_set_laddr3(void *base, MAC_ADDR *address)
 {
-	writel(address->bottom,		base + EMAC_SPEC3_ADD_BOT);
-	writel(address->top,		base + EMAC_SPEC3_ADD_TOP); 
+	writel(address->bottom, (int)base + EMAC_SPEC3_ADD_BOT);
+	writel(address->top, (int)base + EMAC_SPEC3_ADD_TOP); 
 }
 
 
 void gemac_set_laddr4(void *base, MAC_ADDR *address)
 {
-	writel(address->bottom,		base + EMAC_SPEC4_ADD_BOT);
-	writel(address->top,		base + EMAC_SPEC4_ADD_TOP); 
+	writel(address->bottom, (int)base + EMAC_SPEC4_ADD_BOT);
+	writel(address->top, (int)base + EMAC_SPEC4_ADD_TOP); 
 }
 
 void gemac_set_laddrN(void *base, MAC_ADDR *address, unsigned int entry_index)
 {
 	if (entry_index < 5)
 	{	
-		writel(address->bottom,		base + (entry_index * 8) + EMAC_SPEC1_ADD_BOT);
-		writel(address->top,		base + (entry_index * 8) + EMAC_SPEC1_ADD_TOP);
+		writel(address->bottom,	(int)base + (entry_index * 8) +
+		    EMAC_SPEC1_ADD_BOT);
+		writel(address->top, (int)base + (entry_index * 8) +
+		    EMAC_SPEC1_ADD_TOP);
 	} 
 	else 
 	{
-		writel(address->bottom,		base + ((entry_index - 5) * 8) + EMAC_SPEC5_ADD_BOT);
-		writel(address->top,		base + ((entry_index - 5) * 8) + EMAC_SPEC5_ADD_TOP);
+		writel(address->bottom, (int)base + ((entry_index - 5) * 8) +
+		    EMAC_SPEC5_ADD_BOT);
+		writel(address->top, (int)base + ((entry_index - 5) * 8) +
+		    EMAC_SPEC5_ADD_TOP);
 	}
 }
 
@@ -987,8 +998,8 @@ void gemac_set_laddrN(void *base, MAC_ADDR *address, unsigned int entry_index)
 MAC_ADDR gem_get_laddr1(void *base)
 {
 	MAC_ADDR addr;
-	addr.bottom = readl(base + EMAC_SPEC1_ADD_BOT);
-	addr.top = readl(base + EMAC_SPEC1_ADD_TOP);
+	addr.bottom = readl((int)base + EMAC_SPEC1_ADD_BOT);
+	addr.top = readl((int)base + EMAC_SPEC1_ADD_TOP);
 	return addr;
 }
 
@@ -996,8 +1007,8 @@ MAC_ADDR gem_get_laddr1(void *base)
 MAC_ADDR gem_get_laddr2(void *base)
 {
 	MAC_ADDR addr;
-	addr.bottom = readl(base + EMAC_SPEC2_ADD_BOT);
-	addr.top = readl(base + EMAC_SPEC2_ADD_TOP);
+	addr.bottom = readl((int)base + EMAC_SPEC2_ADD_BOT);
+	addr.top = readl((int)base + EMAC_SPEC2_ADD_TOP);
 	return addr;
 }
 
@@ -1005,8 +1016,8 @@ MAC_ADDR gem_get_laddr2(void *base)
 MAC_ADDR gem_get_laddr3(void *base)
 {
 	MAC_ADDR addr;
-	addr.bottom = readl(base + EMAC_SPEC3_ADD_BOT);
-	addr.top = readl(base + EMAC_SPEC3_ADD_TOP);
+	addr.bottom = readl((int)base + EMAC_SPEC3_ADD_BOT);
+	addr.top = readl((int)base + EMAC_SPEC3_ADD_TOP);
 	return addr;
 }
 
@@ -1014,8 +1025,8 @@ MAC_ADDR gem_get_laddr3(void *base)
 MAC_ADDR gem_get_laddr4(void *base)
 {
 	MAC_ADDR addr;
-	addr.bottom = readl(base + EMAC_SPEC4_ADD_BOT);
-	addr.top = readl(base + EMAC_SPEC4_ADD_TOP);
+	addr.bottom = readl((int)base + EMAC_SPEC4_ADD_BOT);
+	addr.top = readl((int)base + EMAC_SPEC4_ADD_TOP);
 	return addr;
 }
 
@@ -1026,13 +1037,17 @@ MAC_ADDR gem_get_laddrN(void *base, unsigned int entry_index)
 
 	if (entry_index < 5)
 	{
-		addr.bottom = readl(base + (entry_index * 8) + EMAC_SPEC1_ADD_BOT);
-		addr.top = readl(base + (entry_index * 8) + EMAC_SPEC1_ADD_TOP);
+		addr.bottom = readl((int)base + (entry_index * 8) +
+		    EMAC_SPEC1_ADD_BOT);
+		addr.top = readl((int)base + (entry_index * 8) +
+		    EMAC_SPEC1_ADD_TOP);
 	}
 	else
 	{
-		addr.bottom = readl(base + ((entry_index - 5) * 8) + EMAC_SPEC5_ADD_BOT);
-		addr.top = readl(base + ((entry_index - 5) * 8) + EMAC_SPEC5_ADD_TOP);
+		addr.bottom = readl((int)base + ((entry_index - 5) * 8) +
+		    EMAC_SPEC5_ADD_BOT);
+		addr.top = readl((int)base + ((entry_index - 5) * 8) +
+		    EMAC_SPEC5_ADD_TOP);
 	}
 
 	return addr;
@@ -1043,7 +1058,8 @@ MAC_ADDR gem_get_laddrN(void *base, unsigned int entry_index)
 */
 void gemac_enable_copy_all(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & EMAC_ENABLE_COPY_ALL, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & EMAC_ENABLE_COPY_ALL,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC do not allow frames
@@ -1051,17 +1067,17 @@ void gemac_enable_copy_all(void *base)
 */
 void gemac_disable_copy_all(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_COPY_ALL, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_COPY_ALL,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
-
-
 
 /** GEMAC allow broadcast function.
 * @param[in] base	GEMAC base address
 */
 void gemac_allow_broadcast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_NO_BROADCAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_NO_BROADCAST,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC no broadcast function.
@@ -1069,7 +1085,8 @@ void gemac_allow_broadcast(void *base)
 */
 void gemac_no_broadcast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_NO_BROADCAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_NO_BROADCAST,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable unicast function.
@@ -1077,7 +1094,8 @@ void gemac_no_broadcast(void *base)
 */
 void gemac_enable_unicast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_UNICAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_UNICAST,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC disable unicast function.
@@ -1085,7 +1103,8 @@ void gemac_enable_unicast(void *base)
 */
 void gemac_disable_unicast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_UNICAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_UNICAST,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable multicast function.
@@ -1093,7 +1112,8 @@ void gemac_disable_unicast(void *base)
 */
 void gemac_enable_multicast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_MULTICAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_MULTICAST,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC disable multicast function.
@@ -1101,7 +1121,8 @@ void gemac_enable_multicast(void *base)
 */
 void gemac_disable_multicast(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_MULTICAST, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_MULTICAST,
+	   (int) base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable fcs rx function.
@@ -1109,7 +1130,8 @@ void gemac_disable_multicast(void *base)
 */
 void gemac_enable_fcs_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_FCS_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_FCS_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC disable fcs rx function.
@@ -1117,7 +1139,8 @@ void gemac_enable_fcs_rx(void *base)
 */
 void gemac_disable_fcs_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_FCS_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_FCS_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable 1536 rx function.
@@ -1125,7 +1148,8 @@ void gemac_disable_fcs_rx(void *base)
 */
 void gemac_enable_1536_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_1536_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_1536_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC disable 1536 rx function.
@@ -1133,7 +1157,8 @@ void gemac_enable_1536_rx(void *base)
 */
 void gemac_disable_1536_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_1536_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_1536_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable pause rx function.
@@ -1141,7 +1166,8 @@ void gemac_disable_1536_rx(void *base)
 */
 void gemac_enable_pause_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_PAUSE_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_PAUSE_RX,
+	   (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC disable pause rx function.
@@ -1149,7 +1175,8 @@ void gemac_enable_pause_rx(void *base)
 */
 void gemac_disable_pause_rx(void *base)
 {
-	writel (readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_PAUSE_RX, base + EMAC_NETWORK_CONFIG);
+	writel (readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_PAUSE_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** GEMAC enable rx checksum offload function.
@@ -1157,8 +1184,10 @@ void gemac_disable_pause_rx(void *base)
 */
 void gemac_enable_rx_checksum_offload(void *base)
 {
-	writel(readl(base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_CHKSUM_RX, base + EMAC_NETWORK_CONFIG);
-	writel(readl(CLASS_L4_CHKSUM_ADDR) | IPV4_CHKSUM_DROP, CLASS_L4_CHKSUM_ADDR);
+	writel(readl((int)base + EMAC_NETWORK_CONFIG) | EMAC_ENABLE_CHKSUM_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
+	writel(readl((int)base + CLASS_L4_CHKSUM_ADDR) | IPV4_CHKSUM_DROP,
+	    (int)base + CLASS_L4_CHKSUM_ADDR);
 }
 
 /** GEMAC disable rx checksum offload function.
@@ -1166,8 +1195,10 @@ void gemac_enable_rx_checksum_offload(void *base)
 */
 void gemac_disable_rx_checksum_offload(void *base)
 {
-	writel(readl(base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_CHKSUM_RX, base + EMAC_NETWORK_CONFIG);
-	writel(readl(CLASS_L4_CHKSUM_ADDR) & ~IPV4_CHKSUM_DROP, CLASS_L4_CHKSUM_ADDR);
+	writel(readl((int)base + EMAC_NETWORK_CONFIG) & ~EMAC_ENABLE_CHKSUM_RX,
+	    (int)base + EMAC_NETWORK_CONFIG);
+	writel(readl((int)base + CLASS_L4_CHKSUM_ADDR) & ~IPV4_CHKSUM_DROP,
+	    (int)base + CLASS_L4_CHKSUM_ADDR);
 }
 
 /** Sets Gemac bus width to 64bit
@@ -1176,7 +1207,7 @@ void gemac_disable_rx_checksum_offload(void *base)
  * */
 void gemac_set_bus_width(void *base, int width)
 {
-	u32 val = readl(base + EMAC_NETWORK_CONFIG);
+	u32 val = readl((int)base + EMAC_NETWORK_CONFIG);
 	switch(width) 
 	{
 	case 32:
@@ -1188,7 +1219,7 @@ void gemac_set_bus_width(void *base, int width)
 		val = (val & ~EMAC_DATA_BUS_WIDTH_MASK) | EMAC_DATA_BUS_WIDTH_64;
 
 	}
-	writel (val, base + EMAC_NETWORK_CONFIG);
+	writel (val, (int)base + EMAC_NETWORK_CONFIG);
 }
 
 /** Sets Gemac configuration.
@@ -1203,7 +1234,6 @@ void gemac_set_config(void *base, GEMAC_CFG *cfg)
 
 	gemac_set_duplex(base,cfg->duplex);
 }
-
 
 /**************************** GPI ***************************/
 
@@ -1225,7 +1255,7 @@ void gpi_init(void *base, GPI_CFG *cfg)
 */
 void gpi_reset(void *base)
 {
-	writel (CORE_SW_RESET, base + GPI_CTRL);
+	writel (CORE_SW_RESET, (int)base + GPI_CTRL);
 }
 
 /** Enables a GPI block.
@@ -1233,7 +1263,7 @@ void gpi_reset(void *base)
 */
 void gpi_enable(void *base)
 {
-	writel (CORE_ENABLE, base + GPI_CTRL);
+	writel (CORE_ENABLE, (int)base + GPI_CTRL);
 }
 
 /** Disables a GPI block.
@@ -1241,7 +1271,7 @@ void gpi_enable(void *base)
 */
 void gpi_disable(void *base)
 {
-	writel (CORE_DISABLE, base + GPI_CTRL);
+	writel (CORE_DISABLE, (int)base + GPI_CTRL);
 }
 
 
@@ -1251,21 +1281,26 @@ void gpi_disable(void *base)
 */
 void gpi_set_config(void *base, GPI_CFG *cfg)
 {  
-	writel (CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_ALLOC_CTRL),	base + GPI_LMEM_ALLOC_ADDR);
-	writel (CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_FREE_CTRL),	base + GPI_LMEM_FREE_ADDR);
-	writel (CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_ALLOC_CTRL),	base + GPI_DDR_ALLOC_ADDR);
-	writel (CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_FREE_CTRL),	base + GPI_DDR_FREE_ADDR);
-	writel (CBUS_VIRT_TO_PFE(CLASS_INQ_PKTPTR),			base + GPI_CLASS_ADDR);
- 	writel (DDR_HDR_SIZE,						base + GPI_DDR_DATA_OFFSET);
-	writel (LMEM_HDR_SIZE,						base + GPI_LMEM_DATA_OFFSET);
-	writel (0,							base + GPI_LMEM_SEC_BUF_DATA_OFFSET);
-	writel (0,							base + GPI_DDR_SEC_BUF_DATA_OFFSET);
-	writel ((DDR_HDR_SIZE << 16) | LMEM_HDR_SIZE,			base + GPI_HDR_SIZE);
-	writel ((DDR_BUF_SIZE << 16) | LMEM_BUF_SIZE,			base + GPI_BUF_SIZE);
+	writel (CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_ALLOC_CTRL),
+	    (int)base + GPI_LMEM_ALLOC_ADDR);
+	writel (CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_FREE_CTRL),
+	    (int)base + GPI_LMEM_FREE_ADDR);
+	writel (CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_ALLOC_CTRL),
+	    (int)base + GPI_DDR_ALLOC_ADDR);
+	writel (CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_FREE_CTRL),
+	    (int)base + GPI_DDR_FREE_ADDR);
+	writel (CBUS_VIRT_TO_PFE(CLASS_INQ_PKTPTR),(int)base + GPI_CLASS_ADDR);
+ 	writel (DDR_HDR_SIZE,(int)base + GPI_DDR_DATA_OFFSET);
+	writel (LMEM_HDR_SIZE,(int)base + GPI_LMEM_DATA_OFFSET);
+	writel (0, (int)base + GPI_LMEM_SEC_BUF_DATA_OFFSET);
+	writel (0, (int)base + GPI_DDR_SEC_BUF_DATA_OFFSET);
+	writel ((DDR_HDR_SIZE << 16) | LMEM_HDR_SIZE,(int)base + GPI_HDR_SIZE);
+	writel ((DDR_BUF_SIZE << 16) | LMEM_BUF_SIZE,(int)base + GPI_BUF_SIZE);
 	
-	writel (((cfg->lmem_rtry_cnt << 16) | (GPI_DDR_BUF_EN << 1) | GPI_LMEM_BUF_EN),	base + GPI_RX_CONFIG);
-	writel (cfg->tmlf_txthres,					base + GPI_TMLF_TX);
-	writel (cfg->aseq_len,						base + GPI_DTX_ASEQ);
+	writel (((cfg->lmem_rtry_cnt << 16) | (GPI_DDR_BUF_EN << 1) |
+	    GPI_LMEM_BUF_EN), (int)base + GPI_RX_CONFIG);
+	writel (cfg->tmlf_txthres,(int)base + GPI_TMLF_TX);
+	writel (cfg->aseq_len,(int)base + GPI_DTX_ASEQ);
 }
 
 /**************************** CLASSIFIER ***************************/
@@ -1312,23 +1347,28 @@ void class_disable(void)
 void class_set_config(CLASS_CFG *cfg)
 {
 	if (PLL_CLK_EN == 0)
-		writel(0x0,     CLASS_PE_SYS_CLK_RATIO);        // Clock ratio: for 1:1 the value is 0
+		// Clock ratio: for 1:1 the value is 0
+		writel(0x0, CLASS_PE_SYS_CLK_RATIO);
 	else
-		writel(0x1,     CLASS_PE_SYS_CLK_RATIO);        // Clock ratio: for 1:2 the value is 1
+		// Clock ratio: for 1:2 the value is 1
+		writel(0x1, CLASS_PE_SYS_CLK_RATIO);
 
-	writel((DDR_HDR_SIZE << 16) | LMEM_HDR_SIZE,	CLASS_HDR_SIZE);
-	writel(LMEM_BUF_SIZE,				CLASS_LMEM_BUF_SIZE);
-	writel(CLASS_ROUTE_ENTRY_SIZE(CLASS_ROUTE_SIZE) | CLASS_ROUTE_HASH_SIZE(cfg->route_table_hash_bits),	CLASS_ROUTE_HASH_ENTRY_SIZE);
+	writel((DDR_HDR_SIZE << 16) | LMEM_HDR_SIZE, CLASS_HDR_SIZE);
+	writel(LMEM_BUF_SIZE, CLASS_LMEM_BUF_SIZE);
+	writel(CLASS_ROUTE_ENTRY_SIZE(CLASS_ROUTE_SIZE) |
+	    CLASS_ROUTE_HASH_SIZE(cfg->route_table_hash_bits),
+	    CLASS_ROUTE_HASH_ENTRY_SIZE);
 	writel(HASH_CRC_PORT_IP | QB2BUS_LE, CLASS_ROUTE_MULTI);
 
-	writel(cfg->route_table_baseaddr,		CLASS_ROUTE_TABLE_BASE);
-	memset(cfg->route_table_baseaddr, 0, ROUTE_TABLE_SIZE);
+//	writel(cfg->route_table_baseaddr, CLASS_ROUTE_TABLE_BASE);
+	writel(pge_sc->sc_tmu_pa, CLASS_ROUTE_TABLE_BASE);
+//	memset(cfg->route_table_baseaddr, 0, ROUTE_TABLE_SIZE);
 
-	writel(CLASS_PE0_RO_DM_ADDR0_VAL,		CLASS_PE0_RO_DM_ADDR0);
-	writel(CLASS_PE0_RO_DM_ADDR1_VAL,		CLASS_PE0_RO_DM_ADDR1);
-	writel(CLASS_PE0_QB_DM_ADDR0_VAL,		CLASS_PE0_QB_DM_ADDR0);
-	writel(CLASS_PE0_QB_DM_ADDR1_VAL,		CLASS_PE0_QB_DM_ADDR1);
-	writel(CBUS_VIRT_TO_PFE(TMU_PHY_INQ_PKTPTR),	CLASS_TM_INQ_ADDR);
+	writel(CLASS_PE0_RO_DM_ADDR0_VAL, CLASS_PE0_RO_DM_ADDR0);
+	writel(CLASS_PE0_RO_DM_ADDR1_VAL, CLASS_PE0_RO_DM_ADDR1);
+	writel(CLASS_PE0_QB_DM_ADDR0_VAL, CLASS_PE0_QB_DM_ADDR0);
+	writel(CLASS_PE0_QB_DM_ADDR1_VAL, CLASS_PE0_QB_DM_ADDR1);
+	writel(CBUS_VIRT_TO_PFE(TMU_PHY_INQ_PKTPTR), CLASS_TM_INQ_ADDR);
 
 	writel(31, CLASS_AFULL_THRES);
 	writel(31, CLASS_TSQ_FIFO_THRES);
@@ -1342,32 +1382,43 @@ void class_set_config(CLASS_CFG *cfg)
 void tmu_init(TMU_CFG *cfg)
 {
 	int q, phyno;
-	writel(0x3,						TMU_SYS_GENERIC_CONTROL);
-	writel(750,						TMU_INQ_WATERMARK);
-	writel(CBUS_VIRT_TO_PFE(EGPI1_BASE_ADDR + GPI_INQ_PKTPTR),	TMU_PHY0_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(EGPI2_BASE_ADDR + GPI_INQ_PKTPTR),	TMU_PHY1_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(EGPI3_BASE_ADDR + GPI_INQ_PKTPTR),	TMU_PHY2_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(HGPI_BASE_ADDR + GPI_INQ_PKTPTR),	TMU_PHY3_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(HIF_NOCPY_RX_INQ0_PKTPTR),		TMU_PHY4_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(UTIL_INQ_PKTPTR),			TMU_PHY5_INQ_ADDR);
-	writel(CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_FREE_CTRL), 	TMU_BMU_INQ_ADDR);
+	writel(0x3, TMU_SYS_GENERIC_CONTROL);
+	writel(750, TMU_INQ_WATERMARK);
+	writel(CBUS_VIRT_TO_PFE(EGPI1_BASE_ADDR + GPI_INQ_PKTPTR),
+	    TMU_PHY0_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(EGPI2_BASE_ADDR + GPI_INQ_PKTPTR),
+	    TMU_PHY1_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(EGPI3_BASE_ADDR + GPI_INQ_PKTPTR),
+	    TMU_PHY2_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(HGPI_BASE_ADDR + GPI_INQ_PKTPTR),
+	    TMU_PHY3_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(HIF_NOCPY_RX_INQ0_PKTPTR),
+	    TMU_PHY4_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(UTIL_INQ_PKTPTR),
+	    TMU_PHY5_INQ_ADDR);
+	writel(CBUS_VIRT_TO_PFE(BMU2_BASE_ADDR + BMU_FREE_CTRL),
+	    TMU_BMU_INQ_ADDR);
 
-	writel(0x3FF,	TMU_TDQ0_SCH_CTRL);	// enabling all 10 schedulers [9:0] of each TDQ 
-	writel(0x3FF,	TMU_TDQ1_SCH_CTRL);
-	writel(0x3FF,	TMU_TDQ2_SCH_CTRL);
-	writel(0x3FF,	TMU_TDQ3_SCH_CTRL);
+	// enabling all 10 schedulers [9:0] of each TDQ 
+	writel(0x3FF, TMU_TDQ0_SCH_CTRL);
+	writel(0x3FF, TMU_TDQ1_SCH_CTRL);
+	writel(0x3FF, TMU_TDQ2_SCH_CTRL);
+	writel(0x3FF, TMU_TDQ3_SCH_CTRL);
 	
 	if (PLL_CLK_EN == 0)
-		writel(0x0,	TMU_PE_SYS_CLK_RATIO);	// Clock ratio: for 1:1 the value is 0
+		// Clock ratio: for 1:1 the value is 0
+		writel(0x0, TMU_PE_SYS_CLK_RATIO);
 	else
-		writel(0x1,	TMU_PE_SYS_CLK_RATIO);	// Clock ratio: for 1:2 the value is 1
+		// Clock ratio: for 1:2 the value is 1
+		writel(0x1, TMU_PE_SYS_CLK_RATIO);
 	
-	writel(cfg->llm_base_addr,	TMU_LLM_BASE_ADDR);	// Extra packet pointers will be stored from this address onwards
+	// Extra packet pointers will be stored from this address onwards
+	writel(cfg->llm_base_addr, TMU_LLM_BASE_ADDR);
 	
-	writel(cfg->llm_queue_len,	TMU_LLM_QUE_LEN);
-	writel(0x100,			TMU_CTRL);
-	writel(5,			TMU_TDQ_IIFG_CFG);
-	writel(DDR_BUF_SIZE,		TMU_BMU_BUF_SIZE);
+	writel(cfg->llm_queue_len, TMU_LLM_QUE_LEN);
+	writel(0x100, TMU_CTRL);
+	writel(5, TMU_TDQ_IIFG_CFG);
+	writel(DDR_BUF_SIZE, TMU_BMU_BUF_SIZE);
 
 	// set up each queue for tail drop
 	for (phyno = 0; phyno < 4; phyno++)
@@ -1417,9 +1468,11 @@ void util_init(UTIL_CFG *cfg)
 {
 
 	if (PLL_CLK_EN == 0)
-		writel(0x0,     UTIL_PE_SYS_CLK_RATIO);        // Clock ratio: for 1:1 the value is 0
+		// Clock ratio: for 1:1 the value is 0
+		writel(0x0, UTIL_PE_SYS_CLK_RATIO);
 	else
-		writel(0x1,     UTIL_PE_SYS_CLK_RATIO);        // Clock ratio: for 1:2 the value is 1
+		// Clock ratio: for 1:2 the value is 1
+		writel(0x1, UTIL_PE_SYS_CLK_RATIO);
 }
 
 /** Enables UTIL-PE core.
@@ -1438,26 +1491,32 @@ void util_disable(void)
 	writel(CORE_DISABLE, UTIL_TX_CTRL);
 }
 
-/** GEMAC PHY Statistics - This function return address of the first statistics register
+#ifdef NOTUSE
+/** GEMAC PHY Statistics - This function return address of the first
+* statistics register
 * @param[in]	base	GEMAC base address 
 */
 unsigned int * gemac_get_stats(void *base)
 {
 	return (unsigned int *)(base + EMAC_OCT_TX_BOT);
 }
+#endif   /* NOTUSE */
 
 /**************************** HIF ***************************/
 
+#ifdef NOTUSE
 /** Initializes HIF no copy block.
 *
 */
 void hif_nocpy_init(void)
 {
-	writel(4,							HIF_NOCPY_TX_PORT_NO);
-	writel(CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_ALLOC_CTRL),		HIF_NOCPY_LMEM_ALLOC_ADDR);
-	writel(CBUS_VIRT_TO_PFE(CLASS_INQ_PKTPTR),	HIF_NOCPY_CLASS_ADDR);
-	writel(CBUS_VIRT_TO_PFE(TMU_PHY_INQ_PKTPTR),	HIF_NOCPY_TMU_PORT0_ADDR);
+	writel(4, HIF_NOCPY_TX_PORT_NO);
+	writel(CBUS_VIRT_TO_PFE(BMU1_BASE_ADDR + BMU_ALLOC_CTRL),
+	    HIF_NOCPY_LMEM_ALLOC_ADDR);
+	writel(CBUS_VIRT_TO_PFE(CLASS_INQ_PKTPTR), HIF_NOCPY_CLASS_ADDR);
+	writel(CBUS_VIRT_TO_PFE(TMU_PHY_INQ_PKTPTR), HIF_NOCPY_TMU_PORT0_ADDR);
 }
+#endif   /* NOTUSE */
 
 /** Initializes HIF copy block.
 *
@@ -1465,7 +1524,8 @@ void hif_nocpy_init(void)
 void hif_init(void)
 {
 	/*Initialize HIF registers*/
-	writel(HIF_RX_POLL_CTRL_CYCLE<<16|HIF_TX_POLL_CTRL_CYCLE, HIF_POLL_CTRL); 
+	writel(HIF_RX_POLL_CTRL_CYCLE<<16|HIF_TX_POLL_CTRL_CYCLE,
+	    HIF_POLL_CTRL); 
 }
 
 /** Enable hif tx DMA and interrupt
@@ -1473,9 +1533,9 @@ void hif_init(void)
 */
 void hif_tx_enable(void)
 {
-	/*TODO not sure poll_cntrl_en is required or not */
-	writel( HIF_CTRL_DMA_EN, HIF_TX_CTRL);
-	//writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_TXPKT_INT_EN), HIF_INT_ENABLE);
+	writel(HIF_CTRL_DMA_EN, HIF_TX_CTRL);
+	writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_TXPKT_INT_EN),
+	    HIF_INT_ENABLE);
 }
 
 /** Disable hif tx DMA and interrupt
@@ -1497,9 +1557,9 @@ void hif_tx_disable(void)
 */
 void hif_rx_enable(void)
 {
-	/*TODO not sure poll_cntrl_en is required or not */
 	writel((HIF_CTRL_DMA_EN | HIF_CTRL_BDP_CH_START_WSTB), HIF_RX_CTRL);
-	//writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_TXPKT_INT_EN), HIF_INT_ENABLE);
+	writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_TXPKT_INT_EN),
+	    HIF_INT_ENABLE);
 }
 
 /** Disable hif rx DMA and interrupt
@@ -1514,6 +1574,4 @@ void hif_rx_disable(void)
 	hif_int = readl(HIF_INT_ENABLE);
 	hif_int &= HIF_RXPKT_INT_EN;
 	writel(hif_int, HIF_INT_ENABLE);
-
 }
-#endif   /* NOTUSE */
