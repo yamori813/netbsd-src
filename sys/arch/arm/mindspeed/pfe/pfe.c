@@ -733,6 +733,33 @@ void bmu_set_config(void *base, BMU_CFG *cfg)
 
 /**************************** GEMAC ***************************/
 
+/** MAC Address converter
+ * Convert standard byte style ethernet address to format compatible with MAC.
+ *  
+ * @param[in] enet_byte_addr    Pointer to the mac address in byte format
+ * @param[out] Pointer to MAC_ADDR structure
+ *  
+ * @return      0 on success, -1 on failure
+ */
+int gemac_enet_addr_byte_mac(u8 *enet_byte_addr, MAC_ADDR *enet_addr)
+{
+	if ((enet_byte_addr == NULL) || (enet_addr == NULL))
+	{
+		return -1;
+	}
+	else
+	{
+	enet_addr->bottom = enet_byte_addr[0] |
+	    (enet_byte_addr[1] << 8) |
+	    (enet_byte_addr[2] << 16) |
+	    (enet_byte_addr[3] << 24);
+	enet_addr->top = enet_byte_addr[4] |
+	    (enet_byte_addr[5] << 8);
+	return 0;
+	}
+}
+
+
 /** GEMAC block initialization.
 * @param[in] base	GEMAC base address (GEMAC0, GEMAC1, GEMAC2)
 * @param[in] cfg	GEMAC configuration
@@ -1360,8 +1387,7 @@ void class_set_config(CLASS_CFG *cfg)
 	    CLASS_ROUTE_HASH_ENTRY_SIZE);
 	writel(HASH_CRC_PORT_IP | QB2BUS_LE, CLASS_ROUTE_MULTI);
 
-//	writel(cfg->route_table_baseaddr, CLASS_ROUTE_TABLE_BASE);
-	writel(pge_sc->sc_tmu_pa, CLASS_ROUTE_TABLE_BASE);
+	writel(cfg->route_table_baseaddr, CLASS_ROUTE_TABLE_BASE);
 //	memset(cfg->route_table_baseaddr, 0, ROUTE_TABLE_SIZE);
 
 	writel(CLASS_PE0_RO_DM_ADDR0_VAL, CLASS_PE0_RO_DM_ADDR0);
