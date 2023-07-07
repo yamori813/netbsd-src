@@ -77,6 +77,7 @@ attach  pge at axi
 file    arch/arm/mindspeed/if_pge.c		pge
 file    arch/arm/mindspeed/pfe/pfe.c		pge
 file    arch/arm/mindspeed/pfe/pfe_driver.c	pge
+file    arch/arm/mindspeed/pfe/pfe_firmware.c	pge
 
 # USB3 Host Controller (XHCI)
 attach xhci at axi with xhci_axi

@@ -40,9 +40,9 @@
 
 typedef uint32_t u32;
 typedef uint8_t u8;
-//#define CBUS_BASE_ADDR 0
 
 #include <arm/mindspeed/pfe/base/pfe.h>
+//#include <arm/mindspeed/pfe/hal.h>
 
 #include "hal.h"
 #if NOTUSE
@@ -457,6 +457,7 @@ static int hif_tx_desc_init(struct pfe *pfe)
 
 	return 0;
 }
+#endif   /* NOTUSE */
 
 /** PFE/Class initialization.
  */
@@ -471,6 +472,7 @@ static void pfe_class_init(struct pfe *pfe)
 	printk(KERN_INFO "class init complete\n");
 }
 
+#ifdef NOTUSE
 /** PFE/TMU initialization.
  */
 static void pfe_tmu_init(struct pfe *pfe)
@@ -618,11 +620,11 @@ static void pfe_hif_init(struct pfe *pfe)
 static int pfe_hw_init(struct pfe *pfe)
 {
 
-#if 0
-	dprint("%s: start \n", __func__);
+	printk("%s: start \n", __func__);
 
 	pfe_class_init(pfe);
 
+#if 0
 	pfe_tmu_init(pfe);
 
 	pfe_bmu_init(pfe);
@@ -640,11 +642,11 @@ static int pfe_hw_init(struct pfe *pfe)
 	
 	bmu_enable(BMU2_BASE_ADDR);
 	printk(KERN_INFO "bmu2 enabled\n");
+#endif
 	
 	printk("%s: done\n", __func__);
 	
 	/* NOTE: Load PE specific data (if any) */
-#endif
 
 	return 0;
 }
