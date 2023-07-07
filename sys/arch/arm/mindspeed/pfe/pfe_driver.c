@@ -280,7 +280,8 @@ void pfe_gemac_init(void *gemac_base, u32 mode, u32 speed, u32 duplex)
 
 /** Helper function to dump Rx descriptors.
  */
-void hif_rx_desc_dump(void)
+static void hif_rx_desc_dump(void);
+static void hif_rx_desc_dump(void)
 {
 	struct bufDesc *bd_va;
 	int i;
@@ -373,7 +374,8 @@ static int hif_rx_desc_init(struct pfe *pfe)
 
 /** Helper function to dump Tx Descriptors.
  */
-void hif_tx_desc_dump(void)
+static void hif_tx_desc_dump(void);
+static void hif_tx_desc_dump(void)
 {
 	struct tx_desc_s *tx_desc;
 	int i;
@@ -472,7 +474,6 @@ static void pfe_class_init(struct pfe *pfe)
 	printk(KERN_INFO "class init complete\n");
 }
 
-#ifdef NOTUSE
 /** PFE/TMU initialization.
  */
 static void pfe_tmu_init(struct pfe *pfe)
@@ -502,10 +503,10 @@ static void pfe_bmu_init(struct pfe *pfe)
 		.size = BMU2_BUF_SIZE,
 	};
 
-	bmu_init(BMU1_BASE_ADDR, &bmu1_cfg);
+	bmu_init((void *)BMU1_BASE_ADDR, &bmu1_cfg);
 	printk(KERN_INFO "bmu1 init: done\n");
 
-	bmu_init(BMU2_BASE_ADDR, &bmu2_cfg);
+	bmu_init((void *)BMU2_BASE_ADDR, &bmu2_cfg);
 	printk(KERN_INFO "bmu2 init: done\n");
 }
 
@@ -552,29 +553,30 @@ static void pfe_gpi_init(struct pfe *pfe)
 		.aseq_len = HGPI_ASEQ_LEN,
 	};
 
-	gpi_init(EGPI1_BASE_ADDR, &egpi1_cfg);
+	gpi_init((void *)EGPI1_BASE_ADDR, &egpi1_cfg);
 	printk(KERN_INFO "GPI1 init complete\n");
 	
-   gpi_init(EGPI2_BASE_ADDR, &egpi2_cfg);
+	gpi_init((void *)EGPI2_BASE_ADDR, &egpi2_cfg);
 	printk(KERN_INFO "GPI2 init complete\n");
 
 #if 0
-   gpi_init(EGPI3_BASE_ADDR, &egpi3_cfg);
+	gpi_init((void *)EGPI3_BASE_ADDR, &egpi3_cfg);
 #endif
 
-   gpi_init(HGPI_BASE_ADDR, &hgpi_cfg);
+	gpi_init((void *)HGPI_BASE_ADDR, &hgpi_cfg);
 	printk(KERN_INFO "HGPI init complete\n");
 }
 
 /** Helper function for PCI init sequence.
  */
+void pfe_gem_enable_all(void);
 void pfe_gem_enable_all(void)
 {
-	gpi_enable(EGPI1_BASE_ADDR);
-	gemac_enable(EMAC1_BASE_ADDR);
+	gpi_enable((void *)EGPI1_BASE_ADDR);
+	gemac_enable((void *)EMAC1_BASE_ADDR);
 
-	gpi_enable(EGPI2_BASE_ADDR);
-	gemac_enable(EMAC2_BASE_ADDR);
+	gpi_enable((void *)EGPI2_BASE_ADDR);
+	gemac_enable((void *)EMAC2_BASE_ADDR);
 
 #if 0
 	gpi_enable(EGPI3_BASE_ADDR);
@@ -589,20 +591,19 @@ static void pfe_hif_init(struct pfe *pfe)
 	hif_tx_disable();
 	hif_rx_disable();
 
-	hif_tx_desc_init(pfe);
-	hif_rx_desc_init(pfe);
+//	hif_tx_desc_init(pfe);
+//	hif_rx_desc_init(pfe);
 
 	hif_init();
 
 	hif_tx_enable();
 	hif_rx_enable();
 
-	hif_rx_desc_dump();
-	hif_tx_desc_dump();
+//	hif_rx_desc_dump();
+//	hif_tx_desc_dump();
 
 	printk(KERN_INFO "HIF init complete\n");
 }
-#endif   /* NOTUSE */
 
 /** PFE initialization
  * - Firmware loading (CLASS-PE and TMU-PE)
@@ -624,7 +625,6 @@ static int pfe_hw_init(struct pfe *pfe)
 
 	pfe_class_init(pfe);
 
-#if 0
 	pfe_tmu_init(pfe);
 
 	pfe_bmu_init(pfe);
@@ -637,12 +637,11 @@ static int pfe_hw_init(struct pfe *pfe)
 
 	pfe_hif_init(pfe);
 
-	bmu_enable(BMU1_BASE_ADDR);
+	bmu_enable((void *)BMU1_BASE_ADDR);
 	printk(KERN_INFO "bmu1 enabled\n");
 	
-	bmu_enable(BMU2_BASE_ADDR);
+	bmu_enable((void *)BMU2_BASE_ADDR);
 	printk(KERN_INFO "bmu2 enabled\n");
-#endif
 	
 	printk("%s: done\n", __func__);
 	
