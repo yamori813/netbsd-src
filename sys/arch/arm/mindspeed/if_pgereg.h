@@ -88,9 +88,9 @@ struct pge_softc {
 	void			*sc_txpad;
 	bus_dmamap_t		sc_txpad_dm;
 #define sc_txpad_pa sc_txpad_dm->dm_segs[0].ds_addr
-	void			*sc_tmu;
-	bus_dmamap_t		sc_tmu_dm;
-#define sc_tmu_pa sc_tmu_dm->dm_segs[0].ds_addr
+	void			*sc_ddr;
+	bus_dmamap_t		sc_ddr_dm;
+#define sc_ddr_pa sc_ddr_dm->dm_segs[0].ds_addr
 	uint8_t			sc_enaddr[ETHER_ADDR_LEN];
 	bool			sc_attached;
 	struct pge_ring_data	*sc_rdp;

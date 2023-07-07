@@ -41,14 +41,14 @@
 typedef uint32_t u32;
 typedef uint8_t u8;
 
-#include <arm/mindspeed/pfe/base/pfe.h>
+//#include <arm/mindspeed/pfe/base/pfe.h>
 //#include <arm/mindspeed/pfe/hal.h>
 
+#include "base/pfe.h"
 #include "hal.h"
-#if NOTUSE
-#include "pfe/pfe.h"
 #include "pfe_driver.h"
 #include "pfe_firmware.h"
+#if NOTUSE
 
 
 static struct tx_desc_s *g_tx_desc = NULL;
@@ -466,7 +466,8 @@ static int hif_tx_desc_init(struct pfe *pfe)
 static void pfe_class_init(struct pfe *pfe)
 {
 	CLASS_CFG class_cfg = {
-		.route_table_baseaddr = pfe->ddr_phys_baseaddr + ROUTE_TABLE_BASEADDR,
+//		.route_table_baseaddr = pfe->ddr_phys_baseaddr + ROUTE_TABLE_BASEADDR,
+		.route_table_baseaddr = pge_sc->sc_ddr_pa,
 		.route_table_hash_bits = ROUTE_TABLE_HASH_BITS,
 	};
 
@@ -479,7 +480,8 @@ static void pfe_class_init(struct pfe *pfe)
 static void pfe_tmu_init(struct pfe *pfe)
 {
 	TMU_CFG tmu_cfg = {
-		.llm_base_addr = pfe->ddr_phys_baseaddr + TMU_LLM_BASEADDR,
+//		.llm_base_addr = pfe->ddr_phys_baseaddr + TMU_LLM_BASEADDR,
+		.llm_base_addr = pge_sc->sc_ddr_pa + ROUTE_TABLE_SIZE,
 		.llm_queue_len = TMU_LLM_QUEUE_LEN,
 	};
 
@@ -498,7 +500,8 @@ static void pfe_bmu_init(struct pfe *pfe)
 	};
 
 	BMU_CFG bmu2_cfg = {
-		.baseaddr = pfe->ddr_phys_baseaddr + BMU2_DDR_BASEADDR,
+//		.baseaddr = pfe->ddr_phys_baseaddr + BMU2_DDR_BASEADDR,
+		.baseaddr = pge_sc->sc_ddr_pa + ROUTE_TABLE_SIZE + TMU_LLM_SIZE,
 		.count = BMU2_BUF_COUNT,
 		.size = BMU2_BUF_SIZE,
 	};
@@ -569,7 +572,6 @@ static void pfe_gpi_init(struct pfe *pfe)
 
 /** Helper function for PCI init sequence.
  */
-void pfe_gem_enable_all(void);
 void pfe_gem_enable_all(void)
 {
 	gpi_enable((void *)EGPI1_BASE_ADDR);
@@ -596,8 +598,8 @@ static void pfe_hif_init(struct pfe *pfe)
 
 	hif_init();
 
-	hif_tx_enable();
-	hif_rx_enable();
+//	hif_tx_enable();
+//	hif_rx_enable();
 
 //	hif_rx_desc_dump();
 //	hif_tx_desc_dump();

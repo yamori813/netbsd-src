@@ -185,6 +185,7 @@ void bmu_enable(void *base);
 void bmu_disable(void *base);
 void bmu_set_config(void *base, BMU_CFG *cfg);
 
+int gemac_enet_addr_byte_mac(u8 *enet_byte_addr, MAC_ADDR *enet_addr);
 void gemac_init(void *base, void *config);
 void gemac_set_speed(void *base, MAC_SPEED gem_speed);
 void gemac_set_duplex(void *base, int duplex);
