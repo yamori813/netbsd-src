@@ -64,10 +64,6 @@
 #include <asm/io.h>
 */
 
-#include <arm/mindspeed/if_pgereg.h>
-
-#include "c2000_eth.h"
-
 extern struct pge_softc *pge_sc;
 
 #define printk(fmt, arg...)	aprint_normal_dev(pge_sc->sc_dev, fmt, ##arg)

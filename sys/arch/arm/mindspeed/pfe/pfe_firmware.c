@@ -38,24 +38,15 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-typedef uint32_t u32;
-typedef uint8_t u8;
-
-/*
 #include <arm/mindspeed/if_pgereg.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
+#include <arm/mindspeed/pfe/c2000_eth.h>
 #include <arm/mindspeed/pfe/hal.h>
 #include <arm/mindspeed/pfe/pfe_firmware.h>
-*/
 
 /** @file
  *  Contains all the functions to handle parsing and loading of PE firmware files.
  */
-
-#include "base/pfe.h"
-#include "c2000_eth.h"
-#include "hal.h"
-#include "pfe_firmware.h"
 
 
 /* CLASS-PE ELF file content */
