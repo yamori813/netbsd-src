@@ -487,6 +487,7 @@ static int pe_load_ddr_section(int id, void *data, Elf32_Shdr *shdr)
 #ifdef NOTUSE
 				util_pmem_memcpy((void *)DDR_PHYS_TO_VIRT(addr), data + offset, size);
 #endif
+				printk(KERN_ERR "%s: util_pmem_memcpy %x %x %x %x\n", __func__, addr, (int)data, offset, size);
 			}
 			else
 #endif
@@ -499,12 +500,14 @@ static int pe_load_ddr_section(int id, void *data, Elf32_Shdr *shdr)
 		else
 		{
 //			memcpy(DDR_PHYS_TO_VIRT(addr), data + offset, size);
+			printk(KERN_ERR "%s: memcpy %x %x %x %x\n", __func__, addr, (int)data, offset, size);
 		}
 
 		break;
 
 	case SHT_NOBITS:
 //		memset(DDR_PHYS_TO_VIRT(addr), 0, size);
+		printk(KERN_ERR "%s: memset %x %x %x %x\n", __func__, addr, (int)data, offset, size);
 
 		break;
 
