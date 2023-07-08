@@ -35,11 +35,15 @@
 #ifndef __PFE_FIRMWARE_H__
 #define __PFE_FIRMWARE_H__
 
-
+#if 0
 #define CLASS_FIRMWARE_FILENAME		"firmware/class_sbl_c2000_elf.fw"
 #define TMU_FIRMWARE_FILENAME		"firmware/tmu_sbl_c2000_elf.fw"
 #define UTIL_FIRMWARE_FILENAME		"firmware/util_c2000_elf.fw" 
+#endif
 
+#define CLASS_FIRMWARE_FILENAME		"firmware/class_sbl_elf.fw"
+#define TMU_FIRMWARE_FILENAME		"firmware/tmu_sbl_elf.fw"
+#define UTIL_FIRMWARE_FILENAME		"firmware/util_sbl_elf.fw" 
 
 int pfe_firmware_init(void);
 void pfe_firmware_exit(void);
