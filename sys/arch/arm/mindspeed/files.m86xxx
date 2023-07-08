@@ -76,6 +76,7 @@ device  pge: ether, ifnet, arp, mii, mii_phy
 attach  pge at axi
 file    arch/arm/mindspeed/if_pge.c		pge
 file    arch/arm/mindspeed/pfe/pfe.c		pge
+file    arch/arm/mindspeed/pfe/pe.c		pge
 file    arch/arm/mindspeed/pfe/pfe_driver.c	pge
 file    arch/arm/mindspeed/pfe/pfe_firmware.c	pge
 

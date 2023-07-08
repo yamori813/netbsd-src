@@ -1,7 +1,7 @@
 #ifndef _PFE_H_
 #define _PFE_H_
 
-#include "../elf.h"
+#include <sys/exec_elf.h>
 #define be16_to_cpu(x) be16toh(x)
 #define be32_to_cpu(x) be32toh(x)
 #define cpu_to_be16(x) htobe16(x)
