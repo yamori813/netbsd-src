@@ -131,4 +131,13 @@ pge_write_4(struct pge_softc * const sc, bus_size_t const offset,
 	bus_space_write_4(sc->sc_bst, sc->sc_bsh, offset, value);
 }
 
+
+/*
+ * pfe
+ */
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+
 #endif /* __IF_PGEREG_H__ */

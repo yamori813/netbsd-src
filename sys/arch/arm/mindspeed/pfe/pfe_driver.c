@@ -38,18 +38,14 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-typedef uint32_t u32;
-typedef uint8_t u8;
+#include <arm/mindspeed/if_pgereg.h>
+#include <arm/mindspeed/pfe/base/pfe.h>
+#include <arm/mindspeed/pfe/c2000_eth.h>
+#include <arm/mindspeed/pfe/hal.h>
+#include <arm/mindspeed/pfe/pfe_driver.h>
+#include <arm/mindspeed/pfe/pfe_firmware.h>
 
-//#include <arm/mindspeed/pfe/base/pfe.h>
-//#include <arm/mindspeed/pfe/hal.h>
-
-#include "base/pfe.h"
-#include "hal.h"
-#include "pfe_driver.h"
-#include "pfe_firmware.h"
 #if NOTUSE
-
 
 static struct tx_desc_s *g_tx_desc = NULL;
 static struct rx_desc_s *g_rx_desc = NULL;
