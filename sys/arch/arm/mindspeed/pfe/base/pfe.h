@@ -185,6 +185,7 @@ u32 util_bus_read(u32 addr, u8 size);
 int pe_load_elf_section(int id, void *data, Elf32_Shdr *shdr);
 
 void pfe_lib_init(void *cbus_base, void *ddr_base, unsigned long ddr_phys_base);
+
 void bmu_init(void *base, BMU_CFG *cfg);
 void bmu_reset(void *base);
 void bmu_enable(void *base);
