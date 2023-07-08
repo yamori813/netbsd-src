@@ -98,7 +98,7 @@ void hif_tx_disable(void)
 void hif_rx_enable(void)
 {
 	writel((HIF_CTRL_DMA_EN | HIF_CTRL_BDP_CH_START_WSTB), HIF_RX_CTRL);
-	writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_TXPKT_INT_EN),
+	writel((readl(HIF_INT_ENABLE) | HIF_INT_EN | HIF_RXPKT_INT_EN),
 	    HIF_INT_ENABLE);
 }
 
