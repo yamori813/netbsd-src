@@ -73,6 +73,7 @@ static void pge_mii_statchg(struct ifnet *);
 
 static int pge_new_rxbuf(struct pge_softc * const, const u_int);
 static void pge_tick(void *);
+static int pge_alloc_ddr(struct pge_softc * const);
 
 static int pge_intr(void *);
 
@@ -204,17 +205,13 @@ pge_attach(device_t parent, device_t self, void *aux)
 	    BUS_DMASYNC_PREWRITE);
 
 	/* for ROUTE_TABLE_BASEADDR, TMU_LLM_BASEADDR, BMU2_DDR_BASEADDR */
-	sc->sc_ddr = kmem_zalloc(ROUTE_TABLE_SIZE + TMU_LLM_SIZE +
-	    BMU2_DDR_SIZE, KM_SLEEP);
-	bus_dmamap_create(sc->sc_bdt, TMU_LLM_SIZE, 1, TMU_LLM_SIZE, 0,
-	    BUS_DMA_WAITOK, &sc->sc_ddr_dm);
-	bus_dmamap_load(sc->sc_bdt, sc->sc_ddr_dm, sc->sc_ddr,
-	    TMU_LLM_SIZE, NULL, BUS_DMA_WAITOK | BUS_DMA_WRITE);
-//	bus_dmamap_sync(sc->sc_bdt, sc->sc_ddr_dm, 0, TMU_LLM_SIZE,
-//	    BUS_DMASYNC_PREWRITE);
-	aprint_normal_dev(sc->sc_dev, "ddr_baseaddr: %x ddr_phys_baseaddr: %x ddr_size: %x\n", (int)sc->sc_ddr,
-	    (int) sc->sc_ddr_pa, ROUTE_TABLE_SIZE + TMU_LLM_SIZE +
-            BMU2_DDR_SIZE);
+	sc->sc_ddrsize = (ROUTE_TABLE_SIZE + TMU_LLM_SIZE + BMU2_DDR_SIZE);
+	error = pge_alloc_ddr(sc);
+	if (error != 0) {
+		aprint_normal_dev(sc->sc_dev, "pge_alloc_ddr error %d\n",
+		    error);
+	}
+	aprint_normal_dev(sc->sc_dev, "ddr_baseaddr: %x ddr_phys_baseaddr: %x ddr_size: %x\n", (int)sc->sc_ddr, (int)sc->sc_ddr_pa, (int)sc->sc_ddrsize);
 
 	aprint_normal_dev(sc->sc_dev, "Ethernet address %s\n",
 	    ether_sprintf(sc->sc_enaddr));
@@ -482,7 +479,7 @@ pge_init(struct ifnet *ifp)
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 
-	hif_tx_enable();
+//	hif_tx_enable();
 	hif_rx_enable();
 
 	return 0;
@@ -748,4 +745,43 @@ pge_tick(void *arg)
 	printf("reg=%x\n", reg);
 
 	callout_schedule(&sc->sc_tick_ch, hz);
+}
+
+static int
+pge_alloc_ddr(struct pge_softc *sc)
+{
+	int error, nsegs;
+
+	error = bus_dmamem_alloc(sc->sc_bdt, sc->sc_ddrsize, 0x1000, 0,
+	    sc->sc_ddrsegs, 1, &nsegs, BUS_DMA_WAITOK);
+	if (error)
+		return error;
+	error = bus_dmamem_map(sc->sc_bdt, sc->sc_ddrsegs, nsegs,
+	    sc->sc_ddrsize, &sc->sc_ddr, BUS_DMA_WAITOK | BUS_DMA_COHERENT);
+	if (error)
+		goto free;
+	error = bus_dmamap_create(sc->sc_bdt, sc->sc_ddrsize, 1,
+	    sc->sc_ddrsize, 0, BUS_DMA_WAITOK, &sc->sc_ddrmap);
+	if (error)
+		goto unmap;
+	error = bus_dmamap_load(sc->sc_bdt, sc->sc_ddrmap, sc->sc_ddr,
+	    sc->sc_ddrsize, NULL, BUS_DMA_WAITOK);
+	if (error)
+		goto destroy;
+
+	memset(sc->sc_ddr, 0, sc->sc_ddrsize);
+
+	return 0;
+
+destroy:
+	bus_dmamap_destroy(sc->sc_bdt, sc->sc_ddrmap);
+unmap:
+	bus_dmamem_unmap(sc->sc_bdt, sc->sc_ddr, sc->sc_ddrsize);
+free:
+	bus_dmamem_free(sc->sc_bdt, sc->sc_ddrsegs, nsegs);
+
+	sc->sc_ddrsize = 0;
+	sc->sc_ddr = NULL;
+
+	return error;
 }
