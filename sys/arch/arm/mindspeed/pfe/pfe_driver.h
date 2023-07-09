@@ -82,6 +82,7 @@ typedef struct tx_desc_s {
 	int txToSend;
 	int txRingSize;
 }tx_desc_t;
+#endif   /* NOTUSE */
 
 
 /* The set of statistics registers implemented in the Cadence MAC.
@@ -137,6 +138,7 @@ typedef struct gem_stats{
 } volatile GEM_STATS;
 
 
+#ifdef NOTUSE
 int pfe_send(int phy_port, void *data, int length);
 int pfe_recv(unsigned int *pkt_ptr, int *phy_port);
 int pfe_tx_done(void);
