@@ -156,7 +156,7 @@ static void pfe_gpi_init(struct pfe *pfe)
 
 /** Helper function for PCI init sequence.
  */
-void pfe_gem_enable_all(void)
+void pfe_gemac_enable_all(void)
 {
 	gpi_enable((void *)EGPI1_BASE_ADDR);
 	gemac_enable((void *)EMAC1_BASE_ADDR);
@@ -167,6 +167,41 @@ void pfe_gem_enable_all(void)
 #if 0
 	gpi_enable(EGPI3_BASE_ADDR);
 	gemac_enable(EMAC3_BASE_ADDR);
+#endif
+}
+
+/** GEMAC initialization
+ * Initializes the GEMAC registers. 
+ *
+ * @param[in] gemac_base   Pointer to GEMAC reg base
+ * @param[in] mode GEMAC mode to configure (MII config)
+ * @param[in] speed GEMAC speed
+ * @param[in] duplex
+ */
+void pfe_gemac_init(void *gemac_base, u32 mode, u32 speed, u32 duplex)
+{
+	GEMAC_CFG gemac_cfg  = {
+		.mode = mode,
+		.speed = speed,
+		.duplex = duplex,
+	};
+
+	dprint("%s: gemac_base=%p\n", __func__, gemac_base);
+
+	gemac_init(gemac_base, &gemac_cfg);
+	
+	//gemac_set_loop(gemac_base, LB_NONE);
+	//gemac_disable_copy_all(gemac_base);
+	//gemac_disable_rx_checksum_offload(gemac_base);
+
+	gemac_allow_broadcast(gemac_base); 
+	gemac_disable_unicast(gemac_base); /* unicast hash disabled  */
+	gemac_disable_multicast(gemac_base); /* multicast hash disabled */
+#if 0
+	gemac_disable_fcs_rx(gemac_base);
+	gemac_disable_1536_rx(gemac_base);
+	gemac_enable_pause_rx(gemac_base);
+	gemac_enable_rx_checksum_offload(gemac_base);
 #endif
 }
 
@@ -295,3 +330,4 @@ int pfe_remove(struct pfe *pfe)
 
 	return 0;
 }
+

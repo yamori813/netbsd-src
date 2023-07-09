@@ -241,6 +241,8 @@ pge_attach(device_t parent, device_t self, void *aux)
 	struct pfe pfe;   /* dummy */
 	pfe_probe(&pfe);
 
+	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
+	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
 #if 0
 	if (device_unit(self) == 0) {
 		arswitch_writereg(self, AR8X16_REG_MODE,
@@ -478,6 +480,8 @@ pge_init(struct ifnet *ifp)
 	MAC_ADDR enet_address = {0x0, 0x0};
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
+
+	pfe_gemac_enable_all();
 
 //	hif_tx_enable();
 	hif_rx_enable();

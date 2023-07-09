@@ -141,7 +141,7 @@ int pfe_send(int phy_port, void *data, int length);
 int pfe_recv(unsigned int *pkt_ptr, int *phy_port);
 int pfe_tx_done(void);
 #endif   /* NOTUSE */
-void pfe_gem_enable_all(void);
+void pfe_gemac_enable_all(void);
 void pfe_gemac_init(void *gemac_base, u32 mode, u32 speed, u32 duplex);
 
 
