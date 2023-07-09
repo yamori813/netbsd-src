@@ -46,9 +46,6 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/m86xxx_intr.h>
 #include <arm/mindspeed/if_pgereg.h>
 
-typedef uint8_t u8;
-typedef uint32_t u32;
-
 #include <arm/mindspeed/pfe/c2000_eth.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
 
@@ -351,38 +348,53 @@ pge_watchdog(struct ifnet *ifp)
 	if_statinc(ifp, if_oerrors);
 }
 
+#define EMAC_PHY_IDLE   (1 << 2)
+
+static int
+pge_mii_timeout(struct pge_softc * const sc, int base)
+{
+	int timeout = 5000;
+
+	while (!(pge_read_4(sc, base + EMAC_NETWORK_STATUS) &
+	    EMAC_PHY_IDLE)) {
+		--timeout;
+		if (timeout == 0)
+			return -1;
+	}
+	return 0;
+}
+
 static int
 pge_mii_readreg(device_t dev, int phy, int reg, uint16_t *val)
 {
-/*
 	struct pge_softc * const sc = device_private(dev);
-	int result, wdata;
+	int result, wdata, base;
 
+	base = pge_emac_base(sc);
 	wdata = 0x60020000;
 	wdata |= ((phy << 23) | (reg << 18));
-	pge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
-	while(!(pge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
-		;
-	result = pge_read_4(sc, GEM_IP + GEM_PHY_MAN);
+	pge_write_4(sc, base + EMAC_PHY_MANAGEMENT, wdata);
+	if (pge_mii_timeout(sc, base) != 0)
+		return -1;
+	result = pge_read_4(sc, base + EMAC_PHY_MANAGEMENT);
 
 	*val = (uint16_t)result;
-*/
+
 	return 0;
 }
 
 static int
 pge_mii_writereg(device_t dev, int phy, int reg, uint16_t val)
 {
-/*
 	struct pge_softc * const sc = device_private(dev);
-	int wdata;
+	int wdata, base;
 
+	base = pge_emac_base(sc);
 	wdata = 0x50020000;
 	wdata |= ((phy << 23) | (reg << 18) | val);
-	pge_write_4(sc, GEM_IP + GEM_PHY_MAN, wdata);
-	while(!(pge_read_4(sc, GEM_IP + GEM_NET_STATUS) & GEM_PHY_IDLE))
-		;
-*/
+	pge_write_4(sc, base + EMAC_PHY_MANAGEMENT, wdata);
+	if (pge_mii_timeout(sc, base) != 0)
+		return -1;
 	return 0;
 }
 
@@ -455,7 +467,7 @@ pge_init(struct ifnet *ifp)
 {
 	struct pge_softc * const sc = ifp->if_softc;
 	int i;
-//	int reg;
+	int reg;
 //	int mac;
 	paddr_t paddr;
 
@@ -476,6 +488,8 @@ pge_init(struct ifnet *ifp)
 	pge_write_4(sc, HIF_TX_BDP_ADDR, paddr);
 	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
 	pge_write_4(sc, HIF_RX_BDP_ADDR, paddr);
+	reg = pge_read_4(sc, HIF_RX_CTRL);
+	pge_write_4(sc, HIF_RX_CTRL, reg | HIF_CTRL_BDP_CH_START_WSTB);
 
 	MAC_ADDR enet_address = {0x0, 0x0};
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
@@ -744,9 +758,11 @@ pge_tick(void *arg)
 	pge_write_4(sc, HIF_RX_CTRL, reg);
 	}
 */
-	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
 //	reg = pge_read_4(sc, HIF_INT_SRC - CBUS_BASE_ADDR);
-	printf("reg=%x\n", reg);
+	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
+	printf("reg=%x", reg);
+	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
+	printf(" %x\n", reg);
 
 	callout_schedule(&sc->sc_tick_ch, hz);
 }
