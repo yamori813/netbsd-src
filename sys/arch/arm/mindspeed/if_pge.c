@@ -48,6 +48,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 
 #include <arm/mindspeed/pfe/c2000_eth.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
+#include <arm/mindspeed/pfe/pfe_driver.h>
 
 #include <arm/mindspeed/arswitchreg.h>
 
@@ -238,8 +239,10 @@ pge_attach(device_t parent, device_t self, void *aux)
 	struct pfe pfe;   /* dummy */
 	pfe_probe(&pfe);
 
+/*
 	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
 	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
+*/
 #if 0
 	if (device_unit(self) == 0) {
 		arswitch_writereg(self, AR8X16_REG_MODE,
@@ -762,6 +765,8 @@ pge_tick(void *arg)
 	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
 	printf("reg=%x", reg);
 	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
+	printf(" %x", reg);
+	reg = pge_read_4(sc, pge_emac_base(sc) + EMAC_OCT_TX_BOT + offsetof(struct gem_stats, frames_rx));
 	printf(" %x\n", reg);
 
 	callout_schedule(&sc->sc_tick_ch, hz);
