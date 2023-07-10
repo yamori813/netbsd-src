@@ -173,6 +173,21 @@ pge_attach(device_t parent, device_t self, void *aux)
 
 	memset(sc->sc_rxdesc_ring, 0, sizeof(struct bufDesc) * PGE_RX_RING_CNT);
 
+	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
+
+	for (i = 0; i < PGE_RX_RING_CNT; i++) {
+		sc->sc_rxdesc_ring[i].data = 0;
+		if (i == PGE_TX_RING_CNT - 1)
+			sc->sc_rxdesc_ring[i].next = (struct bufDesc *)paddr;
+		else
+			sc->sc_rxdesc_ring[i].next = (struct bufDesc *)paddr +
+			    i + 1;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+		    sizeof(struct bufDesc) * i,
+		    sizeof(struct bufDesc),
+		    BUS_DMASYNC_PREWRITE);
+	}
+
 	if (pge_alloc_dma(sc, sizeof(struct bufDesc) * PGE_TX_RING_CNT,
 	    (void **)&(sc->sc_txdesc_ring), &(sc->sc_txdesc_dmamap)) != 0)
 		return;
