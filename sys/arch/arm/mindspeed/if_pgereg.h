@@ -143,5 +143,6 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 
 #define CONFIG_UTIL_PE_DISABLED
+//#define CONFIG_TMU_DUMMY
 
 #endif /* __IF_PGEREG_H__ */
