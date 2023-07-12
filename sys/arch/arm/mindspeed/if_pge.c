@@ -250,10 +250,6 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
-	pge_sc = sc;
-	struct pfe pfe;   /* dummy */
-	pfe_probe(&pfe);
-
 /*
 	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
 	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
@@ -485,9 +481,7 @@ pge_init(struct ifnet *ifp)
 {
 	struct pge_softc * const sc = ifp->if_softc;
 	int i;
-	int reg;
 //	int mac;
-	paddr_t paddr;
 
 	pge_stop(ifp, 0);
 
@@ -502,21 +496,18 @@ pge_init(struct ifnet *ifp)
 	/*
 	 * Give the transmit and receive rings to the chip.
 	 */
-	paddr = sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
-	pge_write_4(sc, HIF_TX_BDP_ADDR, paddr);
-	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
-	pge_write_4(sc, HIF_RX_BDP_ADDR, paddr);
-	reg = pge_read_4(sc, HIF_RX_CTRL);
-	pge_write_4(sc, HIF_RX_CTRL, reg | HIF_CTRL_BDP_CH_START_WSTB);
-
+/*
 	MAC_ADDR enet_address = {0x0, 0x0};
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
+*/
+	pge_sc = sc;
+	struct pfe pfe;   /* dummy */
+	pfe_probe(&pfe);
 
-	pfe_gemac_enable_all();
-
-//	hif_tx_enable();
-	hif_rx_enable();
+	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
+	gemac_enable_copy_all((void *)EMAC2_BASE_ADDR);
+	gemac_enable((void *)EMAC2_BASE_ADDR);
 
 	return 0;
 }
@@ -780,6 +771,8 @@ pge_tick(void *arg)
 	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
 	printf("reg=%x", reg);
 	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
+	printf(" %x", reg);
+	reg = pge_read_4(sc, HIF_RX_STATUS);
 	printf(" %x", reg);
 	reg = pge_read_4(sc, pge_emac_base(sc) + EMAC_OCT_TX_BOT + offsetof(struct gem_stats, frames_rx));
 	printf(" %x\n", reg);

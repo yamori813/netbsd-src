@@ -197,28 +197,36 @@ void pfe_gemac_init(void *gemac_base, u32 mode, u32 speed, u32 duplex)
 	gemac_allow_broadcast(gemac_base); 
 	gemac_disable_unicast(gemac_base); /* unicast hash disabled  */
 	gemac_disable_multicast(gemac_base); /* multicast hash disabled */
-#if 0
 	gemac_disable_fcs_rx(gemac_base);
 	gemac_disable_1536_rx(gemac_base);
 	gemac_enable_pause_rx(gemac_base);
-	gemac_enable_rx_checksum_offload(gemac_base);
-#endif
+//	gemac_enable_rx_checksum_offload(gemac_base);
 }
 
 /** PFE/HIF initialization function.
  */
 static void pfe_hif_init(struct pfe *pfe)
 {
+	paddr_t paddr;
+	uint32_t reg;
+
 	hif_tx_disable();
 	hif_rx_disable();
 
 //	hif_tx_desc_init(pfe);
 //	hif_rx_desc_init(pfe);
+	paddr = pge_sc->sc_txdesc_dmamap->dm_segs[0].ds_addr;
+	pge_write_4(pge_sc, HIF_TX_BDP_ADDR, paddr);
+
+	paddr = pge_sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
+	pge_write_4(pge_sc, HIF_RX_BDP_ADDR, paddr);
+	reg = pge_read_4(pge_sc, HIF_RX_CTRL);
+	pge_write_4(pge_sc, HIF_RX_CTRL, reg | HIF_CTRL_BDP_CH_START_WSTB);
 
 	hif_init();
 
-//	hif_tx_enable();
-//	hif_rx_enable();
+	hif_tx_enable();
+	hif_rx_enable();
 
 //	hif_rx_desc_dump();
 //	hif_tx_desc_dump();
