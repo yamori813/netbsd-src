@@ -216,8 +216,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txpad_dm, 0, ETHER_MIN_LEN,
 	    BUS_DMASYNC_PREWRITE);
 
-	/* for ROUTE_TABLE_BASEADDR, TMU_LLM_BASEADDR, BMU2_DDR_BASEADDR */
-	sc->sc_ddrsize = (ROUTE_TABLE_SIZE + TMU_LLM_SIZE + BMU2_DDR_SIZE);
+	sc->sc_ddrsize = PFE_TOTAL_DATA_SIZE;
 	error = pge_alloc_ddr(sc);
 	if (error != 0) {
 		aprint_normal_dev(sc->sc_dev, "pge_alloc_ddr error %d\n",
@@ -503,10 +502,11 @@ pge_init(struct ifnet *ifp)
 	pge_sc = sc;
 	struct pfe pfe;   /* dummy */
 	pfe_probe(&pfe);
-
-	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
-	gemac_enable_copy_all((void *)EMAC2_BASE_ADDR);
-	gemac_enable((void *)EMAC2_BASE_ADDR);
+/*
+	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
+	gemac_enable_copy_all((void *)EMAC1_BASE_ADDR);
+	gemac_enable((void *)EMAC1_BASE_ADDR);
+*/
 
 	callout_schedule(&sc->sc_tick_ch, hz);
 
@@ -777,7 +777,7 @@ printf("MORIMORI %d\n", use);
 	reg = pge_read_4(sc, HIF_RX_STATUS);
 	printf(" %x\n", reg);
 	printf("RX:");
-	int ptr = pge_emac_base(sc) + EMAC_OCT_TX_BOT +
+	int ptr = EMAC1_BASE_ADDR + EMAC_OCT_TX_BOT +
 	    offsetof(struct gem_stats, frames_rx);
 	for (i = 0; i < 23; i++) {
 		reg = pge_read_4(sc, ptr + i * 4);
