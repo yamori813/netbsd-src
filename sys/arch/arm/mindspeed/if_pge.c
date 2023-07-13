@@ -500,7 +500,9 @@ pge_init(struct ifnet *ifp)
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 */
 	pge_sc = sc;
-	struct pfe pfe;   /* dummy */
+	struct pfe pfe;
+	pfe.ddr_baseaddr = sc->sc_ddr;
+	pfe.ddr_phys_baseaddr = sc->sc_ddr_pa;
 	pfe_probe(&pfe);
 /*
 	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
