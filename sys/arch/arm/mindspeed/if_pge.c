@@ -126,7 +126,6 @@ pge_attach(device_t parent, device_t self, void *aux)
 	mutex_init(&sc->mtx, MUTEX_DEFAULT, IPL_NET);
 	callout_init(&sc->sc_tick_ch, 0);
 	callout_setfunc(&sc->sc_tick_ch, pge_tick, sc);
-	callout_schedule(&sc->sc_tick_ch, hz);
 
 	error = bus_space_map(aa->aa_iot, aa->aa_addr, sc->sc_bss,
 	    0, &sc->sc_bsh);
@@ -509,6 +508,8 @@ pge_init(struct ifnet *ifp)
 	gemac_enable_copy_all((void *)EMAC2_BASE_ADDR);
 	gemac_enable((void *)EMAC2_BASE_ADDR);
 
+	callout_schedule(&sc->sc_tick_ch, hz);
+
 	return 0;
 }
 
@@ -751,7 +752,6 @@ pge_tick(void *arg)
 	struct pge_softc * const sc = arg;
 	uint32_t reg;
 
-/*
 	int use = 0;
 	int i;
 	for (i = 0; i < PGE_RX_RING_CNT; i++) {
@@ -761,6 +761,8 @@ pge_tick(void *arg)
 	if(sc->sc_rxdesc_ring[i].ctrl & BD_CTRL_DESC_EN)
 		++use;
 	}
+printf("MORIMORI %d\n", use);
+/*
 	if(use) {
 	reg = pge_read_4(sc, HIF_RX_CTRL);
 	reg |= HIF_CTRL_BDP_CH_START_WSTB;
@@ -773,9 +775,15 @@ pge_tick(void *arg)
 	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
 	printf(" %x", reg);
 	reg = pge_read_4(sc, HIF_RX_STATUS);
-	printf(" %x", reg);
-	reg = pge_read_4(sc, pge_emac_base(sc) + EMAC_OCT_TX_BOT + offsetof(struct gem_stats, frames_rx));
 	printf(" %x\n", reg);
+	printf("RX:");
+	int ptr = pge_emac_base(sc) + EMAC_OCT_TX_BOT +
+	    offsetof(struct gem_stats, frames_rx);
+	for (i = 0; i < 23; i++) {
+		reg = pge_read_4(sc, ptr + i * 4);
+		printf(" %d", reg);
+	}
+	printf("\n");
 
 	callout_schedule(&sc->sc_tick_ch, hz);
 }
