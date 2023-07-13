@@ -40,7 +40,7 @@
 
 #include <arm/mindspeed/if_pgereg.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
-#include <arm/mindspeed/pfe/hal.h>
+#include <arm/mindspeed/pfe/pfe_hal.h>
 
 void *cbus_base_addr;
 void *ddr_base_addr;
