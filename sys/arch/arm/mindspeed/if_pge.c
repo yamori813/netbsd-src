@@ -46,7 +46,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/m86xxx_intr.h>
 #include <arm/mindspeed/if_pgereg.h>
 
-#include <arm/mindspeed/pfe/c2000_eth.h>
+#include <arm/mindspeed/pfe/pfe_eth.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
 #include <arm/mindspeed/pfe/pfe_driver.h>
 

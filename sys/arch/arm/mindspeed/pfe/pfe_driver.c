@@ -40,8 +40,8 @@
 
 #include <arm/mindspeed/if_pgereg.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
-#include <arm/mindspeed/pfe/c2000_eth.h>
-#include <arm/mindspeed/pfe/hal.h>
+#include <arm/mindspeed/pfe/pfe_eth.h>
+#include <arm/mindspeed/pfe/pfe_hal.h>
 #include <arm/mindspeed/pfe/pfe_driver.h>
 #include <arm/mindspeed/pfe/pfe_firmware.h>
 
