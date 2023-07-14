@@ -258,6 +258,7 @@ void util_reset(void);
 void util_enable(void);
 void util_disable(void);
 
+void hif_nocpy_init(void);
 void hif_init(void);
 void hif_tx_enable(void);
 void hif_tx_disable(void);
