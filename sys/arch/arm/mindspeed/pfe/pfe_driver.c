@@ -246,7 +246,6 @@ static void pfe_hif_init(struct pfe *pfe)
  */
 static int pfe_hw_init(struct pfe *pfe)
 {
-return 0;
 
 	printk("%s: start \n", __func__);
 
@@ -297,7 +296,7 @@ int pfe_probe(struct pfe *pfe)
 	             pfe->cbus_baseaddr, pfe->ddr_baseaddr, (u32)pfe->ddr_phys_baseaddr);
 */
 
-	pfe_lib_init(pfe->cbus_baseaddr, pfe->ddr_baseaddr,[]
+	pfe_lib_init(pfe->cbus_baseaddr, pfe->ddr_baseaddr,
 	    pfe->ddr_phys_baseaddr);
 
 	pfe_hw_init(pfe);
