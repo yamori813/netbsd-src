@@ -163,6 +163,7 @@ void pe_mem_memcpy_to32(int id, u32 mem_access_addr, u8 *src, unsigned int len)
 	unsigned int len32 = len >> 2;
 	int i;
 
+//	printk(KERN_INFO "%s: %d %x %x\n", __func__, id, mem_access_addr, len);
 	addr = mem_access_addr | PE_MEM_ACCESS_WRITE | PE_MEM_ACCESS_BYTE_ENABLE(0, 4);
 
 	for (i = 0; i < len32; i++, offset += 4, src += 4) {
