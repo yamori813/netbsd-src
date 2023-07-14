@@ -44,7 +44,6 @@
 
 /**************************** HIF ***************************/
 
-#ifdef NOTUSE
 /** Initializes HIF no copy block.
 *
 */
@@ -56,7 +55,6 @@ void hif_nocpy_init(void)
 	writel(CBUS_VIRT_TO_PFE(CLASS_INQ_PKTPTR), HIF_NOCPY_CLASS_ADDR);
 	writel(CBUS_VIRT_TO_PFE(TMU_PHY_INQ_PKTPTR), HIF_NOCPY_TMU_PORT0_ADDR);
 }
-#endif   /* NOTUSE */
 
 /** Initializes HIF copy block.
 *
