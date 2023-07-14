@@ -8,14 +8,14 @@
 #define cpu_to_be32(x) htobe32(x)
 
 #define CLASS_DMEM_BASE_ADDR(i)	(0x00000000 | ((i) << 20))
-#define CLASS_IMEM_BASE_ADDR(i)	(0x00000000 | ((i) << 20)) /* Only valid for mem access register interface */
+#define CLASS_PMEM_BASE_ADDR(i)	(0x00000000 | ((i) << 20)) /* Only valid for mem access register interface */
 #define CLASS_DMEM_SIZE		0x00002000
-#define CLASS_IMEM_SIZE		0x00008000
+#define CLASS_PMEM_SIZE		0x00008000
 
 #define TMU_DMEM_BASE_ADDR(i)	(0x00000000 + ((i) << 20))
-#define TMU_IMEM_BASE_ADDR(i)	(0x00000000 + ((i) << 20)) /* Only valid for mem access register interface */
+#define TMU_PMEM_BASE_ADDR(i)	(0x00000000 + ((i) << 20)) /* Only valid for mem access register interface */
 #define TMU_DMEM_SIZE		0x00000800
-#define TMU_IMEM_SIZE		0x00002000
+#define TMU_PMEM_SIZE		0x00002000
 
 #define UTIL_DMEM_BASE_ADDR	0x00000000
 #define UTIL_DMEM_SIZE		0x00002000

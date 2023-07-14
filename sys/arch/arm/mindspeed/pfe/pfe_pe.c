@@ -67,73 +67,73 @@ void pfe_lib_init(void *cbus_base, void *ddr_base, unsigned long ddr_phys_base)
 	ddr_phys_base_addr = ddr_phys_base;
 
 	pe[CLASS0_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(0);
-	pe[CLASS0_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(0);
-	pe[CLASS0_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS0_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(0);
+	pe[CLASS0_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS0_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS0_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS0_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 
 	pe[CLASS1_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(1);
-	pe[CLASS1_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(1);
-	pe[CLASS1_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS1_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(1);
+	pe[CLASS1_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS1_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS1_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS1_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 
 	pe[CLASS2_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(2);
-	pe[CLASS2_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(2);
-	pe[CLASS2_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS2_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(2);
+	pe[CLASS2_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS2_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS2_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS2_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 
 	pe[CLASS3_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(3);
-	pe[CLASS3_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(3);
-	pe[CLASS3_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS3_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(3);
+	pe[CLASS3_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS3_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS3_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS3_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 
 #if !defined(CONFIG_PLATFORM_PCI)
 	pe[CLASS4_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(4);
-	pe[CLASS4_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(4);
-	pe[CLASS4_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS4_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(4);
+	pe[CLASS4_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS4_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS4_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS4_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 
 	pe[CLASS5_ID].dmem_base_addr = CLASS_DMEM_BASE_ADDR(5);
-	pe[CLASS5_ID].pmem_base_addr = CLASS_IMEM_BASE_ADDR(5);
-	pe[CLASS5_ID].pmem_size = CLASS_IMEM_SIZE;
+	pe[CLASS5_ID].pmem_base_addr = CLASS_PMEM_BASE_ADDR(5);
+	pe[CLASS5_ID].pmem_size = CLASS_PMEM_SIZE;
 	pe[CLASS5_ID].mem_access_wdata = (void *)CLASS_MEM_ACCESS_WDATA;
 	pe[CLASS5_ID].mem_access_addr = (void *)CLASS_MEM_ACCESS_ADDR;
 	pe[CLASS5_ID].mem_access_rdata = (void *)CLASS_MEM_ACCESS_RDATA;
 #endif
 	pe[TMU0_ID].dmem_base_addr = TMU_DMEM_BASE_ADDR(0);
-	pe[TMU0_ID].pmem_base_addr = TMU_IMEM_BASE_ADDR(0);
-	pe[TMU0_ID].pmem_size = TMU_IMEM_SIZE;
+	pe[TMU0_ID].pmem_base_addr = TMU_PMEM_BASE_ADDR(0);
+	pe[TMU0_ID].pmem_size = TMU_PMEM_SIZE;
 	pe[TMU0_ID].mem_access_wdata = (void *)TMU_MEM_ACCESS_WDATA;
 	pe[TMU0_ID].mem_access_addr = (void *)TMU_MEM_ACCESS_ADDR;
 	pe[TMU0_ID].mem_access_rdata = (void *)TMU_MEM_ACCESS_RDATA;
 
 #if !defined(CONFIG_TMU_DUMMY)
 	pe[TMU1_ID].dmem_base_addr = TMU_DMEM_BASE_ADDR(1);
-	pe[TMU1_ID].pmem_base_addr = TMU_IMEM_BASE_ADDR(1);
-	pe[TMU1_ID].pmem_size = TMU_IMEM_SIZE;
+	pe[TMU1_ID].pmem_base_addr = TMU_PMEM_BASE_ADDR(1);
+	pe[TMU1_ID].pmem_size = TMU_PMEM_SIZE;
 	pe[TMU1_ID].mem_access_wdata = (void *)TMU_MEM_ACCESS_WDATA;
 	pe[TMU1_ID].mem_access_addr = (void *)TMU_MEM_ACCESS_ADDR;
 	pe[TMU1_ID].mem_access_rdata = (void *)TMU_MEM_ACCESS_RDATA;
 
 	pe[TMU2_ID].dmem_base_addr = TMU_DMEM_BASE_ADDR(2);
-	pe[TMU2_ID].pmem_base_addr = TMU_IMEM_BASE_ADDR(2);
-	pe[TMU2_ID].pmem_size = TMU_IMEM_SIZE;
+	pe[TMU2_ID].pmem_base_addr = TMU_PMEM_BASE_ADDR(2);
+	pe[TMU2_ID].pmem_size = TMU_PMEM_SIZE;
 	pe[TMU2_ID].mem_access_wdata = (void *)TMU_MEM_ACCESS_WDATA;
 	pe[TMU2_ID].mem_access_addr = (void *)TMU_MEM_ACCESS_ADDR;
 	pe[TMU2_ID].mem_access_rdata = (void *)TMU_MEM_ACCESS_RDATA;
 
 	pe[TMU3_ID].dmem_base_addr = TMU_DMEM_BASE_ADDR(3);
-	pe[TMU3_ID].pmem_base_addr = TMU_IMEM_BASE_ADDR(3);
-	pe[TMU3_ID].pmem_size = TMU_IMEM_SIZE;
+	pe[TMU3_ID].pmem_base_addr = TMU_PMEM_BASE_ADDR(3);
+	pe[TMU3_ID].pmem_size = TMU_PMEM_SIZE;
 	pe[TMU3_ID].mem_access_wdata = (void *)TMU_MEM_ACCESS_WDATA;
 	pe[TMU3_ID].mem_access_addr = (void *)TMU_MEM_ACCESS_ADDR;
 	pe[TMU3_ID].mem_access_rdata = (void *)TMU_MEM_ACCESS_RDATA;
@@ -206,11 +206,11 @@ void pe_dmem_memcpy_to32(int id, u32 dst, void *src, unsigned int len)
  */
 void pe_pmem_memcpy_to32(int id, u32 dst, void *src, unsigned int len)
 {
-	pe_mem_memcpy_to32(id, pe[id].pmem_base_addr | (dst & (pe[id].pmem_size - 1)) | PE_MEM_ACCESS_IMEM, (u8 *)src, len);
+	pe_mem_memcpy_to32(id, pe[id].pmem_base_addr | (dst & (pe[id].pmem_size - 1)) | PE_MEM_ACCESS_PMEM, (u8 *)src, len);
 }
 
 
-/** Reads PE internal program memory (IMEM) from the host
+/** Reads PE internal program memory (PMEM) from the host
  * through indirect access registers.
  * @param[in] id		PE identification (CLASS0_ID, ..., TMU0_ID, ..., TMU3_ID)
  * @param[in] addr		PMEM read address (must be aligned on size)
@@ -223,7 +223,7 @@ u32 pe_pmem_read(int id, u32 addr, u8 size)
 	u32 mask = 0xffffffff >> ((4 - size) << 3);
 	u32 val;
 
-	addr = pe[id].pmem_base_addr | ((addr & ~0x3) & (pe[id].pmem_size - 1)) | PE_MEM_ACCESS_READ | PE_MEM_ACCESS_IMEM | PE_MEM_ACCESS_BYTE_ENABLE(offset, size);
+	addr = pe[id].pmem_base_addr | ((addr & ~0x3) & (pe[id].pmem_size - 1)) | PE_MEM_ACCESS_READ | PE_MEM_ACCESS_PMEM | PE_MEM_ACCESS_BYTE_ENABLE(offset, size);
 
 	writel(addr, (int)pe[id].mem_access_addr);
 	val = be32_to_cpu(readl((int)pe[id].mem_access_rdata));
@@ -287,7 +287,7 @@ static void util_pmem_write(u32 val, void *addr, u8 size)
 	void *addr64 = (void *)((unsigned long)addr & ~0x7);
 	unsigned long off = 8 - ((unsigned long)addr & 0x7) - size;
 	
-	//IMEM should  be loaded as a 64bit swapped value in a 64bit aligned location
+	//PMEM should  be loaded as a 64bit swapped value in a 64bit aligned location
 	if (size == 4)
 		writel(be32_to_cpu(val), (int)addr64 + off);
 	else

@@ -134,7 +134,7 @@ err:
 
 /** PFE firmware initialization.
 * Loads different firmware files from filesystem.
-* Initializes PE IMEM/DMEM and UTIL-PE DDR
+* Initializes PE PMEM/DMEM and UTIL-PE DDR
 * Initializes control path symbol addresses (by looking them up in the elf firmware files
 * Takes PE's out of reset
 *

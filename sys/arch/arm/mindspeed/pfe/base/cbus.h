@@ -31,7 +31,7 @@
 */
 #define PE_MEM_ACCESS_WRITE		(1<<31)			/**< Internal Memory Write. */
 #define PE_MEM_ACCESS_READ		(0<<31)			/**< Internal Memory Read. */
-#define PE_MEM_ACCESS_IMEM		(1<<15)
+#define PE_MEM_ACCESS_PMEM		(1<<15)
 #define PE_MEM_ACCESS_DMEM		(1<<16)
 #define PE_MEM_ACCESS_BYTE_ENABLE(offset,size)	(((((1 << (size)) - 1) << (4 - (offset) - (size))) & 0xf) << 24)	/**< Byte Enables of the Internal memory access. These are interpred in BE */
 // @}
