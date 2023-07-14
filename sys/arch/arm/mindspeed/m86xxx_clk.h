@@ -74,9 +74,9 @@
 #define DDR_CLK_CNTRL                0xF0
 #define DDR_CLK_DIV_CNTRL            0xF4
 #define DDR_RESET                    0xF8
-#define HFE_CLK_CNTRL                0x100
-#define HFE_CLK_DIV_CNTRL            0x104
-#define HFE_RESET                    0x108
+#define PFE_CLK_CNTRL                0x100
+#define PFE_CLK_DIV_CNTRL            0x104
+#define PFE_RESET                    0x108
 #define IPSEC_CLK_CNTRL              0x110
 #define IPSEC_CLK_DIV_CNTRL          0x114
 #define IPSEC_RESET                  0x118
@@ -156,7 +156,7 @@
 #define SERDES2_RST           	(1 << 2)
 
 /* AXI_RESET_1 bits */
-#define HFE_AXI_RESET		(1 << 3)
+#define PFE_AXI_RESET		(1 << 3)
 
 //Clock Divider mirror mechanism in IRAM. It is going to take more than 256 bytes of IRAM
 //#define IRAM_CLK_REG_MIRROR	0x8300FC00 //maybe to need to think of the another fixed location
@@ -350,8 +350,8 @@ enum {
 #define L2CC_CLK_450		450
 #define L2CC_CLK_375		375
 #define L2CC_CLK_325		325
-#define HFE_CLK_500		500
-#define HFE_CLK_400		400
+#define PFE_CLK_500		500
+#define PFE_CLK_400		400
 #define GEMTX_CLK_125		125
 #define EXTPHY0_CLK_125		125
 #define EXTPHY1_CLK_125		125
