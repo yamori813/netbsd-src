@@ -246,6 +246,7 @@ static void pfe_hif_init(struct pfe *pfe)
  */
 static int pfe_hw_init(struct pfe *pfe)
 {
+return 0;
 
 	printk("%s: start \n", __func__);
 
