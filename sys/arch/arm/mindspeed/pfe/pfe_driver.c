@@ -297,15 +297,17 @@ int pfe_probe(struct pfe *pfe)
 	             pfe->cbus_baseaddr, pfe->ddr_baseaddr, (u32)pfe->ddr_phys_baseaddr);
 */
 
-	pfe_lib_init(pfe->cbus_baseaddr, pfe->ddr_baseaddr, pfe->ddr_phys_baseaddr);
-                    
+	pfe_lib_init(pfe->cbus_baseaddr, pfe->ddr_baseaddr,[]
+	    pfe->ddr_phys_baseaddr);
 
 	pfe_hw_init(pfe);
 
 	/* Load the class,TM, Util fw
-    * by now pfe is,  
-    * - out of reset + disabled + configured,
-    * Fw loading should be done after pfe_hw_init() */
+	 * by now pfe is,
+	 * - out of reset + disabled + configured,
+	 * Fw loading should be done after pfe_hw_init()
+	 */
+
 	pfe_firmware_init();
 
 	init_done = 1;
