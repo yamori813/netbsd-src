@@ -252,6 +252,12 @@ m86xxx_bootstrap(vaddr_t iobase)
 	reg &= ~USB1_AXI_RESET_BIT;
 	writel(AXI_RESET_2, reg);
 
+	writel(AXI_RESET_1, PFE_SYS_AXI_RESET_BIT | PFE_CORE_RESET_BIT);
+	delay(10);
+	writel(AXI_RESET_1, 0);
+	writel(PFE_RESET, 1);
+	writel(GEMTX_RESET, 1);
+	delay(10);
 	writel(PFE_RESET, 0);
 	writel(GEMTX_RESET, 0);
 }
