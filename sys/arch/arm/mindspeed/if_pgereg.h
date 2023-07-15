@@ -144,5 +144,6 @@ typedef uint32_t u32;
 
 #define CONFIG_UTIL_PE_DISABLED
 //#define CONFIG_TMU_DUMMY
+#define CONFIG_NOFIRMWARE
 
 #endif /* __IF_PGEREG_H__ */

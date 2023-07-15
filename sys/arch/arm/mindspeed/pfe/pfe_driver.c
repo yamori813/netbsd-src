@@ -270,7 +270,7 @@ static int pfe_hw_init(struct pfe *pfe)
 	printk(KERN_INFO "bmu2 enabled\n");
 	
 	printk("%s: done\n", __func__);
-	
+
 	/* NOTE: Load PE specific data (if any) */
 
 	return 0;
@@ -307,8 +307,16 @@ int pfe_probe(struct pfe *pfe)
 	 * Fw loading should be done after pfe_hw_init()
 	 */
 
-	pfe_firmware_init();
+#if defined(CONFIG_NOFIRMWARE)
+	tmu_enable(0xf);
+	class_enable();
 
+	gpi_enable((void *)EGPI1_BASE_ADDR);
+	gpi_enable((void *)EGPI2_BASE_ADDR);
+	gpi_enable((void *)HGPI_BASE_ADDR);
+#else
+	pfe_firmware_init();
+#endif
 	init_done = 1;
 
 	return 0;
@@ -333,7 +341,9 @@ int pfe_remove(struct pfe *pfe)
 	}
 */
 
-	pfe_firmware_exit();	
+#if !defined(CONFIG_NOFIRMWARE)
+	pfe_firmware_exit();
+#endif
 
 	return 0;
 }

@@ -28,6 +28,8 @@
  * SUCH DAMAGE.
  */
 
+#if !defined(CONFIG_NOFIRMWARE)
+
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/device.h>
@@ -47,7 +49,6 @@
 /** @file
  *  Contains all the functions to handle parsing and loading of PE firmware files.
  */
-
 
 /* CLASS-PE ELF file content */
 unsigned char class_fw_data[] __attribute__((aligned(sizeof(int)))) = {
@@ -210,3 +211,4 @@ void pfe_firmware_exit(void)
 	hif_tx_disable();
 	hif_rx_disable();
 }
+#endif   /* CONFIG_NOFIRMWARE */
