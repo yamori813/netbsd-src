@@ -74,10 +74,18 @@ static void pge_tick(void *);
 static int pge_alloc_ddr(struct pge_softc * const);
 
 static int pge_intr(void *);
+static int pge_rxintr(void *);
+static int pge_txintr(void *);
 
 static int pge_alloc_dma(struct pge_softc *, size_t, void **,bus_dmamap_t *);
 
 static uint32_t pge_emac_base(struct pge_softc * const);
+
+#define TXDESC_NEXT(x) pge_txdesc_adjust((x), 1)
+#define TXDESC_PREV(x) pge_txdesc_adjust((x), -1)
+
+#define RXDESC_NEXT(x) pge_rxdesc_adjust((x), 1)
+#define RXDESC_PREV(x) pge_rxdesc_adjust((x), -1)
 
 CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
     pge_match, pge_attach, pge_detach, NULL);
@@ -96,6 +104,20 @@ static uint32_t pge_emac_base(struct pge_softc * const sc)
 		addr = EMAC3_BASE_ADDR;
 	
 	return addr;
+}
+
+static inline u_int
+pge_txdesc_adjust(u_int x, int y)
+{
+	int res = x + y + PGE_TX_RING_CNT;
+	return res % PGE_TX_RING_CNT;
+}
+
+static inline u_int
+pge_rxdesc_adjust(u_int x, int y)
+{
+	int res = x + y + PGE_RX_RING_CNT;
+	return res % PGE_RX_RING_CNT;
 }
 
 static int 
@@ -462,8 +484,7 @@ reuse:
 	sc->sc_rxdesc_ring[i].data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 //	sc->sc_rxdesc_ring[i].ctrl = MAX_FRAME_SIZE | BD_CTRL_DESC_EN |
 //	    BD_CTRL_PKT_INT_EN | BD_CTRL_DIR | BD_CTRL_LIFM;
-//	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN | BD_CTRL_LIFM |
-	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_LIFM |
+	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN | BD_CTRL_LIFM |
 	    BD_CTRL_DIR | BD_CTRL_DESC_EN |
 	    BD_BUF_LEN(rdp->rx_dm[i]->dm_segs[0].ds_len);
 	sc->sc_rxdesc_ring[i].status = 0;
@@ -509,7 +530,7 @@ pge_init(struct ifnet *ifp)
 	gemac_enable_copy_all((void *)EMAC1_BASE_ADDR);
 	gemac_enable((void *)EMAC1_BASE_ADDR);
 
-	callout_schedule(&sc->sc_tick_ch, hz);
+//	callout_schedule(&sc->sc_tick_ch, hz);
 
 	return 0;
 }
@@ -565,21 +586,16 @@ pge_stop(struct ifnet *ifp, int disable)
 static int
 pge_intr(void *arg)
 {
-printf("MORIORI intr");
-#if 0
 	struct pge_softc * const sc = arg;
 	int reg;
 
-	reg = pge_read_4(sc, GEM_IP + GEM_IRQ_STATUS);
-
-	if (reg & GEM_IRQ_RX_DONE)
+	reg = pge_read_4(sc, HIF_INT_SRC);
+	if (reg & HIF_RXPKT_INT)
 		pge_rxintr(arg);
-//	else
-	if (reg & GEM_IRQ_TX_DONE)
+	if (reg & HIF_TXPKT_INT)
 		pge_txintr(arg);
 
-	pge_write_4(sc, GEM_IP + GEM_IRQ_STATUS, reg);
-#endif
+	pge_write_4(sc, HIF_INT_SRC, reg);
 
 	return 1;
 }
@@ -826,4 +842,114 @@ free:
 	sc->sc_ddr = NULL;
 
 	return error;
+}
+
+
+static int
+pge_rxintr(void *arg)
+{
+	struct pge_softc * const sc = arg;
+	struct pge_ring_data * const rdp = sc->sc_rdp;
+	u_int i;
+	int length;
+	struct mbuf *m;
+	struct ifnet *ifp = &sc->sc_ec.ec_if;
+	int count;
+
+	count = 0;
+	for (;;) {
+		i = sc->sc_rxhead;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+		    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
+		    BUS_DMASYNC_PREREAD);
+		if(!(sc->sc_rxdesc_ring[i].ctrl & BD_CTRL_DESC_EN)) {
+			length = BD_BUF_LEN(sc->sc_rxdesc_ring[i].ctrl);
+			length -= sizeof(hif_header_t);
+printf("MORI rx len %d\n", length);
+			m = rdp->rx_mb[i];
+			if (length < ETHER_HDR_LEN) {
+				aprint_error_dev(sc->sc_dev,
+				    "RX error packe length\n");
+				m_freem(m);
+			} else {
+				bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
+				    0, rdp->rx_dm[i]->dm_mapsize,
+				    BUS_DMASYNC_POSTREAD);
+int j;
+for (j = 0; j < 8; ++j) {
+for (i = 0; i < 16; ++i) {
+printf(" %02x", *(m->m_data + i + j * 16));
+}
+printf("\n");
+}
+				m_set_rcvif(m, ifp);
+				m->m_pkthdr.len = m->m_len = length;
+				m->m_data += sizeof(hif_header_t);
+				if_percpuq_enqueue(ifp->if_percpuq, m);
+			}
+			pge_new_rxbuf(sc, i);
+
+			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+			    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
+			    BUS_DMASYNC_PREWRITE);
+			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
+			++count;
+		} else {
+			/* may be not happen */
+			if (count == 0)
+				panic("rxintr occur but no data\n");
+			break;
+		}
+	}
+
+	return 1;
+}
+
+static int
+pge_txintr(void *arg)
+{
+	struct pge_softc * const sc = arg;
+	struct pge_ring_data * const rdp = sc->sc_rdp;
+	struct ifnet * const ifp = &sc->sc_ec.ec_if;
+	bool handled = false;
+	int i, remain;
+
+	remain = 0;
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+	    0, sizeof(struct bufDesc) * PGE_TX_RING_CNT, BUS_DMASYNC_PREREAD);
+	for (i = 0; i < PGE_TX_RING_CNT; i++) {
+		if (sc->sc_txdesc_ring[i].ctrl & BD_CTRL_DESC_EN) {
+			++remain;
+			continue;
+		}
+
+//		if ((sc->sc_txdesc_ring[i].tx_ctl & GEMTX_BUFRET) == 0)
+//			continue;
+		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
+		    0, rdp->tx_dm[i]->dm_mapsize,
+		    BUS_DMASYNC_POSTWRITE);
+		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
+
+		m_freem(rdp->tx_mb[i]);
+		rdp->tx_mb[i] = NULL;
+
+		if_statinc(ifp, if_opackets);
+
+		handled = true;
+
+		sc->sc_txbusy = false;
+
+		sc->sc_txdesc_ring[i].ctrl = 0;
+		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
+		    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
+		    BUS_DMASYNC_PREWRITE);
+
+	}
+
+	if (remain == 0)
+		ifp->if_timer = 0;
+	if (handled)
+		if_schedule_deferred_start(ifp);
+
+	return handled;
 }
