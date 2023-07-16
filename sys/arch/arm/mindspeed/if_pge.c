@@ -484,7 +484,8 @@ reuse:
 	sc->sc_rxdesc_ring[i].data = rdp->rx_dm[i]->dm_segs[0].ds_addr;
 //	sc->sc_rxdesc_ring[i].ctrl = MAX_FRAME_SIZE | BD_CTRL_DESC_EN |
 //	    BD_CTRL_PKT_INT_EN | BD_CTRL_DIR | BD_CTRL_LIFM;
-	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN | BD_CTRL_LIFM |
+//	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN | BD_CTRL_LIFM |
+	sc->sc_rxdesc_ring[i].ctrl = BD_CTRL_PKT_INT_EN |
 	    BD_CTRL_DIR | BD_CTRL_DESC_EN |
 	    BD_BUF_LEN(rdp->rx_dm[i]->dm_segs[0].ds_len);
 	sc->sc_rxdesc_ring[i].status = 0;
