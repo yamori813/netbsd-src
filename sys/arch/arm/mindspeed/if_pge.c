@@ -160,12 +160,20 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ih = intr_establish(aa->aa_intr, IPL_NET, IST_LEVEL,
 	    pge_intr, sc);
 
+/*
 	sc->sc_enaddr[0] = 0xd4;
 	sc->sc_enaddr[1] = 0x94;
 	sc->sc_enaddr[2] = 0xa1;
 	sc->sc_enaddr[3] = 0x97;
 	sc->sc_enaddr[4] = 0x03;
 	sc->sc_enaddr[5] = 0x94 + device_unit(self);
+*/
+	sc->sc_enaddr[0] = 0x00;
+	sc->sc_enaddr[1] = 0x0a;
+	sc->sc_enaddr[2] = 0x0b;
+	sc->sc_enaddr[3] = 0x0c;
+	sc->sc_enaddr[4] = 0x0d;
+	sc->sc_enaddr[5] = 0x0e;
 
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
@@ -522,16 +530,21 @@ pge_init(struct ifnet *ifp)
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 */
+
 	pge_sc = sc;
 	struct pfe pfe;
 	pfe.ddr_baseaddr = sc->sc_ddr;
 	pfe.ddr_phys_baseaddr = sc->sc_ddr_pa;
 	pfe_probe(&pfe);
-	pfe_gemac_init((void *)EMAC1_BASE_ADDR, RGMII, SPEED_1000M, DUPLEX_FULL);
-	gemac_enable_copy_all((void *)EMAC1_BASE_ADDR);
-	gemac_enable((void *)EMAC1_BASE_ADDR);
+	int mac = EMAC1_BASE_ADDR;
+	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
+	gemac_enable_copy_all((void *)mac);
+	gemac_set_bus_width((void *)mac, 32);
+	gemac_enable((void *)mac);
 
-//	callout_schedule(&sc->sc_tick_ch, hz);
+	callout_schedule(&sc->sc_tick_ch, hz);
+
+	ifp->if_flags |= IFF_RUNNING;
 
 	return 0;
 }
@@ -604,7 +617,6 @@ pge_intr(void *arg)
 static void
 pge_start(struct ifnet *ifp)
 {
-#if 0
 	struct pge_softc * const sc = ifp->if_softc;
 	struct pge_ring_data * const rdp = sc->sc_rdp;
 	struct mbuf *m;
@@ -617,6 +629,7 @@ pge_start(struct ifnet *ifp)
 	u_int mlen;
 	u_int len;
 	int i;
+printf("MORIMORI start\n");
 
 	PGE_LOCK(sc);
 
@@ -630,11 +643,11 @@ pge_start(struct ifnet *ifp)
 	}
 
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-	    0, sizeof(struct tTXdesc) * PGE_TX_RING_CNT,
+	    0, sizeof(struct bufDesc) * PGE_TX_RING_CNT,
 	    BUS_DMASYNC_PREREAD);
 	txfree = 0;
 	for (i = 0;i < PGE_TX_RING_CNT; ++i) {
-		if(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK)
+		if(!(sc->sc_txdesc_ring[i].ctrl & BD_CTRL_DESC_EN))
 			++txfree;
 	}
 
@@ -644,6 +657,15 @@ pge_start(struct ifnet *ifp)
 		if (m == NULL)
 			break;
 
+		m->m_data -= sizeof(hif_header_t);
+		m->m_len += sizeof(hif_header_t);
+		m->m_data[0] = 0;
+		for (i = 1; i < 6; ++i)
+			m->m_data[i] = 0;
+		for (i = 0; i < 16; ++i) {
+			printf(" %02x", m->m_data[i]);
+		}
+		printf("\n");
 		dm = rdp->tx_dm[sc->sc_txnext];
 		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m,
 		    BUS_DMA_WRITE | BUS_DMA_NOWAIT);
@@ -676,47 +698,49 @@ pge_start(struct ifnet *ifp)
 		if (txstart == -1)
 			txstart = sc->sc_txnext;
 		for (seg = 0; seg < dm->dm_nsegs; seg++) {
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			sc->sc_txdesc_ring[sc->sc_txnext].data =
 			    dm->dm_segs[seg].ds_addr;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			sc->sc_txdesc_ring[sc->sc_txnext].ctrl =
 			    dm->dm_segs[seg].ds_len;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    (GEMTX_FCS | GEMTX_IE | GEMTX_POOLB);
 			len += dm->dm_segs[seg].ds_len;
+			sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
+				    BD_CTRL_DESC_EN;
 			if (!pad && (seg == dm->dm_nsegs - 1))
-				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    GEMTX_LAST;
-			if(seg == 0)
-				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    GEMTX_BUFRET;
-			if (sc->sc_txnext == PGE_TX_RING_CNT - 1)
-				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    GEMTX_WRAP;
-
+				sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
+				    (BD_CTRL_LIFM | BD_CTRL_BRFETCH_DISABLE |
+				    BD_CTRL_RTFETCH_DISABLE |
+				    BD_CTRL_PARSE_DISABLE |
+				    BD_CTRL_PKT_INT_EN);
+			if (seg == 0)
+				sc->sc_txdesc_ring[sc->sc_txnext].status = 1;
+			else
+				sc->sc_txdesc_ring[sc->sc_txnext].status = 0;
 			txfree--;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-			    sizeof(struct tTXdesc) * sc->sc_txnext,
-			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
+			    sizeof(struct bufDesc) * sc->sc_txnext,
+			    sizeof(struct bufDesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
+printf("MORIMORI TX %d %d\n", dm->dm_nsegs, len);
 		if (pad) {
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_data =
+			sc->sc_txdesc_ring[sc->sc_txnext].data =
 			    sc->sc_txpad_pa;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl =
+			sc->sc_txdesc_ring[sc->sc_txnext].ctrl =
 			    PGE_MIN_FRAMELEN - mlen;
 			len += PGE_MIN_FRAMELEN - mlen;
-			sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-			    (GEMTX_FCS | GEMTX_LAST | GEMTX_IE | GEMTX_POOLB);
-			if (sc->sc_txnext == PGE_TX_RING_CNT - 1)
-				sc->sc_txdesc_ring[sc->sc_txnext].tx_ctl |=
-				    GEMTX_WRAP;
+			sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
+			    (BD_CTRL_DESC_EN | BD_CTRL_LIFM |
+			    BD_CTRL_BRFETCH_DISABLE | BD_CTRL_RTFETCH_DISABLE |
+			    BD_CTRL_PARSE_DISABLE | BD_CTRL_PKT_INT_EN);
 			txfree--;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-			    sizeof(struct tTXdesc) * sc->sc_txnext,
-			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
+			    sizeof(struct bufDesc) * sc->sc_txnext,
+			    sizeof(struct bufDesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-		pge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
+//		pge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
+		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
+		    HIF_CTRL_BDP_CH_START_WSTB);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 
@@ -725,7 +749,6 @@ pge_start(struct ifnet *ifp)
 	}
 
 	PGE_UNLOCK(sc);
-#endif
 }
 
 static int
@@ -772,11 +795,11 @@ pge_tick(void *arg)
 
 	int use = 0;
 	int i;
-	for (i = 0; i < PGE_RX_RING_CNT; i++) {
-	bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
+	for (i = 0; i < PGE_TX_RING_CNT; i++) {
+	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 	    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
 	    BUS_DMASYNC_PREREAD);
-	if(sc->sc_rxdesc_ring[i].ctrl & BD_CTRL_DESC_EN)
+	if(sc->sc_txdesc_ring[i].ctrl & BD_CTRL_DESC_EN)
 		++use;
 	}
 printf("MORIMORI %d\n", use);
@@ -788,15 +811,16 @@ printf("MORIMORI %d\n", use);
 	}
 */
 //	reg = pge_read_4(sc, HIF_INT_SRC - CBUS_BASE_ADDR);
-	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR - CBUS_BASE_ADDR);
+	reg = pge_read_4(sc, HIF_TX_CURR_BD_ADDR - CBUS_BASE_ADDR);
+//	reg = pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_STATS_CRS_ERRORS);
 	printf("reg=%x", reg);
-	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
+	reg = pge_read_4(sc, HIF_TX_BDP_ADDR);
 	printf(" %x", reg);
-	reg = pge_read_4(sc, HIF_RX_STATUS);
+	reg = pge_read_4(sc, HIF_TX_STATUS);
 	printf(" %x\n", reg);
-	printf("RX:");
+	printf("TX:");
 	int ptr = EMAC1_BASE_ADDR + EMAC_OCT_TX_BOT +
-	    offsetof(struct gem_stats, frames_rx);
+	    offsetof(struct gem_stats, frames_tx);
 	for (i = 0; i < 23; i++) {
 		reg = pge_read_4(sc, ptr + i * 4);
 		printf(" %d", reg);
@@ -914,6 +938,7 @@ pge_txintr(void *arg)
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
 	int i, remain;
+printf("txintr");
 
 	remain = 0;
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
@@ -923,9 +948,10 @@ pge_txintr(void *arg)
 			++remain;
 			continue;
 		}
+		continue;
 
-//		if ((sc->sc_txdesc_ring[i].tx_ctl & GEMTX_BUFRET) == 0)
-//			continue;
+		if (sc->sc_txdesc_ring[i].status == 0)
+			continue;
 		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
 		    0, rdp->tx_dm[i]->dm_mapsize,
 		    BUS_DMASYNC_POSTWRITE);
@@ -941,6 +967,7 @@ pge_txintr(void *arg)
 		sc->sc_txbusy = false;
 
 		sc->sc_txdesc_ring[i].ctrl = 0;
+		sc->sc_txdesc_ring[i].status = 0;
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
 		    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
 		    BUS_DMASYNC_PREWRITE);
