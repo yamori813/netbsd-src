@@ -178,6 +178,9 @@ com*		at axi? addr 0x96400000 intr 59
 pge0		at axi? addr 0x9c000000 intr 36
 xhci*		at axi? addr 0x9f000000 intr 54
 
+m86gpio0	at axi? addr 0x90470000 intr 77 # to 85
+gpio*		at m86gpio?
+
 # USB bus support
 usb*            at xhci?
 uhub*		at usb?

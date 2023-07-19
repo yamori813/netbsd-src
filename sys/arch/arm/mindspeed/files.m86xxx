@@ -24,6 +24,11 @@ file	arch/arm/mindspeed/m86xxx_axi.c		axi
 attach	com at axi with m86xxx_com
 file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 
+# GPIO
+device  m86gpio: gpiobus
+attach  m86gpio at axi
+file    arch/arm/mindspeed/m86xxx_gpio.c	m86gpio		needs-flag
+
 # ChipCommonA attach point
 #device	bcmcca { [channel=-1] } : bus_space_generic, gpiobus, sysmon_wdog
 #attach	bcmcca at mainbus
