@@ -1,0 +1,523 @@
+/*	$NetBSD$	*/
+
+/*-
+ * Copyright (c) 2007 The NetBSD Foundation, Inc.
+ * All rights reserved.
+ *
+ * This code is derived from software contributed to The NetBSD Foundation
+ * by Matt Thomas
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+#include <sys/cdefs.h>
+__KERNEL_RCSID(0, "$NetBSD$");
+
+#define _INTR_PRIVATE
+
+#include "locators.h"
+#include "gpio.h"
+ 
+#include <sys/param.h>
+#include <sys/bus.h>
+#include <sys/device.h>
+#include <sys/errno.h>
+#include <sys/systm.h>
+
+#include <uvm/uvm_extern.h>
+  
+#include <machine/intr.h>
+ 
+#include <arm/cpu.h>
+#include <arm/armreg.h>
+#include <arm/cpufunc.h>
+
+#include <arm/mindspeed/m86xxx_reg.h>
+#include <arm/mindspeed/m86xxx_var.h>
+
+#include <arm/pic/picvar.h>
+
+#if NGPIO > 0
+#include <sys/gpio.h>
+#include <dev/gpio/gpiovar.h>
+#endif
+
+#define GPIN(n)			(1 << n)
+#define RESET_BIT		17
+
+/******************
+* GPIO_0  I 
+* GPIO_1  I 
+* GPIO_2  O  -> Wireless LED
+* GPIO_3  O
+* GPIO_4  O 
+* GPIO_5  I EXP_CS3_N -> Reset BUTTON
+* GPIO_6  S EXP_NAND_RDY/EXP_A_21
+* GPIO_7  O EXP_IRQ -> Status LED
+* GPIO_8  S EXP_A_15
+* GPIO_9  S EXP_A_16
+* GPIO_10 S EXP_A_17
+* GPIO_11 S EXP_A_13
+* GPIO_12 S SPI_RXD
+* GPIO_13 S SPI_SS0_N -> si3215 or si3050
+* GPIO_14 S EXP_A_14
+* GPIO_15 O TIM_EVNT0 -> Relay
+*
+* GPIO_16 O TIM_EVNT1 -> USB Power
+* GPIO_17 S TM_EXT_RESET
+* GPIO_18 O I2C_SCL
+* GPIO_19 O I2C_SDA
+* GPIO_20 O EXP_ALE -> Internet LED
+* GPIO_21 O EXP_RDY/BSY_N -> Status LED
+* GPIO_22 O UART1_RX -> BB LED
+* GPIO_23 O UART1_TX -> BB LED
+* GPIO_24 S SPI_SCLK
+* GPIO_25 S SPI_TXD
+* GPIO_26 S SPI_SS1_N -> si3215 or si3050
+* GPIO_27 I SPI_SS2_N -> Function BUTTON
+* GPIO_28 O
+* GPIO_29 S EXP_NAND_CS /EXP_A_18
+* GPIO_30 S EXP_NAND_ALE /EXP_A_19
+* GPIO_31 S EXP_NAND_CLE /EXP_A_20
+******************/
+
+/* GPIO Pin Select Pins */
+#define	EXP_A20		(1 << 31)
+#define	EXP_NAND_CLE	(1 << 31)
+#define	EXP_A19		(1 << 30)
+#define	EXP_NAND_ALE	(1 << 30)
+#define EXP_A18		(1 << 29)
+#define	EXP_NAND_CS	(1 << 29)
+#define	SPI_SS3_N	(1 << 28)
+#define	SPI_SS2_N	(1 << 27)
+#define	SPI_SS1_N	(1 << 26)
+#define	SPI_TXD		(1 << 25)
+#define	SPI_SCLK	(1 << 24)
+#define	UART1_TX	(1 << 23)
+#define	UART1_RX	(1 << 22)
+#define	EXP_RDY_BSY	(1 << 21)
+#define	EXP_ALE		(1 << 20)
+#define	I2C_SDA		(1 << 19)
+#define	I2C_SCL		(1 << 18)
+#define	TM_EXT_RESET	(1 << 17)
+#define	TIM_EVNT1	(1 << 16)
+#define	TIM_EVNT0	(1 << 15)
+#define	EXP_A14		(1 << 14)
+#define	SPI_SS0_N	(1 << 13)
+#define	SPI_RXD		(1 << 12)
+#define	EXP_A13		(1 << 11)
+#define	EXP_A17		(1 << 10)
+#define	EXP_A16		(1 << 9)
+#define	EXP_A15		(1 << 8)
+#define	EXP_IRQ		(1 << 7)
+#define	EXP_A21		(1 << 6)
+#define	EXP_NAND_RDY	(1 << 6)
+#define	EXP_CS3_N	(1 << 5)
+
+/* ========== COMCERTO_GPIO_PIN_SELECT_REG ===== */
+#define GSEL	~(EXP_A21 | EXP_A15 | EXP_A16 | EXP_A17 | EXP_A13 | SPI_RXD | SPI_SS0_N | EXP_A14 | TM_EXT_RESET | SPI_SCLK | SPI_TXD | SPI_SS1_N | EXP_A18 | EXP_A19 | EXP_A20)
+
+static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
+static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
+static int gpio_pic_find_pending_irqs(struct pic_softc *);
+static void gpio_pic_establish_irq(struct pic_softc *, struct intrsource *);
+
+const struct pic_ops gpio_pic_ops = {
+	.pic_block_irqs = gpio_pic_block_irqs,
+	.pic_unblock_irqs = gpio_pic_unblock_irqs,
+	.pic_find_pending_irqs = gpio_pic_find_pending_irqs,
+	.pic_establish_irq = gpio_pic_establish_irq,
+};
+
+struct gpio_softc {
+	device_t gpio_dev;
+	struct pic_softc gpio_pic;
+	struct intrsource *gpio_is;
+	bus_space_tag_t gpio_memt;
+	bus_space_handle_t gpio_memh;
+	uint32_t gpio_enable_mask;
+	uint32_t gpio_edge_mask;
+	uint32_t gpio_edge_falling_mask;
+	uint32_t gpio_edge_rising_mask;
+	uint32_t gpio_level_mask;
+	uint32_t gpio_level_hi_mask;
+	uint32_t gpio_level_lo_mask;
+	uint32_t gpio_inuse_mask;
+#if NGPIO > 0
+	struct gpio_chipset_tag gpio_chipset;
+	gpio_pin_t gpio_pins[32];
+#endif
+};
+
+#define	PIC_TO_SOFTC(pic) \
+	((struct gpio_softc *)((char *)(pic) - \
+		offsetof(struct gpio_softc, gpio_pic)))
+
+#define	GPIO_READ(gpio, reg) \
+	bus_space_read_4((gpio)->gpio_memt, (gpio)->gpio_memh, (reg))
+#define	GPIO_WRITE(gpio, reg, val) \
+	bus_space_write_4((gpio)->gpio_memt, (gpio)->gpio_memh, (reg), (val))
+
+void
+gpio_pic_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{
+#if 0
+	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
+	KASSERT(irq_base == 0);
+
+	gpio->gpio_enable_mask |= irq_mask;
+	/*
+	 * If this a level source, ack it now.  If it's still asserted
+	 * it'll come back.
+	 */
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRENB, gpio->gpio_enable_mask);
+	if (irq_mask & gpio->gpio_level_mask)
+		GPIO_WRITE(gpio, GEMINI_GPIO_INTRCLR,
+		    irq_mask & gpio->gpio_level_mask);
+#endif
+}
+
+void
+gpio_pic_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
+{
+#if 0
+	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
+	KASSERT(irq_base == 0);
+
+	gpio->gpio_enable_mask &= ~irq_mask;
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRENB, ~irq_mask);
+	/*
+	 * If any of the sources are edge triggered, ack them now so
+	 * we won't lose them.
+	 */
+	if (irq_mask & gpio->gpio_edge_mask)
+		GPIO_WRITE(gpio, GEMINI_GPIO_INTRCLR,
+		    irq_mask & gpio->gpio_edge_mask);
+#endif
+}
+
+int
+gpio_pic_find_pending_irqs(struct pic_softc *pic)
+{
+#if 0
+	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
+	uint32_t pending;
+
+	pending = GPIO_READ(gpio, GEMINI_GPIO_INTRMSKSTATE);
+	KASSERT((pending & ~gpio->gpio_enable_mask) == 0);
+	if (pending == 0)
+		return 0;
+
+	/*
+	 * Now find all the pending bits and mark them as pending.
+	 */
+	(void) pic_mark_pending_sources(&gpio->gpio_pic, 0, pending);
+#endif
+
+	return 1;
+}
+
+void
+gpio_pic_establish_irq(struct pic_softc *pic, struct intrsource *is)
+{
+#if 0
+	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
+	KASSERT(is->is_irq < 32);
+	uint32_t irq_mask = __BIT(is->is_irq);
+	uint32_t v;
+#if 0
+	unsigned int i;
+	struct intrsource *maybe_is;
+#endif
+
+	/*
+	 * Make sure the irq isn't enabled and not asserting.
+	 */
+	gpio->gpio_enable_mask &= ~irq_mask;
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRENB, gpio->gpio_enable_mask);
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRCLR, irq_mask);
+
+	/*
+	 * Convert the type to a gpio type and figure out which bits in what 
+	 * register we have to tweak.
+	 */
+	gpio->gpio_edge_rising_mask &= ~irq_mask;
+	gpio->gpio_edge_falling_mask &= ~irq_mask;
+	gpio->gpio_level_hi_mask &= ~irq_mask;
+	gpio->gpio_level_lo_mask &= ~irq_mask;
+	switch (is->is_type) {
+	case IST_LEVEL_LOW: gpio->gpio_level_lo_mask |= irq_mask; break;
+	case IST_LEVEL_HIGH: gpio->gpio_level_hi_mask |= irq_mask; break;
+	case IST_EDGE_FALLING: gpio->gpio_edge_falling_mask |= irq_mask; break;
+	case IST_EDGE_RISING: gpio->gpio_edge_rising_mask |= irq_mask; break;
+	case IST_EDGE_BOTH:
+		gpio->gpio_edge_rising_mask |= irq_mask;
+		gpio->gpio_edge_falling_mask |= irq_mask;
+		break;
+	default:
+		panic("%s: unknown is_type %d\n", __FUNCTION__, is->is_type);
+	}
+	gpio->gpio_edge_mask =
+	    gpio->gpio_edge_rising_mask | gpio->gpio_edge_falling_mask;
+	gpio->gpio_level_mask =
+	    gpio->gpio_level_hi_mask|gpio->gpio_level_lo_mask;
+	gpio->gpio_inuse_mask |= irq_mask;
+
+	/*
+	 * Set the interrupt type.
+	 */
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRTRIG, gpio->gpio_level_mask);
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTREDGEBOTH,
+		gpio->gpio_edge_rising_mask & gpio->gpio_edge_falling_mask);
+	GPIO_WRITE(gpio, GEMINI_GPIO_INTRDIR,
+		gpio->gpio_edge_falling_mask | gpio->gpio_level_lo_mask);
+
+	/*
+	 * Mark it as input by clearning bit(s) in PINDIR reg
+	 */
+	v = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
+	v &= ~irq_mask;
+	GPIO_WRITE(gpio, GEMINI_GPIO_PINDIR, v); 
+#if 0
+	for (i = 0, maybe_is = NULL; i < 32; i++) {
+		if ((is = pic->pic_sources[i]) != NULL) {
+			if (maybe_is == NULL || is->is_ipl > maybe_is->is_ipl)
+				maybe_is = is;
+		}
+	}
+	if (maybe_is != NULL) {
+		is = gpio->gpio_is;
+		KASSERT(is != NULL);
+		is->is_ipl = maybe_is->is_ipl;
+		(*is->is_pic->pic_ops->pic_establish_irq)(is->is_pic, is);
+	} 
+#endif
+#endif
+}
+
+static int gpio_match(device_t, cfdata_t, void *);
+static void gpio_attach(device_t, device_t, void *);
+
+CFATTACH_DECL_NEW(m86gpio,
+	sizeof(struct gpio_softc),
+	gpio_match, gpio_attach,
+	NULL, NULL);
+
+#if NGPIO > 0 || NGEMINIGMAC > 0
+
+int m86gpio_pin_read(void *arg, int pin);
+void m86gpio_pin_write(void *arg, int pin, int value);
+void m86gpio_pin_ctl(void *arg, int pin, int flags);
+
+int
+m86gpio_pin_read(void *arg, int pin)
+{
+#if 0
+	struct gpio_softc * const gpio = device_private(arg);
+
+	return (GPIO_READ(gpio, GPIO_INPUT_REG) >> pin) & 1;
+#endif
+	return 1;
+}
+
+void
+m86gpio_pin_write(void *arg, int pin, int value)
+{
+#if 0
+	struct gpio_softc * const gpio = device_private(arg);
+	uint32_t mask = 1 << pin;
+	uint32_t old, new;
+
+	old = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	new = old;
+	if (value)
+		new &= ~mask;
+	else
+		new |= mask;
+
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
+#endif
+}
+
+void
+m86gpio_pin_ctl(void *arg, int pin, int flags)
+{
+#if 0
+	struct gpio_softc * const gpio = device_private(arg);
+	uint32_t mask = 1 << pin;
+	uint32_t old, new;
+
+	old = GPIO_READ(gpio, GPIO_OE_REG);
+	new = old;
+	switch (flags & (GPIO_PIN_INPUT|GPIO_PIN_OUTPUT)) {
+	case GPIO_PIN_INPUT:	new &= ~mask; break;
+	case GPIO_PIN_OUTPUT:	new |=  mask; break;
+	default:		return;
+	}
+	if (old != new)
+		GPIO_WRITE(gpio, GPIO_OE_REG, new);
+#endif
+}
+
+#if 0
+static void
+gpio_defer(device_t self)
+{
+	struct gpio_softc * const gpio = device_private(self);
+	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
+	struct gpiobus_attach_args gba;
+	gpio_pin_t *pins;
+	uint32_t mask, dir, valueout, valuein;
+	int pin;
+
+	gp->gp_cookie = gpio->gpio_dev;
+	gp->gp_pin_read = m86gpio_pin_read;
+	gp->gp_pin_write = m86gpio_pin_write;
+	gp->gp_pin_ctl = m86gpio_pin_ctl;
+
+	gba.gba_gc = gp;
+	gba.gba_pins = gpio->gpio_pins;
+	gba.gba_npins = __arraycount(gpio->gpio_pins);
+
+	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
+	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	dir = GPIO_READ(gpio, GPIO_OE_REG);
+	for (pin = 0, mask = 1, pins = gpio->gpio_pins;
+	     pin < 32; pin++, mask <<= 1, pins++) {
+		pins->pin_num = pin;
+		if (dir & (1 << pin)) {
+			pins->pin_caps = GPIO_PIN_OUTPUT;
+			pins->pin_flags = GPIO_PIN_OUTPUT;
+			pins->pin_state = (valueout & (1 << pin)) ? 1 : 0;
+		} else {
+			pins->pin_caps = GPIO_PIN_INPUT;
+			pins->pin_flags = GPIO_PIN_INPUT;
+			pins->pin_state = (valuein & (1 << pin)) ? 1 : 0;
+		}
+	}
+#if 0
+	dir = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
+	valueout = GPIO_READ(gpio, GEMINI_GPIO_DATAOUT);
+	valuein = GPIO_READ(gpio, GEMINI_GPIO_DATAIN);
+	for (pin = 0, mask = 1, pins = gpio->gpio_pins;
+	     pin < 32; pin++, mask <<= 1, pins++) {
+		pins->pin_num = pin;
+		if (gpio->gpio_inuse_mask & mask)
+			pins->pin_caps = GPIO_PIN_INPUT;
+		else
+			pins->pin_caps = GPIO_PIN_INPUT|GPIO_PIN_OUTPUT;
+		pins->pin_flags =
+		    (dir & mask) ? GPIO_PIN_OUTPUT : GPIO_PIN_INPUT;
+		pins->pin_state =
+		    (((dir & mask) ? valueout : valuein) & mask)
+			? GPIO_PIN_HIGH
+			: GPIO_PIN_LOW;
+	}
+
+#endif
+	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
+}
+#endif
+#endif /* NGPIO > 0 */
+
+int
+gpio_match(device_t parent, cfdata_t cfdata, void *aux)
+{
+	struct axi_attach_args *aa = aux;
+
+	if (aa->aa_addr == GPIO_BASE)
+		return 1;
+
+	return 0;
+}
+
+void
+gpio_attach(device_t parent, device_t self, void *aux)
+{
+#if 0
+	struct axi_attach_args * const aa = aux;
+	struct gpio_softc * const gpio = device_private(self);
+	int error;
+	int oen, i;
+	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
+
+/*
+	if (aa->apba_intr == OBIOCF_INTR_DEFAULT)
+		panic("\n%s: no intr assigned", device_xname(self));
+
+*/
+	if (aa->apba_size != 0x10000)	/* APB is 64K boundly */
+		aa->apba_size = 0x10000;
+
+	gpio->gpio_dev = self;
+	gpio->gpio_memt = aa->apba_memt;
+	error = bus_space_map(aa->apba_memt, aa->apba_addr, aa->apba_size,
+	    0, &gpio->gpio_memh);
+
+	if (error) {
+		aprint_error(": failed to map register %#lx@%#lx: %d\n",
+		    aa->apba_size, aa->apba_addr, error);
+		return;
+	}
+
+	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
+	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
+
+	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, GSEL);
+
+	oen = 0;
+	for (i = 0; i < sizeof(oepins) / 4; ++i) {
+		oen |= (1 << oepins[i]);
+	}
+        GPIO_WRITE(gpio, GPIO_OE_REG, 
+	    GPIO_READ(gpio, GPIO_OE_REG) | oen);
+
+	/* make Status LED is Green */
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, GPIN(RESET_BIT) | GPIN(21));
+	/* do reset */
+/*
+        GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
+	    GPIO_READ(gpio, GPIO_OUTPUT_REG) & ~GPIN(RESET_BIT));
+*/
+	/* USB Power ON */
+        GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
+	    GPIO_READ(gpio, GPIO_OUTPUT_REG) | GPIN(16));
+#if 0
+	if (oa->obio_intrbase != OBIOCF_INTRBASE_DEFAULT) {
+		gpio->gpio_pic.pic_ops = &gpio_pic_ops;
+		strlcpy(gpio->gpio_pic.pic_name, device_xname(self),
+		    sizeof(gpio->gpio_pic.pic_name));
+		gpio->gpio_pic.pic_maxsources = 32;
+		pic_add(&gpio->gpio_pic, oa->obio_intrbase);
+		aprint_normal(": interrupts %d..%d",
+		    oa->obio_intrbase, oa->obio_intrbase + 31);
+		gpio->gpio_is = intr_establish(oa->obio_intr, 
+		    IPL_HIGH, IST_LEVEL_HIGH, pic_handle_intr, &gpio->gpio_pic);
+		KASSERT(gpio->gpio_is != NULL);
+		aprint_normal(", intr %d", oa->obio_intr);
+	}
+#endif
+#endif
+	aprint_normal("\n");
+#if NGPIO > 0
+//	config_interrupts(self, gpio_defer);
+#endif
+}
