@@ -185,24 +185,45 @@
 
 #define	COMCERTO_UART_SIZE		0x4000
 
+/* AXI_RESET_1 */
 #define RTC_AXI_RESET_BIT		(1<<7)
 #define I2CSPI_AXI_RESET_BIT		(1<<5)
-#define DUS_AXI_RESET_BIT		(1<<0)
 #define TDM_AXI_RESET_BIT 		(1<<4)
 #define PFE_SYS_AXI_RESET_BIT		(1<<3)
 #define IPSEC_SPACC_AXI_RESET_BIT	(1<<2)
 #define IPSEC_EAPE_AXI_RESET_BIT	(1<<1)
+#define DUS_AXI_RESET_BIT		(1<<0)
+
+/* AXI_RESET_0 */
 #define DPI_CIE_AXI_RESET_BIT		(1<<5)
 #define DPI_DECOMP_AXI_RESET_BIT	(1<<6)
+
+/* AXI_RESET_2 */
 #define USB1_AXI_RESET_BIT		(1<<4)
-#define USB1_PHY_RESET_BIT		(1<<4)
 #define USB0_AXI_RESET_BIT		(1<<3)
-#define USB0_PHY_RESET_BIT		(1<<0)
 #define SATA_AXI_RESET_BIT		(1<<2)
-#define SATA_PMU_RESET_BIT		(1<<0)
-#define SATA_OOB_RESET_BIT		(1<<0)
 #define PCIE1_AXI_RESET_BIT		(1<<1)
 #define PCIE0_AXI_RESET_BIT		(1<<0)
+
+/* USB_RST_CNTRL */
+#define USB1_UTMI_RESET_BIT		(1<<5)
+#define USB1_PHY_RESET_BIT		(1<<4)
+#define USB0_UTMI_RESET_BIT		(1<<1)
+#define USB0_PHY_RESET_BIT		(1<<0)
+
+/* SERDES_RST_CNTRL */
+#define SERDES2_RESET_BIT		(1<<2)
+#define SERDES1_RESET_BIT		(1<<1)
+#define SERDES0_RESET_BIT		(1<<0)
+
+/* PCIe_SATA_RST_CNTRL */
+#define SERDES_PCIE0_RESET_BIT		((1<<0)|(1<<1))
+#define SERDES_PCIE1_RESET_BIT		((1<<2)|(1<<3))
+#define SERDES_SATA0_RESET_BIT		((1<<4)|(1<<5))
+#define SERDES_SATA1_RESET_BIT		((1<<6)|(1<<7))
+
+#define SATA_PMU_RESET_BIT		(1<<0)
+#define SATA_OOB_RESET_BIT		(1<<0)
 #define PFE_CORE_RESET_BIT		(1<<0)
 #define IPSEC_EAPE_CORE_RESET_BIT	(1<<0)
 #define GEMTX_RESET_BIT			(1<<0)
@@ -210,16 +231,7 @@
 #define DECT_RESET_BIT			(1<<0)
 #define DDR_CNTRL_RESET_BIT		(1<<1)
 #define DDR_PHY_RESET_BIT		(1<<0)
-#define SERDES0_RESET_BIT		(1<<0)
-#define SERDES1_RESET_BIT		(1<<1)
-#define SERDES2_RESET_BIT		(1<<2)
-#define SERDES_PCIE0_RESET_BIT		((1<<0)|(1<<1))
-#define SERDES_PCIE1_RESET_BIT		((1<<2)|(1<<3))
-#define SERDES_SATA0_RESET_BIT		((1<<4)|(1<<5))
-#define SERDES_SATA1_RESET_BIT		((1<<6)|(1<<7))
 #define SGMII_RESET_BIT			(1<<0)
-#define USB0_UTMI_RESET_BIT		(1<<1)
-#define USB1_UTMI_RESET_BIT		(1<<5)
 #define TDMNTG_RESET_BIT		(1<<0)
 
 /***** GPIO  *****/
