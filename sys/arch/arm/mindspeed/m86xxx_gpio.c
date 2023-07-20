@@ -63,78 +63,6 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #define GPIN(n)			(1 << n)
 #define RESET_BIT		17
 
-/******************
-* GPIO_0  I 
-* GPIO_1  I 
-* GPIO_2  O  -> Wireless LED
-* GPIO_3  O
-* GPIO_4  O 
-* GPIO_5  I EXP_CS3_N -> Reset BUTTON
-* GPIO_6  S EXP_NAND_RDY/EXP_A_21
-* GPIO_7  O EXP_IRQ -> Status LED
-* GPIO_8  S EXP_A_15
-* GPIO_9  S EXP_A_16
-* GPIO_10 S EXP_A_17
-* GPIO_11 S EXP_A_13
-* GPIO_12 S SPI_RXD
-* GPIO_13 S SPI_SS0_N -> si3215 or si3050
-* GPIO_14 S EXP_A_14
-* GPIO_15 O TIM_EVNT0 -> Relay
-*
-* GPIO_16 O TIM_EVNT1 -> USB Power
-* GPIO_17 S TM_EXT_RESET
-* GPIO_18 O I2C_SCL
-* GPIO_19 O I2C_SDA
-* GPIO_20 O EXP_ALE -> Internet LED
-* GPIO_21 O EXP_RDY/BSY_N -> Status LED
-* GPIO_22 O UART1_RX -> BB LED
-* GPIO_23 O UART1_TX -> BB LED
-* GPIO_24 S SPI_SCLK
-* GPIO_25 S SPI_TXD
-* GPIO_26 S SPI_SS1_N -> si3215 or si3050
-* GPIO_27 I SPI_SS2_N -> Function BUTTON
-* GPIO_28 O
-* GPIO_29 S EXP_NAND_CS /EXP_A_18
-* GPIO_30 S EXP_NAND_ALE /EXP_A_19
-* GPIO_31 S EXP_NAND_CLE /EXP_A_20
-******************/
-
-/* GPIO Pin Select Pins */
-#define	EXP_A20		(1 << 31)
-#define	EXP_NAND_CLE	(1 << 31)
-#define	EXP_A19		(1 << 30)
-#define	EXP_NAND_ALE	(1 << 30)
-#define EXP_A18		(1 << 29)
-#define	EXP_NAND_CS	(1 << 29)
-#define	SPI_SS3_N	(1 << 28)
-#define	SPI_SS2_N	(1 << 27)
-#define	SPI_SS1_N	(1 << 26)
-#define	SPI_TXD		(1 << 25)
-#define	SPI_SCLK	(1 << 24)
-#define	UART1_TX	(1 << 23)
-#define	UART1_RX	(1 << 22)
-#define	EXP_RDY_BSY	(1 << 21)
-#define	EXP_ALE		(1 << 20)
-#define	I2C_SDA		(1 << 19)
-#define	I2C_SCL		(1 << 18)
-#define	TM_EXT_RESET	(1 << 17)
-#define	TIM_EVNT1	(1 << 16)
-#define	TIM_EVNT0	(1 << 15)
-#define	EXP_A14		(1 << 14)
-#define	SPI_SS0_N	(1 << 13)
-#define	SPI_RXD		(1 << 12)
-#define	EXP_A13		(1 << 11)
-#define	EXP_A17		(1 << 10)
-#define	EXP_A16		(1 << 9)
-#define	EXP_A15		(1 << 8)
-#define	EXP_IRQ		(1 << 7)
-#define	EXP_A21		(1 << 6)
-#define	EXP_NAND_RDY	(1 << 6)
-#define	EXP_CS3_N	(1 << 5)
-
-/* ========== COMCERTO_GPIO_PIN_SELECT_REG ===== */
-#define GSEL	~(EXP_A21 | EXP_A15 | EXP_A16 | EXP_A17 | EXP_A13 | SPI_RXD | SPI_SS0_N | EXP_A14 | TM_EXT_RESET | SPI_SCLK | SPI_TXD | SPI_SS1_N | EXP_A18 | EXP_A19 | EXP_A20)
-
 static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
 static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static int gpio_pic_find_pending_irqs(struct pic_softc *);
@@ -163,7 +91,7 @@ struct gpio_softc {
 	uint32_t gpio_inuse_mask;
 #if NGPIO > 0
 	struct gpio_chipset_tag gpio_chipset;
-	gpio_pin_t gpio_pins[32];
+	gpio_pin_t gpio_pins[64];
 #endif
 };
 
@@ -330,63 +258,85 @@ void m86gpio_pin_ctl(void *arg, int pin, int flags);
 int
 m86gpio_pin_read(void *arg, int pin)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
 
-	return (GPIO_READ(gpio, GPIO_INPUT_REG) >> pin) & 1;
-#endif
-	return 1;
+	if (pin < 32) {
+
+		return (GPIO_READ(gpio, GPIO_INPUT_REG) >> pin) & 1;
+	} else {
+
+		return (GPIO_READ(gpio, GPIO_63_32_INPUT_REG) >> (pin - 32))
+		    & 1;
+	}
 }
 
 void
 m86gpio_pin_write(void *arg, int pin, int value)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
-	uint32_t mask = 1 << pin;
+	uint32_t mask;
 	uint32_t old, new;
 
-	old = GPIO_READ(gpio, GPIO_OUTPUT_REG);
-	new = old;
-	if (value)
-		new &= ~mask;
-	else
-		new |= mask;
-
-	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
-#endif
+	if (pin < 32) {
+		mask = 1 << pin;
+		old = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+		new = old;
+		if (value)
+			new |= mask;
+		else
+			new &= ~mask;
+		GPIO_WRITE(gpio, GPIO_OUTPUT_REG, new);
+	} else {
+		mask = 1 << (pin - 32);
+		old = GPIO_READ(gpio, GPIO_63_32_OUTPUT_REG);
+		new = old;
+		if (value)
+			new |= mask;
+		else
+			new &= ~mask;
+		GPIO_WRITE(gpio, GPIO_63_32_OUTPUT_REG, new);
+	}
 }
 
 void
 m86gpio_pin_ctl(void *arg, int pin, int flags)
 {
-#if 0
 	struct gpio_softc * const gpio = device_private(arg);
-	uint32_t mask = 1 << pin;
+	uint32_t mask;
 	uint32_t old, new;
 
-	old = GPIO_READ(gpio, GPIO_OE_REG);
+	if (pin < 32) {
+		mask = 1 << pin;
+		old = GPIO_READ(gpio, GPIO_OE_REG);
+	} else {
+		mask = 1 << (pin - 32);
+		old = GPIO_READ(gpio, GPIO_63_32_OE_REG);
+	}
 	new = old;
 	switch (flags & (GPIO_PIN_INPUT|GPIO_PIN_OUTPUT)) {
 	case GPIO_PIN_INPUT:	new &= ~mask; break;
 	case GPIO_PIN_OUTPUT:	new |=  mask; break;
 	default:		return;
 	}
-	if (old != new)
-		GPIO_WRITE(gpio, GPIO_OE_REG, new);
-#endif
+	if (old != new) {
+		if (pin < 32)
+			GPIO_WRITE(gpio, GPIO_OE_REG, new);
+		else
+			GPIO_WRITE(gpio, GPIO_63_32_OE_REG, new);
+	}
 }
 
-#if 0
 static void
 gpio_defer(device_t self)
 {
 	struct gpio_softc * const gpio = device_private(self);
 	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
 	struct gpiobus_attach_args gba;
+/*
 	gpio_pin_t *pins;
 	uint32_t mask, dir, valueout, valuein;
 	int pin;
+*/
 
 	gp->gp_cookie = gpio->gpio_dev;
 	gp->gp_pin_read = m86gpio_pin_read;
@@ -397,6 +347,7 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
+#if 0
 	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
 	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	dir = GPIO_READ(gpio, GPIO_OE_REG);
@@ -413,7 +364,6 @@ gpio_defer(device_t self)
 			pins->pin_state = (valuein & (1 << pin)) ? 1 : 0;
 		}
 	}
-#if 0
 	dir = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
 	valueout = GPIO_READ(gpio, GEMINI_GPIO_DATAOUT);
 	valuein = GPIO_READ(gpio, GEMINI_GPIO_DATAIN);
@@ -435,7 +385,6 @@ gpio_defer(device_t self)
 #endif
 	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
 }
-#endif
 #endif /* NGPIO > 0 */
 
 int
@@ -518,6 +467,6 @@ gpio_attach(device_t parent, device_t self, void *aux)
 #endif
 	aprint_normal("\n");
 #if NGPIO > 0
-//	config_interrupts(self, gpio_defer);
+	config_interrupts(self, gpio_defer);
 #endif
 }
