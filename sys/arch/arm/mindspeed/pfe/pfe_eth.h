@@ -144,6 +144,7 @@ typedef struct gemac_s {
 
 } gemac_t;
 
+#ifdef NOTUSE
 struct pfe {
 	unsigned long ddr_phys_baseaddr;
 	void *ddr_baseaddr;
@@ -151,7 +152,6 @@ struct pfe {
 };
 
 
-#ifdef NOTUSE
 typedef struct c2000_eth_dev {
 
 	int gemac_port;

@@ -45,12 +45,12 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/m86xxx_var.h>
 #include <arm/mindspeed/m86xxx_intr.h>
 #include <arm/mindspeed/if_pgereg.h>
+#include <arm/mindspeed/arswitchreg.h>
 
 #include <arm/mindspeed/pfe/pfe_eth.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
 #include <arm/mindspeed/pfe/pfe_driver.h>
 
-#include <arm/mindspeed/arswitchreg.h>
 
 #define	PGE_TXFRAGS	16
 #define	MAX_FRAME_SIZE	2048
@@ -91,6 +91,12 @@ CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
     pge_match, pge_attach, pge_detach, NULL);
 
 extern struct pge_softc *pge_sc;
+
+int arswitch_readreg(device_t dev, int addr);
+int arswitch_writereg(device_t dev, int addr, int value);
+
+void arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+    uint16_t dbg_data);
 
 static uint32_t pge_emac_base(struct pge_softc * const sc)
 {
@@ -282,8 +288,37 @@ pge_attach(device_t parent, device_t self, void *aux)
 	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
 	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
 */
-#if 0
+	pge_sc = sc;
+	sc->pfe.ddr_baseaddr = sc->sc_ddr;
+	sc->pfe.ddr_phys_baseaddr = sc->sc_ddr_pa;
+/*
+	pfe_probe(&sc->pfe);
+	int mac = EMAC1_BASE_ADDR;
+	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
+	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
+	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
+	gemac_enable_mdio((void *)mac);
+	printf("%d\n", gemac_get_mdc_div((void *)mac));
+	gemac_enable_copy_all((void *)mac);
+	gemac_set_bus_width((void *)mac, 32);
+	gemac_enable((void *)mac);
+*/
+	arswitch_writereg(sc->sc_dev, AR8X16_REG_MASK_CTRL,
+	    AR8X16_MASK_CTRL_SOFT_RESET);
+	delay(1000);
+	uint16_t val;
+	printf("PHY:");
+	for (i = 0; i < 8; ++i) {
+		pge_mii_readreg(sc->sc_dev, i, 3, &val);
+		printf(" %x", val);
+	}
+	printf("\n");
+
 	if (device_unit(self) == 0) {
+		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
+		    arswitch_readreg(self, AR8X16_REG_MODE));
+#if 0
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -309,11 +344,8 @@ pge_attach(device_t parent, device_t self, void *aux)
 		aprint_normal_dev(sc->sc_dev, "PORT VLAN %d %x\n", i,
 		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
 #endif
-		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
-		    arswitch_readreg(self, AR8X16_REG_MODE));
-	}
 #endif
+	}
 
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
@@ -400,8 +432,10 @@ pge_mii_timeout(struct pge_softc * const sc, int base)
 	while (!(pge_read_4(sc, base + EMAC_NETWORK_STATUS) &
 	    EMAC_PHY_IDLE)) {
 		--timeout;
-		if (timeout == 0)
+		if (timeout == 0) {
+			device_printf(sc->sc_dev, "timeout\n");
 			return -1;
+		}
 	}
 	return 0;
 }
@@ -531,13 +565,13 @@ pge_init(struct ifnet *ifp)
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 */
 
-	pge_sc = sc;
-	struct pfe pfe;
-	pfe.ddr_baseaddr = sc->sc_ddr;
-	pfe.ddr_phys_baseaddr = sc->sc_ddr_pa;
-	pfe_probe(&pfe);
+	pfe_probe(&sc->pfe);
 	int mac = EMAC1_BASE_ADDR;
 	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
+//	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
+//	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
+//	gemac_enable_mdio((void *)mac);
+//	printf("%d\n", gemac_get_mdc_div((void *)mac));
 	gemac_enable_copy_all((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
@@ -810,14 +844,15 @@ printf("MORIMORI %d\n", use);
 	pge_write_4(sc, HIF_RX_CTRL, reg);
 	}
 */
-//	reg = pge_read_4(sc, HIF_INT_SRC - CBUS_BASE_ADDR);
-	reg = pge_read_4(sc, HIF_TX_CURR_BD_ADDR - CBUS_BASE_ADDR);
-//	reg = pge_read_4(sc, EMAC1_BASE_ADDR + EMAC_STATS_CRS_ERRORS);
-	printf("reg=%x", reg);
 	reg = pge_read_4(sc, HIF_TX_BDP_ADDR);
+	printf("TXDESC reg=%x", reg);
+	reg = pge_read_4(sc, HIF_TX_CURR_BD_ADDR);
 	printf(" %x", reg);
-	reg = pge_read_4(sc, HIF_TX_STATUS);
+	reg = pge_read_4(sc, HIF_RX_BDP_ADDR);
+	printf(" RXDESC reg=%x", reg);
+	reg = pge_read_4(sc, HIF_RX_CURR_BD_ADDR);
 	printf(" %x\n", reg);
+
 	printf("TX:");
 	int ptr = EMAC1_BASE_ADDR + EMAC_OCT_TX_BOT +
 	    offsetof(struct gem_stats, frames_tx);
@@ -980,4 +1015,92 @@ printf("txintr");
 		if_schedule_deferred_start(ifp);
 
 	return handled;
+}
+
+void
+arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+    uint16_t dbg_data)
+{
+/*
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_ADDR, dbg_addr);
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_DATA, dbg_data);
+*/
+	pge_mii_writereg(dev, phy, MII_ATH_DBG_ADDR, dbg_addr);
+	pge_mii_writereg(dev, phy, MII_ATH_DBG_DATA, dbg_data);
+}
+
+static inline void
+arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
+    uint16_t *reg)
+{
+//	struct arswitch_softc *sc = device_get_softc(dev);
+	uint16_t page;
+
+	page = (addr >> 9) & 0x1ff;
+	*phy = (addr >> 6) & 0x7;
+	*reg = (addr >> 1) & 0x1f;
+
+//	if (sc->page != page) {
+//		MDIO_WRITEREG(device_get_parent(dev), 0x18, 0, page);
+		pge_mii_writereg(dev, 0x18, 0, page);
+		delay(2000);
+//		sc->page = page;
+//	}
+}
+
+static uint32_t
+arswitch_reg_read32(device_t dev, int phy, int reg)
+{
+	uint16_t lo, hi;
+	pge_mii_readreg(dev, phy, reg, &lo);
+	pge_mii_readreg(dev, phy, reg + 1, &hi);
+
+	return (hi << 16) | lo;
+}
+
+static int
+arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
+{
+//	struct arswitch_softc *sc;
+	int r;
+	uint16_t lo, hi;
+
+//	sc = device_get_softc(dev);
+	lo = value & 0xffff;
+	hi = (uint16_t) (value >> 16);
+
+/*
+	if (sc->mii_lo_first) {
+		r = pge_mii_writereg(dev, phy, reg, lo);
+		r |= pge_mii_writereg(dev, phy, reg + 1, hi);
+	} else {
+*/
+		r = pge_mii_writereg(dev, phy, reg + 1, hi);
+		r |= pge_mii_writereg(dev, phy, reg, lo);
+//	}
+
+	return r;
+}
+
+int
+arswitch_readreg(device_t dev, int addr)
+{
+	uint16_t phy, reg;
+
+	arswitch_split_setpage(dev, addr, &phy, &reg);
+	return arswitch_reg_read32(dev, 0x10 | phy, reg);
+}
+
+int
+arswitch_writereg(device_t dev, int addr, int value)
+{
+//	struct arswitch_softc *sc;
+	uint16_t phy, reg;
+
+//	sc = device_get_softc(dev);
+
+	arswitch_split_setpage(dev, addr, &phy, &reg);
+	return (arswitch_reg_write32(dev, 0x10 | phy, reg, value));
 }

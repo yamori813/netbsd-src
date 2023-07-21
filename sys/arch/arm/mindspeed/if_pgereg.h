@@ -51,6 +51,11 @@ typedef struct hif_header_s {
         uint32_t reserved2;
 } __attribute__((packed)) hif_header_t;
 
+struct pfe {
+	unsigned long ddr_phys_baseaddr;
+	void *ddr_baseaddr;
+	void *cbus_baseaddr;
+};
 
 #define	PGE_RX_RING_CNT		64
 #define	PGE_TX_RING_CNT		64
@@ -111,6 +116,8 @@ struct pge_softc {
 	kmutex_t		mtx;
 
 	callout_t		sc_tick_ch;
+
+	struct pfe		pfe;
 };
 
 #define PGE_LOCK(sc)		mutex_enter(&(sc)->mtx)
