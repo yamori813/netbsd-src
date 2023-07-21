@@ -200,6 +200,7 @@ void gemac_set_mode(void *base, int mode);
 void gemac_enable_mdio(void *base);
 void gemac_disable_mdio(void *base);
 void gemac_set_mdc_div(void *base, MAC_MDC_DIV gem_mdcdiv);
+int gemac_get_mdc_div(void *base);
 void gemac_enable(void *base);
 void gemac_disable(void *base);
 void gemac_enable_mdio(void *base);

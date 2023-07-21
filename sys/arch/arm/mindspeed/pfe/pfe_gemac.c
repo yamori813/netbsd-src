@@ -215,6 +215,20 @@ void gemac_set_mdc_div(void *base, MAC_MDC_DIV gem_mdcdiv)
         writel(data, (int)base + EMAC_NETWORK_CONFIG);
 }
 
+/** GEMAC Get MDC clock division
+ * @param[in] base       GEMAC base address
+ */
+int gemac_get_mdc_div(void *base)
+{
+        u32 data;
+	int div[] = {8, 16, 32, 48, 64, 96, 128, 224};
+
+        data = readl((int)base + EMAC_NETWORK_CONFIG);
+	data = (data >> MDC_DIV_SHIFT) & MDC_DIV_MASK;
+
+	return div[data];
+}
+
 /** GEMAC reset function.
 * @param[in] base	GEMAC base address
 */
