@@ -476,12 +476,17 @@ consinit(void)
 static void
 m86xxx_system_reset(void)
 {
+	uint32_t reg;
+
 	bus_space_handle_t bsh;
 	bus_space_map(&m83_bs_tag, APB_GPIO_BASE, 0x20000, 0, &bsh);
-	bus_space_write_4(&m83_bs_tag, bsh, 0x00, 0);
+	reg = bus_space_read_4(&m83_bs_tag, bsh, 0x00);
+	reg &= ~(1 << 27);   /* HW Reset GPIO_27 */
+	bus_space_write_4(&m83_bs_tag, bsh, 0x00, reg);
 	while (1);
-	/* not reach here */
+	/* not reach here
 	bus_space_unmap(&m83_bs_tag, bsh, 0x20000);
+	 */
 }
 
 
