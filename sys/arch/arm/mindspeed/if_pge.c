@@ -166,20 +166,12 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ih = intr_establish(aa->aa_intr, IPL_NET, IST_LEVEL,
 	    pge_intr, sc);
 
-/*
 	sc->sc_enaddr[0] = 0xd4;
 	sc->sc_enaddr[1] = 0x94;
 	sc->sc_enaddr[2] = 0xa1;
 	sc->sc_enaddr[3] = 0x97;
 	sc->sc_enaddr[4] = 0x03;
 	sc->sc_enaddr[5] = 0x94 + device_unit(self);
-*/
-	sc->sc_enaddr[0] = 0x00;
-	sc->sc_enaddr[1] = 0x0a;
-	sc->sc_enaddr[2] = 0x0b;
-	sc->sc_enaddr[3] = 0x0c;
-	sc->sc_enaddr[4] = 0x0d;
-	sc->sc_enaddr[5] = 0x0e;
 
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
@@ -559,15 +551,16 @@ pge_init(struct ifnet *ifp)
 	/*
 	 * Give the transmit and receive rings to the chip.
 	 */
-/*
+
+	pfe_probe(&sc->pfe);
+
+	int mac = EMAC1_BASE_ADDR;
+	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
+
 	MAC_ADDR enet_address = {0x0, 0x0};
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
-*/
 
-	pfe_probe(&sc->pfe);
-	int mac = EMAC1_BASE_ADDR;
-	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
 	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
 	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
 	gemac_enable_mdio((void *)mac);
