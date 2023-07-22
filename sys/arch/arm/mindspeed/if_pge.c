@@ -302,7 +302,6 @@ pge_attach(device_t parent, device_t self, void *aux)
 	gemac_enable_copy_all((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
-*/
 	arswitch_writereg(sc->sc_dev, AR8X16_REG_MASK_CTRL,
 	    AR8X16_MASK_CTRL_SOFT_RESET);
 	delay(1000);
@@ -313,12 +312,13 @@ pge_attach(device_t parent, device_t self, void *aux)
 		printf(" %x", val);
 	}
 	printf("\n");
+*/
 
+#if 0
 	if (device_unit(self) == 0) {
 		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
 		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
 		    arswitch_readreg(self, AR8X16_REG_MODE));
-#if 0
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -344,9 +344,9 @@ pge_attach(device_t parent, device_t self, void *aux)
 		aprint_normal_dev(sc->sc_dev, "PORT VLAN %d %x\n", i,
 		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
 #endif
-#endif
 	}
 
+#endif
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
 	ether_ifattach(ifp, sc->sc_enaddr);
@@ -568,13 +568,17 @@ pge_init(struct ifnet *ifp)
 	pfe_probe(&sc->pfe);
 	int mac = EMAC1_BASE_ADDR;
 	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
-//	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
-//	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
-//	gemac_enable_mdio((void *)mac);
-//	printf("%d\n", gemac_get_mdc_div((void *)mac));
+	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
+	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
+	gemac_enable_mdio((void *)mac);
+	printf("%d\n", gemac_get_mdc_div((void *)mac));
 	gemac_enable_copy_all((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
+
+	aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
+	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MASK_CTRL),
+	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MODE));
 
 	callout_schedule(&sc->sc_tick_ch, hz);
 
