@@ -401,32 +401,35 @@ gpio_match(device_t parent, cfdata_t cfdata, void *aux)
 void
 gpio_attach(device_t parent, device_t self, void *aux)
 {
-#if 0
 	struct axi_attach_args * const aa = aux;
 	struct gpio_softc * const gpio = device_private(self);
 	int error;
-	int oen, i;
-	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
+//	int oen, i;
+//	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
 
 /*
 	if (aa->apba_intr == OBIOCF_INTR_DEFAULT)
 		panic("\n%s: no intr assigned", device_xname(self));
 
 */
-	if (aa->apba_size != 0x10000)	/* APB is 64K boundly */
-		aa->apba_size = 0x10000;
+	if (aa->aa_size != 0x10000)	/* APB is 64K boundly */
+		aa->aa_size = 0x10000;
 
 	gpio->gpio_dev = self;
-	gpio->gpio_memt = aa->apba_memt;
-	error = bus_space_map(aa->apba_memt, aa->apba_addr, aa->apba_size,
+	gpio->gpio_memt = aa->aa_iot;
+	error = bus_space_map(aa->aa_iot, aa->aa_addr, aa->aa_size,
 	    0, &gpio->gpio_memh);
 
 	if (error) {
 		aprint_error(": failed to map register %#lx@%#lx: %d\n",
-		    aa->apba_size, aa->apba_addr, error);
+		    aa->aa_size, aa->aa_addr, error);
 		return;
 	}
 
+printf("MORIMORI GPIO %x %x\n", GPIO_READ(gpio, GPIO_PIN_SELECT_REG),
+GPIO_READ(gpio, GPIO_63_32_PIN_SELECT_REG));
+
+#if 0
 	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
 	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
 
