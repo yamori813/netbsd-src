@@ -425,9 +425,35 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		    aa->aa_size, aa->aa_addr, error);
 		return;
 	}
+/*
+GPIO_6 SW
+GPIO_27 HW RESET
+*/
 
-printf("MORIMORI GPIO %x %x\n", GPIO_READ(gpio, GPIO_PIN_SELECT_REG),
-GPIO_READ(gpio, GPIO_63_32_PIN_SELECT_REG));
+#if 0
+	uint32_t i, j, val;
+	for (i = 0; i < 32; ++i) {
+		printf("MORIMORI GPIO %d\n", i);
+		val = ~(1 << i);
+		GPIO_WRITE(gpio, GPIO_OE_REG, val);
+		GPIO_WRITE(gpio, GPIO_OUTPUT_REG, val);
+		/* 5 sec is overflow at delay() */
+		for (j = 0;j < 1000; ++j)
+			delay(1000*5);
+	}
+
+	uint32_t reg;
+	/* QCA8337 Reset is GPIO_5. Same as reference design */
+	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	reg = reg & ~(1 << 5);
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
+	reg = GPIO_READ(gpio, GPIO_OE_REG);
+	reg = reg | (1 << 5);
+	GPIO_WRITE(gpio, GPIO_OE_REG, reg);
+	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	reg = reg | (1 << 5);
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
+#endif
 
 #if 0
 	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
