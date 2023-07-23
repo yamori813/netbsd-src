@@ -255,7 +255,7 @@ m86xxx_bootstrap(vaddr_t iobase)
 	/* PFE Reset */
 
 	reg = readl(PFE_CLK_CNTRL);
-	reg &=~(1);
+	reg &=~CLK_DOMAIN_MASK;
 	writel(PFE_CLK_CNTRL, reg);
 
 	reg = readl(AXI_RESET_1);
@@ -264,7 +264,7 @@ m86xxx_bootstrap(vaddr_t iobase)
 	writel(AXI_RESET_1, reg & ~PFE_SYS_AXI_RESET_BIT);
 
 	reg = readl(PFE_CLK_CNTRL);
-	reg |= 1;
+	reg |= CLK_DOMAIN_MASK;
 	writel(PFE_CLK_CNTRL, reg);
 
 /*
