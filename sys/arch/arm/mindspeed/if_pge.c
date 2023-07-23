@@ -569,6 +569,14 @@ pge_init(struct ifnet *ifp)
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
 
+	uint16_t val;
+	printf("PHY:");
+	for (i = 0; i < 8; ++i) {
+		pge_mii_readreg(sc->sc_dev, i, 3, &val);
+		printf(" %x", val);
+	}
+	printf("\n");
+
 	aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
 	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MASK_CTRL),
 	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MODE));
