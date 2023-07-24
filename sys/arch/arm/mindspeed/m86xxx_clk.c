@@ -86,8 +86,10 @@ m86xxx_clk_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	sc->sc_iot = axia->aa_iot;
 
+/*
 	if (bus_space_map(axia->aa_iot, axia->aa_addr, axia->aa_size,
 			  0, &sc->sc_hdl))
+*/
 
 	aprint_normal("\n");
 }
