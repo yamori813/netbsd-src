@@ -90,6 +90,26 @@ axi_attach(device_t parent __unused, device_t self, void *aux __unused)
 	    CFARGS(.search = axi_search));
 }
 
+/* ARGSUSED */
+static int
+axi_search(device_t parent, struct cfdata *cf, const int *ldesc __unused,
+    void *aux)
+{
+	struct axi_attach_args *aa;
+
+	aa = aux;
+
+	aa->aa_addr = cf->cf_loc[AXICF_ADDR];
+	aa->aa_size = cf->cf_loc[AXICF_SIZE];
+	aa->aa_intr = cf->cf_loc[AXICF_INTR];
+	aa->aa_intrbase = cf->cf_loc[AXICF_IRQBASE];
+
+	if (config_probe(parent, cf, aux))
+		config_attach(parent, cf, aux, axi_print, CFARGS_NONE);
+
+	return 0;
+}
+
 static int
 axi_find(device_t parent, cfdata_t cf, const int *ldesc, void *aux)
 {
@@ -157,26 +177,6 @@ axi_attach_critical(struct axi_softc *sc)
 		aa.aa_intrbase = cf->cf_loc[AXICF_IRQBASE];
 		config_attach(sc->sc_dev, cf, &aa, axi_print, CFARGS_NONE);
 	}
-}
-
-/* ARGSUSED */
-static int
-axi_search(device_t parent, struct cfdata *cf, const int *ldesc __unused,
-    void *aux)
-{
-	struct axi_attach_args *aa;
-
-	aa = aux;
-
-	aa->aa_addr = cf->cf_loc[AXICF_ADDR];
-	aa->aa_size = cf->cf_loc[AXICF_SIZE];
-	aa->aa_intr = cf->cf_loc[AXICF_INTR];
-	aa->aa_intrbase = cf->cf_loc[AXICF_IRQBASE];
-
-	if (config_probe(parent, cf, aux))
-		config_attach(parent, cf, aux, axi_print, CFARGS_NONE);
-
-	return 0;
 }
 
 /* ARGSUSED */
