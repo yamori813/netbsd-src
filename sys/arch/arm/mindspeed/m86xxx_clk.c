@@ -30,6 +30,7 @@
 __KERNEL_RCSID(0, "$NetBSD$");
 
 //#include "opt_clk.h"
+#include "locators.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +44,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/mindspeed/m86xxx_var.h>
+#include <arm/mindspeed/m86xxx_clk.h>
 
 struct clk_softc {
 	device_t sc_dev;
@@ -60,8 +62,6 @@ CFATTACH_DECL_NEW(clk, sizeof(struct clk_softc),
 	bus_space_read_4(sc->sc_iot, sc->sc_hdl, (reg))
 #define	CLK_WRITE(sc, reg, val)						\
 	bus_space_write_4(sc->sc_iot, sc->sc_hdl, (reg), (val))
-#define	CLK_WRITE_2(sc, reg, val)					\
-	bus_space_write_2(sc->sc_iot, sc->sc_hdl, (reg), (val))
 
 static int
 m86xxx_clk_match(device_t parent, cfdata_t cf, void *aux)
@@ -82,14 +82,25 @@ m86xxx_clk_attach(device_t parent, device_t self, void *aux)
 {
 	struct clk_softc *sc = device_private(self);
 	struct axi_attach_args *axia = aux;
+	int error;
 
 	sc->sc_dev = self;
 	sc->sc_iot = axia->aa_iot;
 
-/*
-	if (bus_space_map(axia->aa_iot, axia->aa_addr, axia->aa_size,
-			  0, &sc->sc_hdl))
-*/
+	if (axia->aa_size == AXICF_SIZE_DEFAULT)
+		axia->aa_size = 0x1000;
+
+	error = bus_space_map(axia->aa_iot, axia->aa_addr, axia->aa_size,
+	    0, &sc->sc_hdl);
+
+	if (error) {
+		aprint_error(": failed to map register %#lx@%#lx: %d\n",
+		    axia->aa_size, axia->aa_addr, error);
+		return;
+	}
+
+	CLK_WRITE(sc, PFE_RESET, 0);
+	CLK_WRITE(sc, GEMTX_RESET, 0);
 
 	aprint_normal("\n");
 }

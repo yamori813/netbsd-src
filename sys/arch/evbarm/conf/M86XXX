@@ -174,7 +174,7 @@ arma9tmr0	at armperiph?		# A9 Global Timer
 arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
 
 axi0		at mainbus?		# AXI
-clk0		at axi? addr 0x96b00000
+clk0		at axi? addr 0x904b0000
 com*		at axi? addr 0x96400000 intr 59
 pge0		at axi? addr 0x9c000000 intr 36
 xhci*		at axi? addr 0x9f000000 intr 54
