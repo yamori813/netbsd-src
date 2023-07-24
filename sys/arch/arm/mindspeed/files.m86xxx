@@ -24,6 +24,10 @@ file	arch/arm/mindspeed/m86xxx_axi.c		axi
 attach	com at axi with m86xxx_com
 file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 
+device	clk
+attach	clk at axi
+file	arch/arm/mindspeed/m86xxx_clk.c		clk		needs-flag
+
 # GPIO
 device  m86gpio: gpiobus
 attach  m86gpio at axi
