@@ -98,7 +98,7 @@ axi_critical_search(device_t parent, struct cfdata *cf,
 
 	aa = aux;
 
-	if ((strcmp(cf->cf_name, "tzic") != 0) &&
+	if ((strcmp(cf->cf_name, "clk") != 0) &&
 	    (strcmp(cf->cf_name, "imxuart") != 0) &&
 	    (strcmp(cf->cf_name, "imxccm") != 0) &&
 	    (strcmp(cf->cf_name, "imxgpio") != 0))
