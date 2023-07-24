@@ -99,8 +99,25 @@ m86xxx_clk_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 
+	uint32_t reg;
+	reg = CLK_READ(sc, PFE_CLK_CNTRL);
+	reg &=~CLK_DOMAIN_MASK;
+	CLK_WRITE(sc, PFE_CLK_CNTRL, reg);
+
+	reg = CLK_READ(sc, AXI_RESET_1);
+	CLK_WRITE(sc, AXI_RESET_1, reg | PFE_SYS_AXI_RESET_BIT);
+	delay(1000);
+	CLK_WRITE(sc, AXI_RESET_1, reg & ~PFE_SYS_AXI_RESET_BIT);
+
+	reg = CLK_READ(sc, PFE_CLK_CNTRL);
+	reg |= CLK_DOMAIN_MASK;
+	CLK_WRITE(sc, PFE_CLK_CNTRL, reg);
+
+	CLK_WRITE(sc, AXI_RESET_0, 0);
+	CLK_WRITE(sc, AXI_RESET_2, 0);
+/*
 	CLK_WRITE(sc, PFE_RESET, 0);
 	CLK_WRITE(sc, GEMTX_RESET, 0);
-
+*/
 	aprint_normal("\n");
 }
