@@ -267,9 +267,9 @@ m86xxx_bootstrap(vaddr_t iobase)
 	reg |= CLK_DOMAIN_MASK;
 	writel(PFE_CLK_CNTRL, reg);
 
-/*
 	writel(PFE_RESET, PFE_CORE_RESET_BIT);
 	writel(GEMTX_RESET, GEMTX_RESET_BIT);
+/*
 	delay(10);
 	writel(PFE_RESET, 0);
 	writel(GEMTX_RESET, 0);
