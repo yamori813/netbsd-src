@@ -78,7 +78,7 @@ int gemac_enet_addr_byte_mac(u8 *enet_byte_addr, MAC_ADDR *enet_addr)
 void gemac_init(void *base, void *cfg)
 {
 	gemac_set_config(base, cfg);
-	gemac_set_bus_width(base, 64);
+//	gemac_set_bus_width(base, 64);
 }
 
 /** GEMAC set speed.
