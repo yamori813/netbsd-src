@@ -1,4 +1,4 @@
-/*	$NetBSD: debug.c,v 1.67 2023/06/17 22:28:49 rillig Exp $	*/
+/*	$NetBSD: debug.c,v 1.70 2023/06/27 04:41:23 rillig Exp $	*/
 
 /*-
  * Copyright (c) 2023 The NetBSD Foundation, Inc.
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$NetBSD: debug.c,v 1.67 2023/06/17 22:28:49 rillig Exp $");
+__RCSID("$NetBSD: debug.c,v 1.70 2023/06/27 04:41:23 rillig Exp $");
 
 #include <stdarg.h>
 #include <string.h>
@@ -111,6 +111,14 @@ static const char *const declaration_name[] = {
 	"no",
 	"begin",
 	"end",
+};
+
+static const char *const badp_name[] = {
+	"none",
+	"seen{",
+	"decl",
+	"seen_decl",
+	"yes",
 };
 
 const char *const paren_level_cast_name[] = {
@@ -263,8 +271,8 @@ paren_stack_equal(const struct paren_stack *a, const struct paren_stack *b)
 	for (size_t i = 0, n = a->len; i < n; i++)
 		if (a->item[i].indent != b->item[i].indent
 		    || a->item[i].cast != b->item[i].cast)
-			return true;
-	return false;
+			return false;
+	return true;
 }
 
 static void
@@ -371,11 +379,13 @@ debug_parser_state(void)
 	debug_ps_bool(want_newline);
 	debug_ps_enum(declaration, declaration_name);
 	debug_ps_bool(blank_line_after_decl);
+	debug_ps_enum(badp, badp_name);
 
 	state.heading = NULL;
 	debug_blank_line();
 
-	state.prev_ps = ps;
+	parser_state_free(&state.prev_ps);
+	parser_state_back_up(&state.prev_ps);
 	state.ps_first = false;
 }
 

@@ -1,4 +1,4 @@
-/*	$NetBSD: compat_defs.h,v 1.120 2021/05/30 10:39:41 cjep Exp $	*/
+/*	$NetBSD: compat_defs.h,v 1.122 2023/07/21 22:05:04 lukem Exp $	*/
 
 #ifndef	__NETBSD_COMPAT_DEFS_H__
 #define	__NETBSD_COMPAT_DEFS_H__
@@ -996,6 +996,15 @@ void *setmode(const char *);
 #ifndef MAXPATHLEN
 #define MAXPATHLEN	4096
 #endif
+
+#ifndef NAME_MAX
+#ifdef _XOPEN_NAME_MAX
+#define NAME_MAX _XOPEN_NAME_MAX
+#else
+#error "Both NAME_MAX and _XOPEN_NAME_MAX are not defined"
+#endif
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX	MAXPATHLEN
 #endif

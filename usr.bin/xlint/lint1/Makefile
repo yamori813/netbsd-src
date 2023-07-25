@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile,v 1.95 2023/03/28 14:44:35 rillig Exp $
+#	$NetBSD: Makefile,v 1.100 2023/07/21 15:00:32 lukem Exp $
 
 .include <bsd.own.mk>
 
@@ -16,7 +16,6 @@ YHEADER=
 #LFLAGS+=	-d
 
 CWARNFLAGS.clang+=	-Wno-error=implicit-int-float-conversion
-LINTFLAGS+=		-T
 LOBJS.${PROG}+=		${SRCS:M*.y:.y=.ln}
 LOBJS.${PROG}+=		${SRCS:M*.l:.l=.ln}
 LINTFLAGS.cgram.c+=	-X 351		# 'extern' declaration in .c file
@@ -28,6 +27,7 @@ LINTFLAGS.scan.c+=	-X 351		# 'extern' declaration in .c file
 CPPFLAGS+=	-DIS_LINT1
 CPPFLAGS+=	-I${.CURDIR} -I${.OBJDIR}
 CPPFLAGS+=	${DEBUG:D-DDEBUG -DYYDEBUG}
+CPPFLAGS+=	${DEBUG_MEM:D-DDEBUG_MEM}
 
 COPTS.err.c+=	${${ACTIVE_CC} == "clang":? -Wno-format-nonliteral :}
 
@@ -41,7 +41,8 @@ LINT1=		${TOOLDIR}/libexec/${MACHINE_GNU_PLATFORM}-lint1
 LINT1?=		./${PROG}
 
 ${MAN}.date:	err.c
-	sed -E \
+	${_MKTARGET_CREATE}
+	${TOOL_SED} -E \
 	    -e 's,.*(....)/([0-9]{2})/0?([0-9]+).*,\2 \3\, \1,' \
 	    -e 's,^01,January,' \
 	    -e 's,^02,February,' \
@@ -67,7 +68,7 @@ cgram.ln: cgram.c
 
 ${MAN}:		makeman err.c Makefile ${MAN}.date
 	${_MKTARGET_CREATE}
-	${HOST_SH} ${.ALLSRC:M*makeman} \
+	SED=${TOOL_SED:Q} ${HOST_SH} ${.ALLSRC:M*makeman} \
 	    "$$(cat ${.ALLSRC:M*.date})" ${.ALLSRC:M*err.c} \
 	    >${.TARGET}
 
@@ -82,7 +83,7 @@ DPADD+=		${LIBL}
 err-msgs.h: err.c
 	${_MKTARGET_CREATE}
 	sp='[[:space:]]*'; \
-	from="^$$sp\(\".*\"\)\,$$sp/\*$$sp\(Q*[0-9][0-9]*\)$$sp\*/\$$"; \
+	from="^$$sp\(\"[^\"].*\"\)\,$$sp/\*$$sp\(Q*[0-9][0-9]*\)$$sp\*/\$$"; \
 	${TOOL_SED} -n -e "s,$$from,#define MSG_\2 \1,p" < ${.ALLSRC:M*err.c} > ${.TARGET}.tmp
 	mv -f ${.TARGET}.tmp ${.TARGET}
 
@@ -119,7 +120,7 @@ add-test: .PHONY
 		'/* lint1-extra-flags: -Z */' \
 		'/* lint1-flags: -Z */' \
 		'/* lint1-only-if: schar uchar ilp32 lp64 int long */' \
-		'/* lint1-skip-if: ldbl-64 ldbl-96 ldbl-128 */' \
+		'/* lint1-skip-if: ldbl64 ldbl96 ldbl128 */' \
 		'' \
 		'// TODO: Add some code that passes.' \
 		'// TODO: Add some code that fails.' \
