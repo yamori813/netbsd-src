@@ -297,20 +297,22 @@ pge_attach(device_t parent, device_t self, void *aux)
 	arswitch_writereg(sc->sc_dev, AR8X16_REG_MASK_CTRL,
 	    AR8X16_MASK_CTRL_SOFT_RESET);
 	delay(1000);
+*/
+	int mac = EMAC1_BASE_ADDR;
+	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
+	gemac_enable_mdio((void *)mac);
 	uint16_t val;
-	printf("PHY:");
-	for (i = 0; i < 8; ++i) {
-		pge_mii_readreg(sc->sc_dev, i, 3, &val);
+	printf("SWPHY:");
+	for (i = 0; i < 5; ++i) {
+		pge_mii_readreg(sc->sc_dev, i, 1, &val);
 		printf(" %x", val);
 	}
 	printf("\n");
-*/
+		aprint_normal_dev(sc->sc_dev, "arswitch %x\n",
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL));
 
 #if 0
 	if (device_unit(self) == 0) {
-		aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
-		    arswitch_readreg(self, AR8X16_REG_MODE));
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -561,17 +563,21 @@ pge_init(struct ifnet *ifp)
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 
+/*
 	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
 	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
 	gemac_enable_mdio((void *)mac);
 	printf("%d\n", gemac_get_mdc_div((void *)mac));
-	gemac_enable_copy_all((void *)mac);
+*/
+//	gemac_enable_copy_all((void *)mac);
+	gpi_enable((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
 
+/*
 	uint16_t val;
 	printf("PHY:");
-	for (i = 0; i < 8; ++i) {
+	for (i = 0; i < 5; ++i) {
 		pge_mii_readreg(sc->sc_dev, i, 3, &val);
 		printf(" %x", val);
 	}
@@ -580,8 +586,9 @@ pge_init(struct ifnet *ifp)
 	aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
 	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MASK_CTRL),
 	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MODE));
+*/
 
-	callout_schedule(&sc->sc_tick_ch, hz);
+//	callout_schedule(&sc->sc_tick_ch, hz);
 
 	ifp->if_flags |= IFF_RUNNING;
 
@@ -668,7 +675,6 @@ pge_start(struct ifnet *ifp)
 	u_int mlen;
 	u_int len;
 	int i;
-printf("MORIMORI start\n");
 
 	PGE_LOCK(sc);
 
@@ -701,10 +707,12 @@ printf("MORIMORI start\n");
 		m->m_data[0] = 0;
 		for (i = 1; i < 6; ++i)
 			m->m_data[i] = 0;
+/*
 		for (i = 0; i < 16; ++i) {
 			printf(" %02x", m->m_data[i]);
 		}
 		printf("\n");
+*/
 		dm = rdp->tx_dm[sc->sc_txnext];
 		error = bus_dmamap_load_mbuf(sc->sc_bdt, dm, m,
 		    BUS_DMA_WRITE | BUS_DMA_NOWAIT);
@@ -760,7 +768,6 @@ printf("MORIMORI start\n");
 			    sizeof(struct bufDesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-printf("MORIMORI TX %d %d\n", dm->dm_nsegs, len);
 		if (pad) {
 			sc->sc_txdesc_ring[sc->sc_txnext].data =
 			    sc->sc_txpad_pa;
@@ -930,7 +937,6 @@ pge_rxintr(void *arg)
 		if(!(sc->sc_rxdesc_ring[i].ctrl & BD_CTRL_DESC_EN)) {
 			length = BD_BUF_LEN(sc->sc_rxdesc_ring[i].ctrl);
 			length -= sizeof(hif_header_t);
-printf("MORI rx len %d\n", length);
 			m = rdp->rx_mb[i];
 			if (length < ETHER_HDR_LEN) {
 				aprint_error_dev(sc->sc_dev,
@@ -940,13 +946,14 @@ printf("MORI rx len %d\n", length);
 				bus_dmamap_sync(sc->sc_bdt, rdp->rx_dm[i],
 				    0, rdp->rx_dm[i]->dm_mapsize,
 				    BUS_DMASYNC_POSTREAD);
+/*
 int j;
 for (j = 0; j < 8; ++j) {
 for (i = 0; i < 16; ++i) {
 printf(" %02x", *(m->m_data + i + j * 16));
 }
 printf("\n");
-}
+}*/
 				m_set_rcvif(m, ifp);
 				m->m_pkthdr.len = m->m_len = length;
 				m->m_data += sizeof(hif_header_t);
@@ -978,7 +985,6 @@ pge_txintr(void *arg)
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	bool handled = false;
 	int i, remain;
-printf("txintr");
 
 	remain = 0;
 	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
@@ -1076,15 +1082,15 @@ arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
 	lo = value & 0xffff;
 	hi = (uint16_t) (value >> 16);
 
-/*
-	if (sc->mii_lo_first) {
+//	if (sc->mii_lo_first) {
 		r = pge_mii_writereg(dev, phy, reg, lo);
 		r |= pge_mii_writereg(dev, phy, reg + 1, hi);
+/*
 	} else {
-*/
 		r = pge_mii_writereg(dev, phy, reg + 1, hi);
 		r |= pge_mii_writereg(dev, phy, reg, lo);
-//	}
+	}
+*/
 
 	return r;
 }
