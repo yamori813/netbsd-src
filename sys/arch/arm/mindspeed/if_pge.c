@@ -994,7 +994,6 @@ pge_txintr(void *arg)
 			++remain;
 			continue;
 		}
-		continue;
 
 		if (sc->sc_txdesc_ring[i].status == 0)
 			continue;
