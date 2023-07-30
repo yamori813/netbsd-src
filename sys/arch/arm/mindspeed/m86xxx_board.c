@@ -81,11 +81,32 @@ static uint32_t readl2(int off)
 	return *(uint32_t *)(baseaddr + 0x100000 + off);
 }
 
-static void writel_uphy(int off, uint32_t val);
-static void writel_uphy(int off, uint32_t val)
+static void write_usb3(int off, uint32_t val);
+static void write_usb3(int off, uint32_t val)
 {
 
 	*(uint32_t *)(baseaddr + 0x0a0000 + off) = val;
+}
+
+static void write_usb2(int off, uint32_t val);
+static void write_usb2(int off, uint32_t val)
+{
+
+	*(uint32_t *)(baseaddr + 0x010000 + off) = val;
+}
+
+static uint32_t readl_dwc(int off);
+static uint32_t readl_dwc(int off)
+{
+
+	return *(uint32_t *)(baseaddr + 0x060000 + off);
+}
+
+static void writel_dwc(int off, uint32_t val);
+static void writel_dwc(int off, uint32_t val)
+{
+
+	*(uint32_t *)(baseaddr + 0x060000 + off) = val;
 }
 
 static uint32_t m86xxx_get_pll_freq(int pll_no);
@@ -219,9 +240,13 @@ m86xxx_bootstrap(vaddr_t iobase)
 
 	curcpu()->ci_data.cpu_cc_freq = clock_info.clk_arm;
 
+	/* Enable  clock USB2 and USB3 */
+
 	uint32_t reg = readl(AXI_CLK_CNTRL_2);
 	reg |= (CLK_DOMAIN_USB0_MASK | CLK_DOMAIN_USB1_MASK);
 	writel(AXI_CLK_CNTRL_2, reg);
+
+	/* USB3 */
 
 	reg = readl(USB_RST_CNTRL);
 	reg |= USB1_PHY_RESET_BIT;
@@ -234,13 +259,13 @@ m86xxx_bootstrap(vaddr_t iobase)
 	writel(AXI_RESET_2, reg);
 
 #if 0
-	writel_uphy(0x20, 0x420E82A8);	/* 24MHz */
+	write_usb3(0x20, 0x420E82A8);	/* 24MHz */
 #else
-	writel_uphy(0x20, 0x420E82A9);	/* 48MHz */
+	write_usb3(0x20, 0x420E82A9);	/* 48MHz */
 #endif
-	writel_uphy(0x24, 0x69C34F53);
-	writel_uphy(0x28, 0x0005D815);
-	writel_uphy(0x2C, 0x00000801);
+	write_usb3(0x24, 0x69C34F53);
+	write_usb3(0x28, 0x0005D815);
+	write_usb3(0x2C, 0x00000801);
 
 	reg = readl(USB_RST_CNTRL);
 	reg &= ~USB1_PHY_RESET_BIT;
@@ -252,7 +277,31 @@ m86xxx_bootstrap(vaddr_t iobase)
 	reg &= ~USB1_AXI_RESET_BIT;
 	writel(AXI_RESET_2, reg);
 
-	/* PFE Reset */
+	/* USB2 OTG PHY init */
+
+#if 0
+	write_usb2(USB0_PHY_CTRL_REG0, 0x00210000);   /* 24MHz */
+#else
+	write_usb2(USB0_PHY_CTRL_REG0, 0x00220000);   /* 48MHz */
+#endif
+
+	reg = readl_dwc(USB_PHY_SCALEDOWN_ADDR);
+	reg = ((reg & 0xffff11ff) | 0x00001100);
+	writel_dwc(USB_PHY_SCALEDOWN_ADDR, reg);
+
+	reg = readl_dwc(USB_PHY_SCALEDOWN_ADDR);
+	reg = ((reg & 0xfffffff0) | 0x0);
+	writel_dwc(USB_PHY_SCALEDOWN_ADDR, reg);
+
+	writel(USB_RST_CNTRL, readl(USB_RST_CNTRL) | USB0_UTMI_RESET_BIT);
+	writel(USB_RST_CNTRL, readl(USB_RST_CNTRL) | USB0_PHY_RESET_BIT);
+	writel(AXI_RESET_2, readl(AXI_RESET_2) | USB0_AXI_RESET_BIT);
+
+	writel(USB_RST_CNTRL, readl(USB_RST_CNTRL) & ~USB0_PHY_RESET_BIT);
+	writel(USB_RST_CNTRL, readl(USB_RST_CNTRL) & ~USB0_UTMI_RESET_BIT);
+	writel(AXI_RESET_2, readl(AXI_RESET_2) & ~USB0_AXI_RESET_BIT);
+
+	/* PFE Reset move to m86xxx_clk */
 
 /*
 	reg = readl(PFE_CLK_CNTRL);
