@@ -52,3 +52,12 @@ file    arch/arm/mindspeed/pfe/pfe_pe.c		pge
 attach xhci at axi with xhci_axi
 file    arch/arm/mindspeed/m86xxx_xhci.c        xhci_axi
 
+# USB OTG
+#device	dotg: usbus, usbroothub
+#file	arch/arm/mindspeed/dotg.c		dotg		needs-flag
+
+#attach	dotg at axi with m86xxx_otg
+#file	arch/arm/mindspeed/m86xxx_otg.c		m86xxx_otg
+
+attach	dwctwo at axi with m86xxx_otg
+file	arch/arm/mindspeed/m86xxx_otg.c		m86xxx_otg

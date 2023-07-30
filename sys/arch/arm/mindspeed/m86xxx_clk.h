@@ -359,9 +359,14 @@ enum {
 #define TPI_CLK_250		250
 #define CSYS_CLK_166		166
 
+/*
 #define USB0_PHY_CTRL_REG0           0x90410000
 #define USB1_PHY_CTRL_REG0           0x90410010
 #define USB_PHY_SCALEDOWN_ADDR       0x9046003C
+*/
+#define USB0_PHY_CTRL_REG0           0x00
+#define USB1_PHY_CTRL_REG0           0x10
+#define USB_PHY_SCALEDOWN_ADDR       0x3C
 
 #define read_clk_div_bypass_backup(reg) readl2(reg - CLK_REG_DIV_BUG_BASE + IRAM_CLK_REG_MIRROR)
 /*
