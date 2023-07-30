@@ -57,7 +57,6 @@ static void	m86xxx_otg_attach(device_t, device_t, void *);
 
 struct m86xxx_otg_softc {
 	struct dwc2_softc	sc_otg;
-	struct dwc2_core_params	sc_params;
 	struct bus_space	sc_bs;
 };
 
@@ -67,42 +66,36 @@ CFATTACH_DECL_NEW(m86xxx_otg, sizeof(struct m86xxx_otg_softc),
 #define	REMAPFLAG	0x8000
 #define	REGDECL(a, b)	[(a)] = ((b) | REMAPFLAG)
 
-static void
-dwc2_fdt_amlogic_params(struct dwc2_core_params *params)
-{
-	dwc2_set_all_params(params, -1);
-
-	params->otg_cap = DWC2_CAP_PARAM_NO_HNP_SRP_CAPABLE;
-/*
-	params->speed = DWC2_SPEED_PARAM_HIGH;
-	params->dma_enable = 1;
-	params->enable_dynamic_fifo = 1;
-	params->host_rx_fifo_size = 512;
-	params->host_nperio_tx_fifo_size = 500;
-	params->host_perio_tx_fifo_size = 500;
-	params->host_channels = 16;
-	params->phy_type = DWC2_PHY_TYPE_PARAM_UTMI;
-	params->reload_ctl = 1;
-	params->ahbcfg = GAHBCFG_HBSTLEN_INCR8 << GAHBCFG_HBSTLEN_SHIFT;
-*/
-#ifdef DWC2_POWER_DOWN_PARAM_NONE
-	params->power_down = DWC2_POWER_DOWN_PARAM_NONE;
-#endif
-}
-
-#if 0
-static void
-dwc2_fdt_rockchip_params(struct dwc2_fdt_softc *sc, struct dwc2_core_params *params)
-{
-	dwc2_set_all_params(params, -1);
-
-	params->otg_cap = DWC2_CAP_PARAM_NO_HNP_SRP_CAPABLE;
-	params->host_rx_fifo_size = 525;
-	params->host_nperio_tx_fifo_size = 128;
-	params->host_perio_tx_fifo_size = 256;
-	params->ahbcfg = GAHBCFG_HBSTLEN_INCR16 << GAHBCFG_HBSTLEN_SHIFT;
-}
-#endif
+/* copy from bcmdwc2_params */
+static struct dwc2_core_params m86xxx_params = {
+	.otg_cap			= 0,	/* HNP/SRP capable */
+	.otg_ver			= 0,	/* 1.3 */
+	.dma_enable			= 1,
+	.dma_desc_enable		= 0,
+	.speed				= 0,	/* High Speed */
+	.enable_dynamic_fifo		= 1,
+	.en_multiple_tx_fifo		= 1,
+	.host_rx_fifo_size		= 774,	/* 774 DWORDs */
+	.host_nperio_tx_fifo_size	= 256,	/* 256 DWORDs */
+	.host_perio_tx_fifo_size	= 512,	/* 512 DWORDs */
+	.max_transfer_size		= 65535,
+	.max_packet_count		= 511,
+	.host_channels			= 8,
+	.phy_type			= 1,	/* UTMI */
+	.phy_utmi_width			= 8,	/* 8 bits */
+	.phy_ulpi_ddr			= 0,	/* Single */
+	.phy_ulpi_ext_vbus		= 0,
+	.i2c_enable			= 0,
+	.ulpi_fs_ls			= 0,
+	.host_support_fs_ls_low_power	= 0,
+	.host_ls_low_power_phy_clk	= 0,	/* 48 MHz */
+	.ts_dline			= 0,
+	.reload_ctl			= 0,
+	.ahbcfg				= 0x10,
+	.uframe_sched			= 1,
+	.external_id_pin_ctl		= -1,
+	.hibernation			= -1,
+};
 
 static void
 m86xxx_dwc2_deferred(device_t self)
@@ -150,9 +143,7 @@ m86xxx_otg_attach(device_t parent, device_t self, void *aux)
 	sc->sc_iot = axia->aa_iot;
 	sc->sc_bus.ub_dmatag = axia->aa_dmat;
 
-	dwc2_fdt_amlogic_params(&msc->sc_params);
-	sc->sc_params = &msc->sc_params;
-	sc->sc_params = NULL;
+	sc->sc_params = &m86xxx_params;
 
 	aprint_naive("\n");
 	aprint_normal(": DesignWare USB2 OTG\n");
