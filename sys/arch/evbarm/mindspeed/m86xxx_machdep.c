@@ -214,30 +214,41 @@ static const struct boot_physmem bp_first256 = {
 	.bp_flags = 0,
 };
 
-#define BCM53xx_ROM_CPU_ENTRY	0xffff0400
+
+#define M86XXX_ROM_CPU_ENTRY	0xffff0400
 
 void
 m86xxx_mpstart(void)
 {
 #ifdef MULTIPROCESSOR
 #if 0
+bus_space_tag_t m86xxx_armcore_bst = &m83_bs_tag;
+bus_space_handle_t m86xxx_armcore_bsh;
+int error;
+
+	error = bus_space_map(m86xxx_armcore_bst, A9_PERIPH_BASE,
+	    0x20000, 0, &m86xxx_armcore_bsh);
+	if (error)
+		panic("%s: failed to map M86xxx %s registers: %d",
+		    __func__, "armcore", error);
+
 	/*
 	 * Invalidate all SCU cache tags. That is, for all cores (0-3)
 	 */
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    ARMCORE_SCU_BASE + SCU_INV_ALL_REG, 0xffff);
+	    A9_SCU_BASE + SCU_INV_ALL_REG, 0xffff);
 
 	uint32_t diagctl = bus_space_read_4(m86xxx_armcore_bst,
-	   m86xxx_armcore_bsh, ARMCORE_SCU_BASE + SCU_DIAG_CONTROL);
+	   m86xxx_armcore_bsh, A9_SCU_BASE + SCU_DIAG_CONTROL);
 	diagctl |= SCU_DIAG_DISABLE_MIGBIT;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    ARMCORE_SCU_BASE + SCU_DIAG_CONTROL, diagctl);
+	    A9_SCU_BASE + SCU_DIAG_CONTROL, diagctl);
 
 	uint32_t scu_ctl = bus_space_read_4(m86xxx_armcore_bst,
-	    m86xxx_armcore_bsh, ARMCORE_SCU_BASE + SCU_CTL);
+	    m86xxx_armcore_bsh, A9_SCU_BASE + SCU_CTL);
 	scu_ctl |= SCU_CTL_SCU_ENA;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    ARMCORE_SCU_BASE + SCU_CTL, scu_ctl);
+	    A9_SCU_BASE + SCU_CTL, scu_ctl);
 
 	armv7_dcache_wbinv_all();
 
@@ -245,7 +256,7 @@ m86xxx_mpstart(void)
 	bus_space_tag_t m86xxx_rom_bst = &bcmgen_bs_tag;
 	bus_space_handle_t m86xxx_rom_entry_bsh;
 
-	int error = bus_space_map(m86xxx_rom_bst, BCM53xx_ROM_CPU_ENTRY,
+	int error = bus_space_map(m86xxx_rom_bst, M86XXX_ROM_CPU_ENTRY,
 	    4, 0, &m86xxx_rom_entry_bsh);
 
 	/*
