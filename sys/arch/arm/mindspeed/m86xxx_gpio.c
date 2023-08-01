@@ -392,7 +392,7 @@ gpio_match(device_t parent, cfdata_t cfdata, void *aux)
 {
 	struct axi_attach_args *aa = aux;
 
-	if (aa->aa_addr == GPIO_BASE)
+	if (aa->aa_addr == GPIO_BASE + AXI_APB_CFG_BASE)
 		return 1;
 
 	return 0;

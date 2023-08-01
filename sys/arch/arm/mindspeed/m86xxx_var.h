@@ -27,6 +27,7 @@ void	m86xxx_device_register(device_t, void *);
 
 #ifdef MULTIPROCESSOR
 void	m86xxx_cpu_hatch(struct cpu_info *);
+void	m86xxx_cpu1_reset(void);
 #endif
 
 #endif	/* _ARM_MINDSPEED_M86VAR_H */

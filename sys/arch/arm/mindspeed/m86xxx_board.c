@@ -64,14 +64,14 @@ static uint32_t readl(int off);
 static uint32_t readl(int off)
 {
 
-	return *(uint32_t *)(baseaddr + 0x0B0000 + off);
+	return *(uint32_t *)(baseaddr + CLKCORE_BASE + off);
 }
 
 static void writel(int off, uint32_t val);
 static void writel(int off, uint32_t val)
 {
 
-	*(uint32_t *)(baseaddr + 0x0B0000 + off) = val;
+	*(uint32_t *)(baseaddr + CLKCORE_BASE + off) = val;
 }
 
 static uint32_t readl2(int off);
@@ -85,28 +85,28 @@ static void write_usb3(int off, uint32_t val);
 static void write_usb3(int off, uint32_t val)
 {
 
-	*(uint32_t *)(baseaddr + 0x0a0000 + off) = val;
+	*(uint32_t *)(baseaddr + USB3_0_BASE + off) = val;
 }
 
 static void write_usb2(int off, uint32_t val);
 static void write_usb2(int off, uint32_t val)
 {
 
-	*(uint32_t *)(baseaddr + 0x010000 + off) = val;
+	*(uint32_t *)(baseaddr + USB_PHY_SERDES_BASE + off) = val;
 }
 
 static uint32_t readl_dwc(int off);
 static uint32_t readl_dwc(int off)
 {
 
-	return *(uint32_t *)(baseaddr + 0x060000 + off);
+	return *(uint32_t *)(baseaddr + PCIE_SATA_USB_CTRL_BASE + off);
 }
 
 static void writel_dwc(int off, uint32_t val);
 static void writel_dwc(int off, uint32_t val)
 {
 
-	*(uint32_t *)(baseaddr + 0x060000 + off) = val;
+	*(uint32_t *)(baseaddr + PCIE_SATA_USB_CTRL_BASE + off) = val;
 }
 
 static uint32_t m86xxx_get_pll_freq(int pll_no);
@@ -380,6 +380,27 @@ void
 m86xxx_cpu_hatch(struct cpu_info *ci)
 {
 	a9tmr_init_cpu_clock(ci);
+}
+
+void
+m86xxx_cpu1_reset(void)
+{
+	uint32_t reg;
+
+	reg = readl(A9DP_CPU_RESET);
+	writel(A9DP_CPU_RESET, reg & ~CPU1_RST);
+
+	reg = readl(A9DP_PWR_CNTRL);
+	writel(A9DP_PWR_CNTRL, reg & ~CLAMP_CORE1);
+
+	reg = readl(A9DP_CPU_CLK_CNTRL);
+	writel(A9DP_CPU_CLK_CNTRL, reg | CPU1_CLK_ENABLE);
+
+	reg = readl(NEON1_CLK_ENABLE);
+	writel(NEON1_CLK_ENABLE, reg & ~NEON1_RST);
+
+	reg = readl(A9DP_CPU_CLK_CNTRL);
+	writel(A9DP_CPU_CLK_CNTRL, reg | NEON1_CLK_ENABLE);
 }
 #endif
 
