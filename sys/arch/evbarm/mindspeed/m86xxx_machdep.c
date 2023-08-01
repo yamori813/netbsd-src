@@ -170,6 +170,11 @@ static const struct pmap_devmap m86xxx_devmap[] = {
 		A9_PERIPH_BASE,
 		0x00100000
 	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x00400000,
+		AXI_DDR_BASE,
+		0x100
+	),
 #if 0
 	DEVMAP_ENTRY(
 		KERNEL_IO_IOREG_VBASE,
@@ -214,20 +219,21 @@ static const struct boot_physmem bp_first256 = {
 	.bp_flags = 0,
 };
 
+#define JUMP_TO_KERNEL_START_1          0xe3a00020      /* mov  r0, #32 */
+#define JUMP_TO_KERNEL_START_2          0xe590f000      /* ldr  pc, [r0] */
 
-#define M86XXX_ROM_CPU_ENTRY	0xffff0400
+#define M86_ARMCORE_SIZE		0x20000
 
 void
 m86xxx_mpstart(void)
 {
 #ifdef MULTIPROCESSOR
-#if 0
 bus_space_tag_t m86xxx_armcore_bst = &m83_bs_tag;
 bus_space_handle_t m86xxx_armcore_bsh;
 int error;
 
 	error = bus_space_map(m86xxx_armcore_bst, A9_PERIPH_BASE,
-	    0x20000, 0, &m86xxx_armcore_bsh);
+	    M86_ARMCORE_SIZE, 0, &m86xxx_armcore_bsh);
 	if (error)
 		panic("%s: failed to map M86xxx %s registers: %d",
 		    __func__, "armcore", error);
@@ -250,24 +256,35 @@ int error;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
 	    A9_SCU_BASE + SCU_CTL, scu_ctl);
 
+	bus_space_unmap(m86xxx_armcore_bst, m86xxx_armcore_bsh, M86_ARMCORE_SIZE);
+
 	armv7_dcache_wbinv_all();
 
 	const paddr_t mpstart = KERN_VTOPHYS((vaddr_t)cpu_mpstart);
-	bus_space_tag_t m86xxx_rom_bst = &bcmgen_bs_tag;
-	bus_space_handle_t m86xxx_rom_entry_bsh;
+	bus_space_tag_t m86xxx_startup_bst = &m83_bs_tag;
+	bus_space_handle_t m86xxx_startup_entry_bsh;
 
-	int error = bus_space_map(m86xxx_rom_bst, M86XXX_ROM_CPU_ENTRY,
-	    4, 0, &m86xxx_rom_entry_bsh);
+	error = bus_space_map(m86xxx_startup_bst, AXI_DDR_BASE,
+	    0x100, 0, &m86xxx_startup_entry_bsh);
 
 	/*
 	 * Before we turn on the MMU, let's the other process out of the
 	 * SKU ROM but setting the magic LUT address to our own mp_start
 	 * routine.
 	 */
-	bus_space_write_4(m86xxx_rom_bst, m86xxx_rom_entry_bsh, mpstart);
+	bus_space_write_4(m86xxx_startup_bst, m86xxx_startup_entry_bsh, 0x20, mpstart);
+	bus_space_write_4(m86xxx_startup_bst, m86xxx_startup_entry_bsh, 0,
+	    JUMP_TO_KERNEL_START_1);
+	bus_space_write_4(m86xxx_startup_bst, m86xxx_startup_entry_bsh, 4,
+	    JUMP_TO_KERNEL_START_2);
 
-	dsb(sy);
+	bus_space_unmap(m86xxx_startup_bst, m86xxx_startup_entry_bsh, 0x100);
+
+//	dsb(sy);
+	dsb(ishst);
 	sev();
+
+	m86xxx_cpu1_reset();
 
 	/* Bitmask of CPUs (non-BP) to start */
 	for (u_int cpuindex = 1; cpuindex < arm_cpu_max; cpuindex++) {
@@ -278,12 +295,10 @@ int error;
                 }
 
                 if (i == 0) {
-                        ret++;
                         aprint_error("cpu%d: WARNING: AP failed to start\n",
                             cpuindex);
                 }
         }
-#endif
 #endif /* MULTIPROCESSOR */
 }
 
@@ -350,11 +365,13 @@ initarm(void *arg)
 #if defined(VERBOSE_INIT_ARM) || 1
 	printf("initarm: Configuring system");
 #ifdef MULTIPROCESSOR
-#if 0
+/*
 	printf(" (%u cpu%s, hatched %#x)",
-	    arm_cpu_max + 1, arm_cpu_max + 1 ? "s" : "",
+	    arm_cpu_max, arm_cpu_max ? "s" : "",
 	    arm_cpu_hatched);
-#endif
+*/
+	printf(" (%u cpu%s)",
+	    arm_cpu_max, arm_cpu_max ? "s" : "");
 #endif
 	printf(", CLIDR=%010o CTR=%#x PMUSERSR=%#x",
 	    armreg_clidr_read(), armreg_ctr_read(), armreg_pmuserenr_read());

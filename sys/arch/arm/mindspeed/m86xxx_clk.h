@@ -387,3 +387,26 @@ enum {
 #define CLK_DOMAIN_DUS_MASK		(1<<0)
 #define CLK_DOMAIN_SATA_MASK		(1<<2)
 
+/* CPU */
+#define CPU0_RST                        (1 << 0)
+#define NEON0_RST                       (1 << 1)
+#define CPU1_RST                        (1 << 2)
+#define NEON1_RST                       (1 << 3)
+
+#define CPU0_CLK_ENABLE         (1 << 0)
+#define NEON0_CLK_ENABLE        (1 << 1)
+#define CPU1_CLK_ENABLE         (1 << 2)
+#define NEON1_CLK_ENABLE        (1 << 3)
+
+#define GLOBAL_CLK_ENABLE       (1 << 0)
+
+#define CLAMP_CORE0             (1 << 4)
+#define CLAMP_CORE1             (1 << 6)
+#define CORE_PWRDWN0        (1 << 5)
+#define CORE_PWRDWN1        (1 << 7)
+#define MP_PWRDWN               (1 << 0)
+
+#define SCPRE                           (1 << 4)
+#define SCALL                           (1 << 5)
+#define ISO_EN                          (1 << 6)
+
