@@ -163,8 +163,8 @@ config		netbsd		root on ? type ?
 mainbus0	at root
 
 # The boot cpu
-cpu0		at mainbus?
-#cpu*		at mainbus?
+#cpu0		at mainbus?
+cpu*		at mainbus?
 
 # The MPCore interrupt controller and global timer
 armperiph0	at mainbus?		# A9 On-Chip Peripherals
