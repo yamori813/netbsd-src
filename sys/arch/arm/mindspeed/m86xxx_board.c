@@ -396,8 +396,8 @@ m86xxx_cpu1_reset(void)
 	reg = readl(A9DP_CPU_CLK_CNTRL);
 	writel(A9DP_CPU_CLK_CNTRL, reg | CPU1_CLK_ENABLE);
 
-	reg = readl(NEON1_CLK_ENABLE);
-	writel(NEON1_CLK_ENABLE, reg & ~NEON1_RST);
+	reg = readl(A9DP_CPU_RESET);
+	writel(A9DP_CPU_RESET, reg & ~NEON1_RST);
 
 	reg = readl(A9DP_CPU_CLK_CNTRL);
 	writel(A9DP_CPU_CLK_CNTRL, reg | NEON1_CLK_ENABLE);
