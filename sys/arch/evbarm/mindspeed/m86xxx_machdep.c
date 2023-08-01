@@ -244,11 +244,13 @@ int error;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
 	    A9_SCU_BASE + SCU_INV_ALL_REG, 0xffff);
 
+/*
 	uint32_t diagctl = bus_space_read_4(m86xxx_armcore_bst,
 	   m86xxx_armcore_bsh, A9_SCU_BASE + SCU_DIAG_CONTROL);
 	diagctl |= SCU_DIAG_DISABLE_MIGBIT;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
 	    A9_SCU_BASE + SCU_DIAG_CONTROL, diagctl);
+*/
 
 	uint32_t scu_ctl = bus_space_read_4(m86xxx_armcore_bst,
 	    m86xxx_armcore_bsh, A9_SCU_BASE + SCU_CTL);
