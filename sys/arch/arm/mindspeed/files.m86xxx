@@ -61,3 +61,7 @@ file    arch/arm/mindspeed/m86xxx_xhci.c        xhci_axi
 
 attach	dwctwo at axi with m86xxx_otg
 file	arch/arm/mindspeed/m86xxx_otg.c		m86xxx_otg
+
+device	cfi : norbus
+attach	cfi at mainbus with mainbus_cfi
+file	arch/arm/mainbus/mainbus_cfi.c	mainbus_cfi

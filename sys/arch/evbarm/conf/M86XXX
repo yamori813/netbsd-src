@@ -183,6 +183,16 @@ dwctwo*		at axi? addr 0x92000000 intr 53
 m86gpio0	at axi? addr 0x90470000 intr 77 # to 85
 gpio*		at m86gpio?
 
+# NOR Flash
+#options        NOR_VERBOSE
+options		ARM_CFI_ADDRESS=0xc0000000
+options		ARM_CFI_BUS_TAG=m83_bs_tag
+cfi0		at mainbus?
+nor0		at cfi0
+flash0		at nor0 offset 0x00000000 size 0x00020000 readonly 1 # uloader
+flash1		at nor0 offset 0x00020000 size 0x000a0000 readonly 1 # barebox
+flash2		at nor0 offset 0x000a0000 size 0x000c0000 readonly 1 # env
+
 # USB bus support
 usb*            at xhci?
 usb*            at dwctwo?
