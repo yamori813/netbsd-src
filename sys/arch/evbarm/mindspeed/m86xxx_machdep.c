@@ -244,14 +244,6 @@ int error;
 	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
 	    A9_SCU_BASE + SCU_INV_ALL_REG, 0xffff);
 
-/*
-	uint32_t diagctl = bus_space_read_4(m86xxx_armcore_bst,
-	   m86xxx_armcore_bsh, A9_SCU_BASE + SCU_DIAG_CONTROL);
-	diagctl |= SCU_DIAG_DISABLE_MIGBIT;
-	bus_space_write_4(m86xxx_armcore_bst, m86xxx_armcore_bsh,
-	    A9_SCU_BASE + SCU_DIAG_CONTROL, diagctl);
-*/
-
 	uint32_t scu_ctl = bus_space_read_4(m86xxx_armcore_bst,
 	    m86xxx_armcore_bsh, A9_SCU_BASE + SCU_CTL);
 	scu_ctl |= SCU_CTL_SCU_ENA;
@@ -347,16 +339,7 @@ initarm(void *arg)
 	consinit();
 	VPRINTF("ok\n");
 
-//	m86xxx_cpu_softc_init(curcpu());
-//	m86xxx_print_clocks();
 	cortex_pmc_ccnt_init();
-
-#if NBCMRNG_CCB > 0
-	/*
-	 * Start this early since it takes a while to startup up.
-	 */
-//	m86xxx_rng_start(m86xxx_ioreg_bst, m86xxx_ioreg_bsh);
-#endif
 
 	printf("uboot arg = %#x, %#x, %#x, %#x\n",
 	    uboot_args[0], uboot_args[1], uboot_args[2], uboot_args[3]);
@@ -367,11 +350,6 @@ initarm(void *arg)
 #if defined(VERBOSE_INIT_ARM) || 1
 	printf("initarm: Configuring system");
 #ifdef MULTIPROCESSOR
-/*
-	printf(" (%u cpu%s, hatched %#x)",
-	    arm_cpu_max, arm_cpu_max ? "s" : "",
-	    arm_cpu_hatched);
-*/
 	printf(" (%u cpu%s)",
 	    arm_cpu_max, arm_cpu_max ? "s" : "");
 #endif
@@ -403,8 +381,6 @@ initarm(void *arg)
 	KASSERT((armreg_pfr1_read() & ARM_PFR1_SEC_MASK) != 0);
 	arm32_bootmem_init(KERN_VTOPHYS(KERNEL_BASE), memsize,
 	    (paddr_t)KERNEL_BASE_phys);
-
-//	m86xxx_dma_bootstrap(memsize);
 
 	/*
 	 * This is going to do all the hard work of setting up the first and
