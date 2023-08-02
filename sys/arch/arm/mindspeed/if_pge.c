@@ -795,7 +795,7 @@ pge_start(struct ifnet *ifp)
 		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
 		    HIF_CTRL_BDP_CH_START_WSTB);
 		ifp->if_timer = 300;	/* not immediate interrupt */
-		delay(10000);   /* tx hang up workaound */
+		delay(5000);   /* tx hang up workaound */
 	}
 
 	PGE_UNLOCK(sc);
