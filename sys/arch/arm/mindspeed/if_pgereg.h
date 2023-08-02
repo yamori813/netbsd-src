@@ -57,8 +57,8 @@ struct pfe {
 	void *cbus_baseaddr;
 };
 
-#define	PGE_RX_RING_CNT		64
-#define	PGE_TX_RING_CNT		64
+#define	PGE_RX_RING_CNT		256
+#define	PGE_TX_RING_CNT		256
 #define	PGE_TX_RING_SIZE	sizeof(struct bufDesc) * CGE_TX_RING_CNT
 #define	PGE_RX_RING_SIZE	sizeof(struct bufDesc) * CGE_RX_RING_CNT
 
