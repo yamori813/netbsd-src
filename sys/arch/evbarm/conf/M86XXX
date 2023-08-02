@@ -157,7 +157,8 @@ makeoptions	COPY_SYMTAB=1
 #  verbose		Show aprint_normal and aprint_verbose output
 options 	BOOT_ARGS="\"\""
 
-config		netbsd		root on ? type ?
+#config		netbsd		root on ? type ?
+config		netbsd		root on sd0 type ffs
 
 # The main bus device
 mainbus0	at root
