@@ -650,6 +650,7 @@ pge_intr(void *arg)
 	int reg;
 
 	reg = pge_read_4(sc, HIF_INT_SRC);
+
 	if (reg & HIF_RXPKT_INT)
 		pge_rxintr(arg);
 	if (reg & HIF_TXPKT_INT)
@@ -784,14 +785,17 @@ pge_start(struct ifnet *ifp)
 			    sizeof(struct bufDesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-//		pge_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
-		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
-		    HIF_CTRL_BDP_CH_START_WSTB);
 		bpf_mtap(ifp, m, BPF_D_OUT);
+
+		if(txfree == 0)
+			device_printf(sc->sc_dev, "no txdesc\n");
 	}
 
 	if (txstart >= 0) {
+		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
+		    HIF_CTRL_BDP_CH_START_WSTB);
 		ifp->if_timer = 300;	/* not immediate interrupt */
+		delay(10000);   /* tx hang up workaound */
 	}
 
 	PGE_UNLOCK(sc);
