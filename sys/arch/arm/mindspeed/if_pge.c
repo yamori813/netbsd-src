@@ -288,8 +288,6 @@ pge_attach(device_t parent, device_t self, void *aux)
 	gemac_enable_copy_all((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
-	arswitch_writereg(sc->sc_dev, AR8X16_REG_MASK_CTRL,
-	    AR8X16_MASK_CTRL_SOFT_RESET);
 	delay(1000);
 */
 	int mac = EMAC1_BASE_ADDR;
@@ -304,36 +302,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 	printf("\n");
 
 	mii_attach(self, mii, 0xffffffff, 0, MII_OFFSET_ANY, 0);
-#if 0
-	if (device_unit(self) == 0) {
-		arswitch_writereg(self, AR8X16_REG_MODE,
-		    AR8X16_MODE_RGMII_PORT4_ISO);
-		/* work around for phy4 rgmii mode */
-		arswitch_writedbg(self, 4, 0x12, 0x480c);
-		/* rx delay */
-		arswitch_writedbg(self, 4, 0x0, 0x824e);
-		/* tx delay */
-		arswitch_writedbg(self, 4, 0x5, 0x3d47);
-		delay(1000);    /* 1ms, again to let things settle */ 
-/* not work strang behaviour ???
-		arswitch_writereg(self, AR8X16_REG_MASK_CTRL,
-		    AR8X16_MASK_CTRL_SOFT_RESET);
-		delay(1000);
-*/
-#ifdef _DEBUG
-		for (i = 0;i < 6; ++i)
-		aprint_normal_dev(sc->sc_dev, "PORT STS %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1)));
-		for (i = 0;i < 6; ++i)
-		aprint_normal_dev(sc->sc_dev, "PORT CTRL %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1) + 4));
-		for (i = 0;i < 6; ++i)
-		aprint_normal_dev(sc->sc_dev, "PORT VLAN %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
-#endif
-	}
 
-#endif
 	if_attach(ifp);
 	if_deferred_start_init(ifp, NULL);
 	ether_ifattach(ifp, sc->sc_enaddr);
@@ -566,20 +535,6 @@ pge_init(struct ifnet *ifp)
 	gpi_enable((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
-
-/*
-	uint16_t val;
-	printf("PHY:");
-	for (i = 0; i < 5; ++i) {
-		pge_mii_readreg(sc->sc_dev, i, 3, &val);
-		printf(" %x", val);
-	}
-	printf("\n");
-
-	aprint_normal_dev(sc->sc_dev, "arswitch %x mode %x\n",
-	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MASK_CTRL),
-	    arswitch_readreg(sc->sc_dev, AR8X16_REG_MODE));
-*/
 
 //	callout_schedule(&sc->sc_tick_ch, hz);
 
