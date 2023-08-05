@@ -45,7 +45,6 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <arm/mindspeed/m86xxx_var.h>
 #include <arm/mindspeed/m86xxx_intr.h>
 #include <arm/mindspeed/if_pgereg.h>
-#include <arm/mindspeed/arswitchreg.h>
 
 #include <arm/mindspeed/pfe/pfe_eth.h>
 #include <arm/mindspeed/pfe/base/pfe.h>
@@ -92,11 +91,6 @@ CFATTACH_DECL_NEW(pge, sizeof(struct pge_softc),
 
 extern struct pge_softc *pge_sc;
 
-int arswitch_readreg(device_t dev, int addr);
-int arswitch_writereg(device_t dev, int addr, int value);
-
-void arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
-    uint16_t dbg_data);
 
 static uint32_t pge_emac_base(struct pge_softc * const sc)
 {
@@ -308,9 +302,8 @@ pge_attach(device_t parent, device_t self, void *aux)
 		printf(" %x", val);
 	}
 	printf("\n");
-		aprint_normal_dev(sc->sc_dev, "arswitch %x\n",
-		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL));
 
+	mii_attach(self, mii, 0xffffffff, 0, MII_OFFSET_ANY, 0);
 #if 0
 	if (device_unit(self) == 0) {
 		arswitch_writereg(self, AR8X16_REG_MODE,
@@ -1029,92 +1022,4 @@ pge_txintr(void *arg)
 		if_schedule_deferred_start(ifp);
 
 	return handled;
-}
-
-void
-arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
-    uint16_t dbg_data)
-{
-/*
-        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
-            MII_ATH_DBG_ADDR, dbg_addr);
-        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
-            MII_ATH_DBG_DATA, dbg_data);
-*/
-	pge_mii_writereg(dev, phy, MII_ATH_DBG_ADDR, dbg_addr);
-	pge_mii_writereg(dev, phy, MII_ATH_DBG_DATA, dbg_data);
-}
-
-static inline void
-arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
-    uint16_t *reg)
-{
-//	struct arswitch_softc *sc = device_get_softc(dev);
-	uint16_t page;
-
-	page = (addr >> 9) & 0x1ff;
-	*phy = (addr >> 6) & 0x7;
-	*reg = (addr >> 1) & 0x1f;
-
-//	if (sc->page != page) {
-//		MDIO_WRITEREG(device_get_parent(dev), 0x18, 0, page);
-		pge_mii_writereg(dev, 0x18, 0, page);
-		delay(2000);
-//		sc->page = page;
-//	}
-}
-
-static uint32_t
-arswitch_reg_read32(device_t dev, int phy, int reg)
-{
-	uint16_t lo, hi;
-	pge_mii_readreg(dev, phy, reg, &lo);
-	pge_mii_readreg(dev, phy, reg + 1, &hi);
-
-	return (hi << 16) | lo;
-}
-
-static int
-arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
-{
-//	struct arswitch_softc *sc;
-	int r;
-	uint16_t lo, hi;
-
-//	sc = device_get_softc(dev);
-	lo = value & 0xffff;
-	hi = (uint16_t) (value >> 16);
-
-//	if (sc->mii_lo_first) {
-		r = pge_mii_writereg(dev, phy, reg, lo);
-		r |= pge_mii_writereg(dev, phy, reg + 1, hi);
-/*
-	} else {
-		r = pge_mii_writereg(dev, phy, reg + 1, hi);
-		r |= pge_mii_writereg(dev, phy, reg, lo);
-	}
-*/
-
-	return r;
-}
-
-int
-arswitch_readreg(device_t dev, int addr)
-{
-	uint16_t phy, reg;
-
-	arswitch_split_setpage(dev, addr, &phy, &reg);
-	return arswitch_reg_read32(dev, 0x10 | phy, reg);
-}
-
-int
-arswitch_writereg(device_t dev, int addr, int value)
-{
-//	struct arswitch_softc *sc;
-	uint16_t phy, reg;
-
-//	sc = device_get_softc(dev);
-
-	arswitch_split_setpage(dev, addr, &phy, &reg);
-	return (arswitch_reg_write32(dev, 0x10 | phy, reg, value));
 }
