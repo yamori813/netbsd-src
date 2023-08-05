@@ -303,6 +303,8 @@ athswattach(device_t parent, device_t self, void *aux)
 	aprint_naive(": Media interface\n");
 	if (swid == 0x1302) {
 		aprint_normal(": QCA8337 Ethernet Switch\n");
+	} else if (swid == 0x1000 || swid == 0x1001) {
+		aprint_normal(": AR8316 Ethernet Switch\n");
 	} else {
 		aprint_normal(": Unknown Ethernet Switch\n");
 	}
