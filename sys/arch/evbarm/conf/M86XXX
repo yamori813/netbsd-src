@@ -242,3 +242,5 @@ pseudo-device	pty			# pseudo-terminals
 pseudo-device	ksyms			# /dev/ksyms
 pseudo-device	drvctl			# device control
 pseudo-device	lockstat		# lock profiling
+
+athsw*    at mii? phy ?

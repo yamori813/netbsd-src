@@ -48,6 +48,10 @@ file    arch/arm/mindspeed/pfe/pfe_tmu.c	pge
 file    arch/arm/mindspeed/pfe/pfe_util.c	pge
 file    arch/arm/mindspeed/pfe/pfe_pe.c		pge
 
+device	athsw: mii_phy
+attach	athsw at mii
+file	arch/arm/mindspeed/athsw.c		athsw
+
 # USB3 Host Controller (XHCI)
 attach xhci at axi with xhci_axi
 file    arch/arm/mindspeed/m86xxx_xhci.c        xhci_axi
