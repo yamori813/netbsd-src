@@ -2,6 +2,7 @@
 
 /*-
  * Copyright (c) 2023 Hiroki Mori
+ * Copyright (c) 2011-2012 Stefan Bethke.
  * Copyright (c) 2006 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -166,7 +167,10 @@ static const struct mvPhyConfig bridgeConfig[] = {
 static void athsw_switchconfig(struct mii_softc *, int);
 static void athsw_flushatu(struct mii_softc *);
 
+/* copy from arswitch_reg.c on FreeBSD etherswitch */
+
 void arswitch_writedbg(device_t, int, uint16_t, uint16_t);
+void arswitch_writemmd(device_t, int, uint16_t, uint16_t);
 
 void
 arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
@@ -181,6 +185,21 @@ arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
 */
 	MV_WRITE(sc, phy, MII_ATH_DBG_ADDR, dbg_addr);
 	MV_WRITE(sc, phy, MII_ATH_DBG_DATA, dbg_data);
+}
+
+void
+arswitch_writemmd(device_t dev, int phy, uint16_t dbg_addr,
+    uint16_t dbg_data)
+{
+	struct mii_softc *sc = device_private(dev);
+/*
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_MMD_ADDR, dbg_addr);
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_MMD_DATA, dbg_data);
+*/
+	MV_WRITE(sc, phy, MII_ATH_MMD_ADDR, dbg_addr);
+	MV_WRITE(sc, phy, MII_ATH_MMD_DATA, dbg_data);
 }
 
 static inline void
