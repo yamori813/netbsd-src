@@ -532,7 +532,7 @@ pge_init(struct ifnet *ifp)
 	printf("%d\n", gemac_get_mdc_div((void *)mac));
 */
 //	gemac_enable_copy_all((void *)mac);
-	gpi_enable((void *)mac);
+//	gpi_enable((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
 
