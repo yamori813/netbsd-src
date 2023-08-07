@@ -214,14 +214,12 @@ int consmode = CONMODE;
 int consrate = CONSPEED;
 
 static const struct pmap_devmap m83xxx_devmap[] = {
-    {
-	M83XXX_UART1_VBASE,
-	_A(APB_UART0_BASE),
-	_S(L1_S_SIZE),
-	VM_PROT_READ|VM_PROT_WRITE,
-	PTE_NOCACHE,
-    },
-	{0, 0, 0, 0, 0 }
+	DEVMAP_ENTRY(
+		M83XXX_UART1_VBASE,
+		APB_UART0_BASE,
+		L1_S_SIZE
+	),
+	DEVMAP_ENTRY_END
 };
 
 #ifndef MEMSTART
