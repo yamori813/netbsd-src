@@ -76,10 +76,19 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #define	MS(_v, _f)	(((_v) & _f) >> _f##_S)
 */
 
+struct athsw_softc {
+	struct mii_softc	sc_mii;
+	int		page;
+	int		is_internal_switch;
+	int		chip_ver;
+	int		chip_rev;
+	int		mii_lo_first;	/* Send low data DWORD before high */
+};
+
 static int	athswmatch(device_t, cfdata_t, void *);
 static void	athswattach(device_t, device_t, void *);
 
-CFATTACH_DECL_NEW(athsw, sizeof(struct mii_softc),
+CFATTACH_DECL_NEW(athsw, sizeof(struct athsw_softc),
     athswmatch, athswattach, mii_phy_detach, mii_phy_activate);
 
 static int	athsw_service(struct mii_softc *, struct mii_data *, int);
@@ -210,20 +219,20 @@ static inline void
 arswitch_split_setpage(device_t dev, uint32_t addr, uint16_t *phy,
     uint16_t *reg)
 {
-//	struct arswitch_softc *sc = device_get_softc(dev);
-	struct mii_softc *sc = device_private(dev);
+	struct athsw_softc *asc = device_private(dev);
+	struct mii_softc *sc = &asc->sc_mii;
 	uint16_t page;
 
 	page = (addr >> 9) & 0x1ff;
 	*phy = (addr >> 6) & 0x7;
 	*reg = (addr >> 1) & 0x1f;
 
-//	if (sc->page != page) {
+	if (asc->page != page) {
 //		MDIO_WRITEREG(device_get_parent(dev), 0x18, 0, page);
 		MV_WRITE(sc, 0x18, 0, page);
 		delay(2000);
-//		sc->page = page;
-//	}
+		asc->page = page;
+	}
 }
 
 static uint32_t
@@ -242,8 +251,8 @@ arswitch_reg_read32(device_t dev, int phy, int reg)
 static int
 arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
 {
-	struct mii_softc *sc = device_private(dev);
-//	struct arswitch_softc *sc;
+	struct athsw_softc *asc = device_private(dev);
+	struct mii_softc *sc = &asc->sc_mii;
 	int r;
 	uint16_t lo, hi;
 
@@ -251,18 +260,18 @@ arswitch_reg_write32(device_t dev, int phy, int reg, uint32_t value)
 	lo = value & 0xffff;
 	hi = (uint16_t) (value >> 16);
 
-//	if (sc->mii_lo_first) {
+	r = 1;
+	if (asc->mii_lo_first) {
 //		r = pge_mii_writereg(dev, phy, reg, lo);
 //		r |= pge_mii_writereg(dev, phy, reg + 1, hi);
-		r = 1;
 		MV_WRITE(sc, phy, reg, lo);
 		MV_WRITE(sc, phy, reg + 1, hi);
-/*
 	} else {
-		r = pge_mii_writereg(dev, phy, reg + 1, hi);
-		r |= pge_mii_writereg(dev, phy, reg, lo);
+//		r = pge_mii_writereg(dev, phy, reg + 1, hi);
+//		r |= pge_mii_writereg(dev, phy, reg, lo);
+		MV_WRITE(sc, phy, reg + 1, hi);
+		MV_WRITE(sc, phy, reg, lo);
 	}
-*/
 
 	return r;
 }
@@ -281,10 +290,7 @@ int arswitch_writereg(device_t, int, int);
 int
 arswitch_writereg(device_t dev, int addr, int value)
 {
-//	struct arswitch_softc *sc;
 	uint16_t phy, reg;
-
-//	sc = device_get_softc(dev);
 
 	arswitch_split_setpage(dev, addr, &phy, &reg);
 	return (arswitch_reg_write32(dev, 0x10 | phy, reg, value));
@@ -304,11 +310,13 @@ athswmatch(device_t parent, cfdata_t match, void *aux)
 static void
 athswattach(device_t parent, device_t self, void *aux)
 {
-	struct mii_softc *sc = device_private(self);
+	struct athsw_softc *asc = device_private(self);
+	struct mii_softc *sc = &asc->sc_mii;
 	struct mii_attach_args *ma = aux;
 	struct mii_data *mii = ma->mii_data;
 	uint16_t swid;
 
+	asc->page = -1;
 
 	sc->mii_dev = self;
 	sc->mii_inst = mii->mii_instance;
@@ -322,12 +330,17 @@ athswattach(device_t parent, device_t self, void *aux)
 	swid = arswitch_readreg(self, AR8X16_REG_MASK_CTRL);
 
 	mii_unlock(mii);
+	asc->chip_rev = (swid & AR8X16_MASK_CTRL_REV_MASK);
+	asc->chip_ver = (swid & AR8X16_MASK_CTRL_VER_MASK) >>
+	    AR8X16_MASK_CTRL_VER_SHIFT;
 
 	aprint_naive(": Media interface\n");
 	if (swid == 0x1302) {
 		aprint_normal(": QCA8337 Ethernet Switch\n");
+		asc->mii_lo_first = 1;
 	} else if (swid == 0x1000 || swid == 0x1001) {
 		aprint_normal(": AR8316 Ethernet Switch\n");
+		asc->mii_lo_first = 0;
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
