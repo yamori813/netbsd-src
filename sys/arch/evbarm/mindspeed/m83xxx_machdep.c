@@ -259,6 +259,7 @@ initarm(void *arg)
 
 //	boothowto = (AB_VERBOSE|AB_DEBUG);
 	boothowto = AB_VERBOSE;
+//	boothowto = RB_SINGLE;
 
 	/*
 	 * Heads up ... Setup the CPU / MMU / TLB functions
