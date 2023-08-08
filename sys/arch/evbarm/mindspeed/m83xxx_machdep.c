@@ -215,7 +215,7 @@ int consrate = CONSPEED;
 
 static const struct pmap_devmap m83xxx_devmap[] = {
 	DEVMAP_ENTRY(
-		M83XXX_UART1_VBASE,
+		M83XXX_UART0_VBASE,
 		APB_UART0_BASE,
 		L1_S_SIZE
 	),
