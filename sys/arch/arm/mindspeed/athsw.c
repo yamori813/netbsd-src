@@ -92,6 +92,7 @@ static const struct mii_phy_funcs athsw_funcs = {
 
 static const struct mii_phydesc athsws[] = {
 	{0xc82e, 0x0003},	/* QCA8337 */
+	{0xc82e, 0x0004},	/* AR8317 */
 	MII_PHY_END,
 };
 
@@ -102,6 +103,7 @@ static const struct mii_phydesc athsws[] = {
  * to the MAC in the 5312.  The BRIDGE config sets up ports
  * 0-4 as LAN ports with port 5 connected to the MAC in the 5312.
  */
+#ifdef NOTUSE
 struct mvPhyConfig {
 	uint16_t switchPortAddr;/* switch port associated with PHY */
 	uint16_t vlanSetting;	/* VLAN table setting  for PHY */
@@ -166,6 +168,8 @@ static const struct mvPhyConfig bridgeConfig[] = {
 
 static void athsw_switchconfig(struct mii_softc *, int);
 static void athsw_flushatu(struct mii_softc *);
+
+#endif   /* NOTUSE */
 
 /* copy from arswitch_reg.c on FreeBSD etherswitch */
 
@@ -324,6 +328,35 @@ athswattach(device_t parent, device_t self, void *aux)
 		aprint_normal(": QCA8337 Ethernet Switch\n");
 	} else if (swid == 0x1000 || swid == 0x1001) {
 		aprint_normal(": AR8316 Ethernet Switch\n");
+		arswitch_writereg(self, AR8X16_REG_MODE,
+		    AR8X16_MODE_RGMII_PORT4_ISO);
+		/* work around for phy4 rgmii mode */
+		arswitch_writedbg(self, 4, 0x12, 0x480c);
+		/* rx delay */
+		arswitch_writedbg(self, 4, 0x0, 0x824e);
+		/* tx delay */
+		arswitch_writedbg(self, 4, 0x5, 0x3d47);
+		delay(1000);    /* 1ms, again to let things settle */
+/* not work strang behaviour ???
+		arswitch_writereg(self, AR8X16_REG_MASK_CTRL,
+		    AR8X16_MASK_CTRL_SOFT_RESET);
+		delay(1000);
+*/
+#ifdef _DEBUG
+		int i;
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(self, "PORT STS %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1)));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(self, "PORT CTRL %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 4));
+		for (i = 0;i < 6; ++i)
+		aprint_normal_dev(self, "PORT VLAN %d %x\n", i,
+		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
+#endif
+		aprint_normal_dev(self, "arswitch %x mode %x\n",
+		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
+		    arswitch_readreg(self, AR8X16_REG_MODE));
 	} else {
 		aprint_normal(": Unknown Ethernet Switch\n");
 	}
@@ -333,6 +366,7 @@ athswattach(device_t parent, device_t self, void *aux)
 static int
 athsw_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
+#if 0
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 
 	KASSERT(mii_locked(mii));
@@ -380,12 +414,14 @@ athsw_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);
+#endif
 	return 0;
 }
 
 static void
 athsw_status(struct mii_softc *sc)
 {
+#if 0
 	struct mii_data *mii = sc->mii_pdata;
 //	uint16_t hwstatus;
 
@@ -418,19 +454,23 @@ athsw_status(struct mii_softc *sc)
 		athsw_flushatu(sc);
 	}
 #endif
+#endif
 }
 
 static void
 athsw_reset(struct mii_softc *sc)
 {
+#if 0
 
 	KASSERT(mii_locked(sc->mii_pdata));
 
 	/* XXX handle fixed media config */
 	PHY_WRITE(sc, MII_BMCR, BMCR_RESET | BMCR_AUTOEN);
 	athsw_switchconfig(sc, MV_PORT(sc));
+#endif
 }
 
+#ifdef NOTUSE
 /*
  * Configure switch for the specified port.
  */
@@ -475,3 +515,4 @@ athsw_flushatu(struct mii_softc *sc)
 	} /*else
 		aprint_error_dev(sc->mii_dev, "timeout waiting for ATU flush\n");*/
 }
+#endif   /* NOTUSE */
