@@ -507,7 +507,7 @@ pge_init(struct ifnet *ifp)
 
 	MAC_ADDR enet_address = {0x0, 0x0};
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
-	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
+	gemac_set_laddr1((void *)mac, &enet_address);
 
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
