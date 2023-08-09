@@ -61,7 +61,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #endif
 
 #define GPIN(n)			(1 << n)
-#define RESET_BIT		17
+#define RESET_BIT		27
 
 static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
 static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
@@ -406,6 +406,7 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	int error;
 //	int oen, i;
 //	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
+	uint32_t reg;
 
 /*
 	if (aa->apba_intr == OBIOCF_INTR_DEFAULT)
@@ -426,23 +427,61 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 /*
-GPIO_6 SW
+
+GPIO_PIN_SELECT_REG		0x58	0xf755577d
+GPIO_63_32_PIN_SELECT_REG	0xdc	0x5f577f77
+
+GPIO_4 LED
+GPIO_5 SW
+GPIO_6 LED
+GPIO_9 USB OTG Power
+GPIO_10 USB XHCI Power
 GPIO_27 HW RESET
 */
 
 #if 0
-	uint32_t i, j, val;
-	for (i = 0; i < 32; ++i) {
-		printf("MORIMORI GPIO %d\n", i);
-		val = ~(1 << i);
-		GPIO_WRITE(gpio, GPIO_OE_REG, val);
-		GPIO_WRITE(gpio, GPIO_OUTPUT_REG, val);
-		/* 5 sec is overflow at delay() */
-		for (j = 0;j < 1000; ++j)
-			delay(1000*5);
+	uint32_t i, j, k, val;
+	int sel, oe, out;
+	for (k = 0; k < 2; ++k) {
+		if (k == 0) {
+			sel = GPIO_PIN_SELECT_REG;
+			oe = GPIO_OE_REG;
+			out = GPIO_OUTPUT_REG;
+		} else {
+			sel = GPIO_63_32_PIN_SELECT_REG;
+			oe = GPIO_63_32_OE_REG;
+			out = GPIO_63_32_OUTPUT_REG;
+		}
+		for (i = 0; i < 32; ++i) {
+			if (i + 32 * k == 27)
+				continue;
+			printf("MORIMORI GPIO %d\n", i + 32 * k);
+			val = (1 << i);
+			reg = GPIO_READ(gpio, sel);
+			reg &= ~val;
+			GPIO_WRITE(gpio, sel, reg);
+			reg = GPIO_READ(gpio, oe);
+			reg |= val;
+			GPIO_WRITE(gpio, oe, reg);
+			reg = GPIO_READ(gpio, out);
+			reg |= val;
+			GPIO_WRITE(gpio, out, reg);
+			/* 10 sec is overflow at delay() */
+			for (j = 0;j < 1000; ++j)
+				delay(1000*2);
+			reg &= ~val;
+			GPIO_WRITE(gpio, out, reg);
+			/* 10 sec is overflow at delay() */
+			for (j = 0;j < 1000; ++j)
+				delay(1000*2);
+			reg |= val;
+			GPIO_WRITE(gpio, out, reg);
+			/* 10 sec is overflow at delay() */
+			for (j = 0;j < 1000; ++j)
+				delay(1000*2);
+		}
 	}
 
-	uint32_t reg;
 	/* QCA8337 Reset is GPIO_5. Same as reference design */
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	reg = reg & ~(1 << 5);
@@ -455,12 +494,23 @@ GPIO_27 HW RESET
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
 #endif
 
+//	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
+//	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
+
+	/* USB Power ON */
+
+	reg = GPIO_READ(gpio, GPIO_PIN_SELECT_REG);
+	reg &= ~(GPIN(9) | GPIN(10));
+	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, reg);
+
+	reg = GPIO_READ(gpio, GPIO_OE_REG);
+	reg |= (GPIN(9) | GPIN(10));
+	GPIO_WRITE(gpio, GPIO_OE_REG, reg);
+
+	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	reg |= (GPIN(9) | GPIN(10));
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
 #if 0
-	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
-	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
-
-	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, GSEL);
-
 	oen = 0;
 	for (i = 0; i < sizeof(oepins) / 4; ++i) {
 		oen |= (1 << oepins[i]);
