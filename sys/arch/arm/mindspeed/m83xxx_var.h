@@ -1,7 +1,7 @@
 /*	$NetBSD$	*/
 
-#ifndef _ARM_MINDSPEED_M83VAR_H
-#define _ARM_MINDSPEED_M83VAR_H
+#ifndef _ARM_MINDSPEED_M86VAR_H
+#define _ARM_MINDSPEED_M86VAR_H
 
 extern struct bus_space m83_bs_tag;
 
@@ -25,4 +25,4 @@ struct ahb_attach_args {
 	int		ahba_irqbase;
 };
 
-#endif	/* _ARM_MINDSPEED_M83VAR_H */
+#endif	/* _ARM_MINDSPEED_M86VAR_H */
