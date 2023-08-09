@@ -1,7 +1,7 @@
 /*	$NetBSD$	*/
 
-#ifndef _ARM_MINDSPEED_M86XXX_VAR_H
-#define _ARM_MINDSPEED_M86XXX_VAR_H
+#ifndef _ARM_MINDSPEED_M86XXX_VAR_H_
+#define _ARM_MINDSPEED_M86XXX_VAR_H_
 
 extern struct bus_space m83_bs_tag;
 
@@ -30,4 +30,4 @@ void	m86xxx_cpu_hatch(struct cpu_info *);
 void	m86xxx_cpu1_reset(void);
 #endif
 
-#endif	/* _ARM_MINDSPEED_M86XXX_VAR_H */
+#endif	/* _ARM_MINDSPEED_M86XXX_VAR_H_ */
