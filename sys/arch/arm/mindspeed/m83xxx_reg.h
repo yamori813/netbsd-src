@@ -29,8 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M83REG_H_
-#define _ARM_MINDSPEED_M83REG_H_
+#ifndef _ARM_MINDSPEED_M63XXX_REG_H_
+#define _ARM_MINDSPEED_M86XXX_REG_H_
 
 /***** Physical address on AHB Bus *****/
 
@@ -159,4 +159,4 @@
 #define	EXP_CSx_TMG3_R			0x058
 #define	EXP_CLOCK_DIV_R			0x06C
 
-#endif /* _ARM_MINDSPEED_M83REG_H_ */
+#endif /* _ARM_MINDSPEED_M86XXX_REG_H_ */

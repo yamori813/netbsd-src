@@ -44,4 +44,4 @@
 #include <arm/cortex/gic_intr.h>
 #include <arm/cortex/a9tmr_intr.h>	/* A9 Timer PPIs */
 
-#endif /* _ARM_BROADCOM_BC53XX_INTR_H_ */
+#endif /* _ARM_MINDSPEED_M86XXX_INTR_H_ */
