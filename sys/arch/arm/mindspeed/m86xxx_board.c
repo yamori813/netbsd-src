@@ -336,7 +336,8 @@ m86xxx_device_register(device_t self, void *aux)
 		 * XXX KLUDGE ALERT XXX
 		 * The iot mainbus supplies is completely wrong since it scales
 		 * addresses by 2.  The simplest remedy is to replace with our
-		 * bus space used for the armcore registers (which armperiph uses). 
+		 * bus space used for the armcore registers (which armperiph
+		 *  uses).
 		 */
 		struct mainbus_attach_args * const mb = aux;
 		mb->mb_iot = &m83_bs_tag;
@@ -353,26 +354,10 @@ m86xxx_device_register(device_t self, void *aux)
 		 * to timers that are part of the A9 MP core subsystem.
 		 */
                 prop_dictionary_set_uint32(dict, "frequency",
-//		    cpu_softc.cpu_clk.clk_cpu / 2);
 		    clock_info.clk_arm / 2);
 		return;
 	}
 
-#if 0 
-	if (device_is_a(self, "bcmeth")) {
-		const struct bcmccb_attach_args * const ccbaa = aux;
-		const uint8_t enaddr[ETHER_ADDR_LEN] = {
-			0x00, 0x01, 0x02, 0x03, 0x04,
-			0x05 + 2 * ccbaa->ccbaa_loc.loc_port,
-		};
-		prop_data_t pd = prop_data_create_data(enaddr, ETHER_ADDR_LEN);
-		KASSERT(pd != NULL);
-		if (prop_dictionary_set(device_properties(self), "mac-address", pd) == false) {
-			printf("WARNING: Unable to set mac-address property for %s\n", device_xname(self));
-		}
-		prop_object_release(pd);
-	}
-#endif
 }
 
 #ifdef MULTIPROCESSOR
