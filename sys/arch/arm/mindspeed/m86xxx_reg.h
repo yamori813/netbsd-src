@@ -29,8 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M86REG_H_
-#define _ARM_MINDSPEED_M86REG_H_
+#ifndef _ARM_MINDSPEED_M86XXX_REG_H_
+#define _ARM_MINDSPEED_M86XXX_REG_H_
 
 /*
  * IRAM Location to keep C2K Part Number.
@@ -270,4 +270,4 @@
 #define GPIO_EXT_OE_REG				0xD4
 #define GPIO_EXT_PIN_SELECT_REG			0xDC
 
-#endif /* _ARM_MINDSPEED_M86REG_H_ */
+#endif /* _ARM_MINDSPEED_M86XXX_REG_H_ */

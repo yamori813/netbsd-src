@@ -29,6 +29,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef	_ARM_MINDSPEED_M86XXX_CLK_H_
+#define	_ARM_MINDSPEED_M86XXX_CLK_H_
+
 #define DEVICE_RST_CNTRL	     0x00
 #define SERDES_RST_CNTRL             0x04
 #define PCIe_SATA_RST_CNTRL          0x08
@@ -410,3 +413,4 @@ enum {
 #define SCALL                           (1 << 5)
 #define ISO_EN                          (1 << 6)
 
+#endif    /* _ARM_MINDSPEED_M86XXX_CLK_H_ */
