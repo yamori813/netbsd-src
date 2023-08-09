@@ -270,26 +270,10 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_ec.ec_mii = mii;
 	ifmedia_init(&mii->mii_media, 0, ether_mediachange, ether_mediastatus);
 
-/*
-	pfe_gemac_init((void *)EMAC1_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
-	pfe_gemac_init((void *)EMAC2_BASE_ADDR, MII, SPEED_100M, DUPLEX_FULL);
-*/
 	pge_sc = sc;
 	sc->pfe.ddr_baseaddr = sc->sc_ddr;
 	sc->pfe.ddr_phys_baseaddr = sc->sc_ddr_pa;
-/*
-	pfe_probe(&sc->pfe);
-	int mac = EMAC1_BASE_ADDR;
-	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
-	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
-	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
-	gemac_enable_mdio((void *)mac);
-	printf("%d\n", gemac_get_mdc_div((void *)mac));
-	gemac_enable_copy_all((void *)mac);
-	gemac_set_bus_width((void *)mac, 32);
-	gemac_enable((void *)mac);
-	delay(1000);
-*/
+
 	int mac = EMAC1_BASE_ADDR;
 	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
 	gemac_enable_mdio((void *)mac);
@@ -525,14 +509,6 @@ pge_init(struct ifnet *ifp)
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)EMAC1_BASE_ADDR, &enet_address);
 
-/*
-	printf("MDC: %d -> ", gemac_get_mdc_div((void *)mac));
-	gemac_set_mdc_div((void *)mac, MDC_DIV_96);
-	gemac_enable_mdio((void *)mac);
-	printf("%d\n", gemac_get_mdc_div((void *)mac));
-*/
-//	gemac_enable_copy_all((void *)mac);
-//	gpi_enable((void *)mac);
 	gemac_set_bus_width((void *)mac, 32);
 	gemac_enable((void *)mac);
 
