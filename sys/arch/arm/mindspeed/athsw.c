@@ -335,7 +335,7 @@ athswattach(device_t parent, device_t self, void *aux)
 	    AR8X16_MASK_CTRL_VER_SHIFT;
 
 	aprint_naive(": Media interface\n");
-	if (swid == 0x1302) {
+	if (asc->chip_ver == 0x13) {
 		aprint_normal(": QCA8337 Ethernet Switch\n");
 		asc->mii_lo_first = 1;
 		int t;
@@ -423,7 +423,7 @@ athswattach(device_t parent, device_t self, void *aux)
 			printf("PORT VLAN1 %d %x\n", port, reg);
 		}
 #endif
-	} else if (swid == 0x1000 || swid == 0x1001) {
+	} else if (asc->chip_ver == 0x10) {
 		aprint_normal(": AR8316 Ethernet Switch\n");
 		asc->mii_lo_first = 0;
 		arswitch_writereg(self, AR8X16_REG_MODE,
