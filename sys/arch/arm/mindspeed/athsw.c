@@ -338,6 +338,91 @@ athswattach(device_t parent, device_t self, void *aux)
 	if (swid == 0x1302) {
 		aprint_normal(": QCA8337 Ethernet Switch\n");
 		asc->mii_lo_first = 1;
+		int t;
+#if 0
+		/* PHY4 conncect to RGMII (same as barebox default) */
+		t = AR8327_PAD_PHYX_RGMII_EN;
+#endif
+#if 0
+		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL0);
+		printf("FWD CTRL0 %x\n", t);
+		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL1);
+		printf("FWD CTRL1 %x\n", t);
+		/* enable CPU port and disable mirror port */
+		t = AR8327_FWD_CTRL0_CPU_PORT_EN |
+		    AR8327_FWD_CTRL0_MIRROR_PORT;
+		arswitch_writereg(self, AR8327_REG_FWD_CTRL0, t);
+#endif
+
+		/* forward multicast and broadcast frames to CPU */
+		t = (AR8327_PORTS_ALL << AR8327_FWD_CTRL1_UC_FLOOD_S) |
+		    (AR8327_PORTS_ALL << AR8327_FWD_CTRL1_MC_FLOOD_S) |
+		    (AR8327_PORTS_ALL << AR8327_FWD_CTRL1_BC_FLOOD_S);
+		arswitch_writereg(self, AR8327_REG_FWD_CTRL1, t);
+
+		/* Disable EEE on all ports due to stability issues */
+		t = arswitch_readreg(self, AR8327_REG_EEE_CTRL);
+		t |= AR8327_EEE_CTRL_DISABLE_PHY(0) |
+		    AR8327_EEE_CTRL_DISABLE_PHY(1) |
+		    AR8327_EEE_CTRL_DISABLE_PHY(2) |
+		    AR8327_EEE_CTRL_DISABLE_PHY(3) |
+		    AR8327_EEE_CTRL_DISABLE_PHY(4);
+		arswitch_writereg(self, AR8327_REG_EEE_CTRL, t);
+
+		int port;
+		port = 5;
+		arswitch_writereg(self, AR8327_REG_PORT_STATUS(port),
+		    AR8X16_PORT_STS_LINK_AUTO);
+		arswitch_writereg(self, AR8327_REG_PORT_HEADER(port), 0);
+
+		/* PORT5_PAD_CTRL[MAC_RGMII_RXCLK_DELAY_EN] controls all RGMII
+		 * interfaces (MAC0, MAC5 and MAC6)
+		 * If set, then RGMII interface RXCLK is delayed:.
+		 *   1000M:    Delay 2 ns output to CPU.
+		 *   10M/100M: Delay value depends on bits[21:20].
+		 */
+		t = AR8327_PAD_RGMII_RXCLK_DELAY_EN;
+		arswitch_writereg(self, AR8327_REG_PAD5_MODE, t);
+
+		/* RGMII connect to MAC6 */
+		t = AR8327_PAD_RGMII_EN |
+		    AR8327_PAD_RGMII_TXCLK_DELAY_EN |
+		    (2 << AR8327_PAD_RGMII_TXCLK_DELAY_SEL_S);
+		arswitch_writereg(self, AR8327_REG_PAD6_MODE, t);
+
+		port = 6;
+		t = AR8X16_PORT_STS_TXMAC | AR8X16_PORT_STS_RXMAC;
+		t |= AR8X16_PORT_STS_DUPLEX;
+		t |= (AR8X16_PORT_STS_RXFLOW | AR8X16_PORT_STS_TXFLOW);
+		t |= AR8X16_PORT_STS_SPEED_1000;
+		arswitch_writereg(self, AR8327_REG_PORT_STATUS(port), t);
+		arswitch_writereg(self, AR8327_REG_PORT_HEADER(port), 0);
+#if 0
+		/* this is default */
+		t = 1 << AR8327_PORT_VLAN0_DEF_SVID_S;
+		t |= 1 << AR8327_PORT_VLAN0_DEF_CVID_S;
+		arswitch_writereg(self, AR8327_REG_PORT_VLAN0(port), t);
+		t = AR8327_PORT_VLAN1_OUT_MODE_UNTOUCH <<
+		    AR8327_PORT_VLAN1_OUT_MODE_S;
+		arswitch_writereg(self, AR8327_REG_PORT_VLAN1(port), t);
+#endif
+
+#if 0
+		for (port = 0; port < 7; ++port) {
+			uint32_t reg = arswitch_readreg(self,
+			    AR8327_REG_PORT_LOOKUP(port));
+			printf("PORT LOOKUP %d %x\n", port, reg);
+			reg = arswitch_readreg(self,
+			    AR8327_REG_PORT_STATUS(port));
+			printf("PORT STATUS %d %x\n", port, reg);
+			reg = arswitch_readreg(self,
+			    AR8327_REG_PORT_VLAN0(port));
+			printf("PORT VLAN0 %d %x\n", port, reg);
+			reg = arswitch_readreg(self,
+			    AR8327_REG_PORT_VLAN1(port));
+			printf("PORT VLAN1 %d %x\n", port, reg);
+		}
+#endif
 	} else if (swid == 0x1000 || swid == 0x1001) {
 		aprint_normal(": AR8316 Ethernet Switch\n");
 		asc->mii_lo_first = 0;
