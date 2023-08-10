@@ -340,10 +340,6 @@ athswattach(device_t parent, device_t self, void *aux)
 		asc->mii_lo_first = 1;
 		int t;
 #if 0
-		/* PHY4 conncect to RGMII (same as barebox default) */
-		t = AR8327_PAD_PHYX_RGMII_EN;
-#endif
-#if 0
 		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL0);
 		printf("FWD CTRL0 %x\n", t);
 		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL1);
@@ -384,6 +380,10 @@ athswattach(device_t parent, device_t self, void *aux)
 		t = AR8327_PAD_RGMII_RXCLK_DELAY_EN;
 		arswitch_writereg(self, AR8327_REG_PAD5_MODE, t);
 
+#if 0
+		/* PHY4 conncect to RGMII (same as barebox default) */
+		t = AR8327_PAD_PHYX_RGMII_EN;
+#endif
 		/* RGMII connect to MAC6 */
 		t = AR8327_PAD_RGMII_EN |
 		    AR8327_PAD_RGMII_TXCLK_DELAY_EN |
