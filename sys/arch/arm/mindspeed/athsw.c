@@ -101,7 +101,7 @@ static const struct mii_phy_funcs athsw_funcs = {
 
 static const struct mii_phydesc athsws[] = {
 	{0xc82e, 0x0003},	/* QCA8337 */
-	{0xc82e, 0x0004},	/* AR8317 */
+	{0xc82e, 0x0004},	/* AR8316 */
 	MII_PHY_END,
 };
 
