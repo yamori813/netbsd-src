@@ -183,6 +183,7 @@ static void athsw_flushatu(struct mii_softc *);
 /* copy from arswitch_reg.c on FreeBSD etherswitch */
 
 void arswitch_writedbg(device_t, int, uint16_t, uint16_t);
+uint16_t arswitch_readdbg(device_t, int, uint16_t);
 void arswitch_writemmd(device_t, int, uint16_t, uint16_t);
 
 void
@@ -198,6 +199,23 @@ arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
 */
 	MV_WRITE(sc, phy, MII_ATH_DBG_ADDR, dbg_addr);
 	MV_WRITE(sc, phy, MII_ATH_DBG_DATA, dbg_data);
+}
+
+uint16_t
+arswitch_readdbg(device_t dev, int phy, uint16_t dbg_addr)
+{
+	struct mii_softc *sc = device_private(dev);
+	uint16_t val;
+/*
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_ADDR, dbg_addr);
+        (void) MDIO_WRITEREG(device_get_parent(dev), phy,
+            MII_ATH_DBG_DATA, dbg_data);
+*/
+	MV_WRITE(sc, phy, MII_ATH_DBG_ADDR, dbg_addr);
+	MV_READ(sc, phy, MII_ATH_DBG_DATA, &val);
+
+	return val;
 }
 
 void
@@ -366,10 +384,18 @@ athswattach(device_t parent, device_t self, void *aux)
 		arswitch_writereg(self, AR8327_REG_EEE_CTRL, t);
 
 		int port;
+#if 0
 		port = 5;
 		arswitch_writereg(self, AR8327_REG_PORT_STATUS(port),
 		    AR8X16_PORT_STS_LINK_AUTO);
 		arswitch_writereg(self, AR8327_REG_PORT_HEADER(port), 0);
+#endif
+		/* same setting PHY4 as PHY3 */
+		int i;
+		for (i = 0; i < 32; ++i) {
+			t = arswitch_readdbg(self, 3, i);
+			arswitch_writedbg(self, 4, i, t);
+		}
 
 		/* PORT5_PAD_CTRL[MAC_RGMII_RXCLK_DELAY_EN] controls all RGMII
 		 * interfaces (MAC0, MAC5 and MAC6)
