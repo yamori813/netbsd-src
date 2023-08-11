@@ -481,6 +481,7 @@ GPIO_27 HW RESET
 				delay(1000*2);
 		}
 	}
+#endif
 
 	/* QCA8337 Reset is GPIO_5. Same as reference design */
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
@@ -492,7 +493,6 @@ GPIO_27 HW RESET
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	reg = reg | (1 << 5);
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
-#endif
 
 //	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
 //	GPIO_WRITE(gpio, GPIO_IOCTRL_REG, 0x00000080);
