@@ -175,40 +175,6 @@ static const struct pmap_devmap m86xxx_devmap[] = {
 		AXI_DDR_BASE,
 		0x100
 	),
-#if 0
-	DEVMAP_ENTRY(
-		KERNEL_IO_IOREG_VBASE,
-		BCM53XX_IOREG_PBASE,		/* 0x18000000 */
-		BCM53XX_IOREG_SIZE		/* 2MB */
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_ARMCORE_VBASE,
-		BCM53XX_ARMCORE_PBASE,		/* 0x19000000 */
-		BCM53XX_ARMCORE_SIZE		/* 1MB */
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_ROM_REGION_VBASE,
-		BCM53XX_ROM_REGION_PBASE,	/* 0xfff00000 */
-		BCM53XX_ROM_REGION_SIZE		/* 1MB */
-	),
-#if NPCI > 0
-	DEVMAP_ENTRY(
-		KERNEL_IO_PCIE0_OWIN_VBASE,
-		BCM53XX_PCIE0_OWIN_PBASE,	/* 0x08000000 */
-		BCM53XX_PCIE0_OWIN_SIZE		/* 4MB */
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_PCIE1_OWIN_VBASE,
-		BCM53XX_PCIE1_OWIN_PBASE,	/* 0x40000000 */
-		BCM53XX_PCIE1_OWIN_SIZE		/* 4MB */
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_PCIE2_OWIN_VBASE,
-		BCM53XX_PCIE2_OWIN_PBASE,	/* 0x48000000 */
-		BCM53XX_PCIE2_OWIN_SIZE		/* 4MB */
-	),
-#endif /* NPCI > 0 */
-#endif
 	DEVMAP_ENTRY_END
 };
 
@@ -448,32 +414,12 @@ void
 consinit(void)
 {
 	static bool consinit_called = false;
-//	uint32_t v;
+
 	if (consinit_called)
 		return;
 
 	consinit_called = true;
 
-#if 0
-	/*
-	 * Force UART clock to the reference clock
-	 */
-	v = bus_space_read_4(m86xxx_ioreg_bst, m86xxx_ioreg_bsh,
-	    IDM_BASE + IDM_APBX_BASE + IDM_IO_CONTROL_DIRECT);
-	v &= ~IO_CONTROL_DIRECT_UARTCLKSEL;
-	bus_space_write_4(m86xxx_ioreg_bst, m86xxx_ioreg_bsh,
-	    IDM_BASE + IDM_APBX_BASE + IDM_IO_CONTROL_DIRECT, v);
-
-	/*
-	 * Switch to the reference clock
-	 */
-	v = bus_space_read_4(m86xxx_ioreg_bst, m86xxx_ioreg_bsh,
-	    CCA_MISC_BASE + MISC_CORECTL);
-	v &= ~CORECTL_UART_CLK_OVERRIDE;
-	bus_space_write_4(m86xxx_ioreg_bst, m86xxx_ioreg_bsh,
-	    CCA_MISC_BASE + MISC_CORECTL, v);
-
-#endif
 	if (m83comcnattach(&m83_bs_tag, comcnaddr, comcnspeed,
 	    clock_info.clk_axi, COM_TYPE_16550_NOERS, comcnmode))
                 panic("Serial console can not be initialized.");
