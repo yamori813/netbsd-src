@@ -312,7 +312,7 @@ int pfe_probe(struct pfe *pfe)
 	class_enable();
 
 	gpi_enable((void *)EGPI1_BASE_ADDR);
-	gpi_enable((void *)EGPI2_BASE_ADDR);
+//	gpi_enable((void *)EGPI2_BASE_ADDR);
 	gpi_enable((void *)HGPI_BASE_ADDR);
 #else
 	pfe_firmware_init();
