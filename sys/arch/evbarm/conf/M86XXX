@@ -217,6 +217,10 @@ udav*	at uhub? port ?		# Davicom DM9601 based adapters
 ure*	at uhub? port ?		# Realtek RTL8152/RTL8153 based adapters
 url*	at uhub? port ?		# Realtek RTL8150L based adapters
 
+# Serial adapters
+uftdi*	at uhub? port ?		# FTDI FT8U100AX serial adapter
+ucom*	at uftdi? portno ?
+
 # Hardware clocking and power management
 
 # Pseudo-Devices
