@@ -21,6 +21,7 @@ defparam opt_m86.h				MEMSIZE
 device	axi { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
 attach	axi at mainbus
 file	arch/arm/mindspeed/m86xxx_axi.c		axi
+
 attach	com at axi with m86xxx_com
 file	arch/arm/mindspeed/m86xxx_com.c		m86xxx_com
 
@@ -56,13 +57,7 @@ file	arch/arm/mindspeed/athsw.c		athsw
 attach xhci at axi with xhci_axi
 file    arch/arm/mindspeed/m86xxx_xhci.c        xhci_axi
 
-# USB OTG
-#device	dotg: usbus, usbroothub
-#file	arch/arm/mindspeed/dotg.c		dotg		needs-flag
-
-#attach	dotg at axi with m86xxx_otg
-#file	arch/arm/mindspeed/m86xxx_otg.c		m86xxx_otg
-
+# USB2 OTG
 attach	dwctwo at axi with m86xxx_otg
 file	arch/arm/mindspeed/m86xxx_otg.c		m86xxx_otg
 
