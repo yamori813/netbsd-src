@@ -428,15 +428,20 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	}
 /*
 
-GPIO_PIN_SELECT_REG		0x58	0xf755577d
-GPIO_63_32_PIN_SELECT_REG	0xdc	0x5f577f77
+GPIO_PIN_SELECT_REG		0x58	0xf755577d (Barebox)
+GPIO_63_32_PIN_SELECT_REG	0xdc	0x5f577f77 (Barebox)
 
-GPIO_4 LED
-GPIO_5 SW
-GPIO_6 LED
-GPIO_9 USB OTG Power
-GPIO_10 USB XHCI Power
-GPIO_27 HW RESET
+GPIO_0 I SW(Function)
+GPIO_1 I SW(Reset)
+GPIO_4 O LED
+GPIO_5 O QCA8337 Reset
+GPIO_6 O LED
+GPIO_9 O USB OTG Power
+GPIO_10 O USB XHCI Power
+GPIO_27 O HW RESET
+
+GPIO_? I USB OTG OverCurrent
+GPIO_? I USB XHCI OverCurrent
 */
 
 #if 0
@@ -483,15 +488,21 @@ GPIO_27 HW RESET
 	}
 #endif
 
+	/* Linux defualt */
+	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, 0x0);
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, 0x18000128);
+	GPIO_WRITE(gpio, GPIO_OE_REG, 0x18000128);
+	GPIO_WRITE(gpio, GPIO_INPUT_REG, 0x3dffffff);
+
 	/* QCA8337 Reset is GPIO_5. Same as reference design */
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
-	reg = reg & ~(1 << 5);
+	reg = reg & ~GPIN(5);
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
 	reg = GPIO_READ(gpio, GPIO_OE_REG);
-	reg = reg | (1 << 5);
+	reg = reg | GPIN(5);
 	GPIO_WRITE(gpio, GPIO_OE_REG, reg);
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
-	reg = reg | (1 << 5);
+	reg = reg | GPIN(5);
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
 
 //	GPIO_WRITE(gpio, GPIO_LOCK_REG, 0x55555555);
