@@ -598,7 +598,6 @@ pge_start(struct ifnet *ifp)
 	int error;
 	bool pad;
 	u_int mlen;
-	u_int len;
 	int i;
 
 	PGE_LOCK(sc);
@@ -622,7 +621,6 @@ pge_start(struct ifnet *ifp)
 	}
 
 	while (txfree > 0) {
-		len = 0;
 		IFQ_POLL(&ifp->if_snd, m);
 		if (m == NULL)
 			break;
@@ -630,7 +628,7 @@ pge_start(struct ifnet *ifp)
 		m->m_data -= sizeof(hif_header_t);
 		m->m_len += sizeof(hif_header_t);
 		m->m_data[0] = 0;
-		for (i = 1; i < 6; ++i)
+		for (i = 1; i < sizeof(hif_header_t); ++i)
 			m->m_data[i] = 0;
 /*
 		for (i = 0; i < 16; ++i) {
@@ -658,7 +656,7 @@ pge_start(struct ifnet *ifp)
 		}
 
 		mlen = m_length(m);
-		pad = mlen < PGE_MIN_FRAMELEN;
+		pad = (mlen - sizeof(hif_header_t)) < PGE_MIN_FRAMELEN;
 
 		KASSERT(rdp->tx_mb[sc->sc_txnext] == NULL);
 		rdp->tx_mb[sc->sc_txnext] = m;
@@ -674,7 +672,6 @@ pge_start(struct ifnet *ifp)
 			    dm->dm_segs[seg].ds_addr;
 			sc->sc_txdesc_ring[sc->sc_txnext].ctrl =
 			    dm->dm_segs[seg].ds_len;
-			len += dm->dm_segs[seg].ds_len;
 			sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
 				    BD_CTRL_DESC_EN;
 			if (!pad && (seg == dm->dm_nsegs - 1))
@@ -698,8 +695,7 @@ pge_start(struct ifnet *ifp)
 			sc->sc_txdesc_ring[sc->sc_txnext].data =
 			    sc->sc_txpad_pa;
 			sc->sc_txdesc_ring[sc->sc_txnext].ctrl =
-			    PGE_MIN_FRAMELEN - mlen;
-			len += PGE_MIN_FRAMELEN - mlen;
+			    PGE_MIN_FRAMELEN - (mlen - sizeof(hif_header_t));
 			sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
 			    (BD_CTRL_DESC_EN | BD_CTRL_LIFM |
 /*			    BD_CTRL_BRFETCH_DISABLE | BD_CTRL_RTFETCH_DISABLE |
@@ -711,6 +707,8 @@ pge_start(struct ifnet *ifp)
 			    sizeof(struct bufDesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
+		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
+		    HIF_CTRL_BDP_CH_START_WSTB);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 
 		if(txfree == 0)
@@ -718,10 +716,7 @@ pge_start(struct ifnet *ifp)
 	}
 
 	if (txstart >= 0) {
-		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
-		    HIF_CTRL_BDP_CH_START_WSTB);
 		ifp->if_timer = 300;	/* not immediate interrupt */
-//		delay(5000);   /* tx hang up workaound */
 	}
 
 	PGE_UNLOCK(sc);
