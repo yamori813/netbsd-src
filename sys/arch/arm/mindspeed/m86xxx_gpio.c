@@ -332,11 +332,10 @@ gpio_defer(device_t self)
 	struct gpio_softc * const gpio = device_private(self);
 	struct gpio_chipset_tag * const gp = &gpio->gpio_chipset;
 	struct gpiobus_attach_args gba;
-/*
+
 	gpio_pin_t *pins;
 	uint32_t mask, dir, valueout, valuein;
-	int pin;
-*/
+	int pin, bit;
 
 	gp->gp_cookie = gpio->gpio_dev;
 	gp->gp_pin_read = m86gpio_pin_read;
@@ -347,7 +346,6 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
-#if 0
 	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
 	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	dir = GPIO_READ(gpio, GPIO_OE_REG);
@@ -355,34 +353,34 @@ gpio_defer(device_t self)
 	     pin < 32; pin++, mask <<= 1, pins++) {
 		pins->pin_num = pin;
 		if (dir & (1 << pin)) {
-			pins->pin_caps = GPIO_PIN_OUTPUT;
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
 			pins->pin_flags = GPIO_PIN_OUTPUT;
 			pins->pin_state = (valueout & (1 << pin)) ? 1 : 0;
 		} else {
-			pins->pin_caps = GPIO_PIN_INPUT;
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
 			pins->pin_flags = GPIO_PIN_INPUT;
 			pins->pin_state = (valuein & (1 << pin)) ? 1 : 0;
 		}
 	}
-	dir = GPIO_READ(gpio, GEMINI_GPIO_PINDIR);
-	valueout = GPIO_READ(gpio, GEMINI_GPIO_DATAOUT);
-	valuein = GPIO_READ(gpio, GEMINI_GPIO_DATAIN);
-	for (pin = 0, mask = 1, pins = gpio->gpio_pins;
-	     pin < 32; pin++, mask <<= 1, pins++) {
+
+	valuein = GPIO_READ(gpio, GPIO_63_32_INPUT_REG);
+	valueout = GPIO_READ(gpio, GPIO_63_32_OUTPUT_REG);
+	dir = GPIO_READ(gpio, GPIO_63_32_OE_REG);
+	for (pin = 32, mask = 1, pins = gpio->gpio_pins;
+	     pin < 64; pin++, mask <<= 1, pins++) {
 		pins->pin_num = pin;
-		if (gpio->gpio_inuse_mask & mask)
-			pins->pin_caps = GPIO_PIN_INPUT;
-		else
-			pins->pin_caps = GPIO_PIN_INPUT|GPIO_PIN_OUTPUT;
-		pins->pin_flags =
-		    (dir & mask) ? GPIO_PIN_OUTPUT : GPIO_PIN_INPUT;
-		pins->pin_state =
-		    (((dir & mask) ? valueout : valuein) & mask)
-			? GPIO_PIN_HIGH
-			: GPIO_PIN_LOW;
+		bit = pin - 32;
+		if (dir & (1 << bit)) {
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
+			pins->pin_flags = GPIO_PIN_OUTPUT;
+			pins->pin_state = (valueout & (1 << bit)) ? 1 : 0;
+		} else {
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
+			pins->pin_flags = GPIO_PIN_INPUT;
+			pins->pin_state = (valuein & (1 << bit)) ? 1 : 0;
+		}
 	}
 
-#endif
 	config_found(self, &gba, gpiobus_print, CFARGS_NONE);
 }
 #endif /* NGPIO > 0 */
