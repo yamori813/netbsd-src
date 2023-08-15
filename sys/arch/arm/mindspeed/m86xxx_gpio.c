@@ -436,6 +436,8 @@ GPIO_5 O QCA8337 Reset
 GPIO_6 O LED
 GPIO_9 O USB OTG Power
 GPIO_10 O USB XHCI Power
+GPIO_16 O LEG
+GPIO_25 O Relay
 GPIO_27 O HW RESET
 
 GPIO_? I USB OTG OverCurrent
@@ -488,9 +490,20 @@ GPIO_? I USB XHCI OverCurrent
 
 	/* Linux defualt */
 	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, 0x0);
+	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG1, 0x55555555);
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, 0x18000128);
 	GPIO_WRITE(gpio, GPIO_OE_REG, 0x18000128);
 	GPIO_WRITE(gpio, GPIO_INPUT_REG, 0x3dffffff);
+
+	GPIO_WRITE(gpio, GPIO_63_32_PIN_SELECT_REG, 0xfffffff);
+	GPIO_WRITE(gpio, GPIO_63_32_OE_REG, 0xfffffff);
+	GPIO_WRITE(gpio, GPIO_63_32_OUTPUT_REG, 0xfffffff);
+
+	/* ZDS block selected (Zarlink le88264) : same as original */
+	reg = GPIO_READ(gpio, GPIO_MISC_PIN_SELECT_REG);
+	reg &= ~(2 << 4);
+	reg |= (1 << 4);
+	GPIO_WRITE(gpio, GPIO_MISC_PIN_SELECT_REG, reg);
 
 	/* QCA8337 Reset is GPIO_5. Same as reference design */
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
