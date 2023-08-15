@@ -396,11 +396,11 @@ gpio_defer(device_t self)
 	     pin < 32; pin++, mask <<= 1, pins++) {
 		pins->pin_num = pin;
 		if (dir & (1 << pin)) {
-			pins->pin_caps = GPIO_PIN_OUTPUT;
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
 			pins->pin_flags = GPIO_PIN_OUTPUT;
 			pins->pin_state = (valueout & (1 << pin)) ? 1 : 0;
 		} else {
-			pins->pin_caps = GPIO_PIN_INPUT;
+			pins->pin_caps = GPIO_PIN_OUTPUT | GPIO_PIN_INPUT;
 			pins->pin_flags = GPIO_PIN_INPUT;
 			pins->pin_state = (valuein & (1 << pin)) ? 1 : 0;
 		}
