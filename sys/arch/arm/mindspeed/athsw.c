@@ -427,6 +427,8 @@ athswattach(device_t parent, device_t self, void *aux)
 		t |= AR8X16_PORT_STS_SPEED_1000;
 		arswitch_writereg(self, AR8327_REG_PORT_STATUS(port), t);
 		arswitch_writereg(self, AR8327_REG_PORT_HEADER(port), 0);
+		aprint_normal_dev(self,
+		    "MAC port == RGMII, port 4 = switch port\n");
 #if 0
 		/* this is default */
 		t = 1 << AR8327_PORT_VLAN0_DEF_SVID_S;
