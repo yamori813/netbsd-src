@@ -333,6 +333,7 @@ athswattach(device_t parent, device_t self, void *aux)
 	struct mii_attach_args *ma = aux;
 	struct mii_data *mii = ma->mii_data;
 	uint16_t swid;
+	int i;
 
 	asc->page = -1;
 
@@ -391,7 +392,6 @@ athswattach(device_t parent, device_t self, void *aux)
 		arswitch_writereg(self, AR8327_REG_PORT_HEADER(port), 0);
 #endif
 		/* same setting PHY4 as PHY3 */
-		int i;
 		for (i = 0; i < 32; ++i) {
 			t = arswitch_readdbg(self, 3, i);
 			arswitch_writedbg(self, 4, i, t);
@@ -452,6 +452,7 @@ athswattach(device_t parent, device_t self, void *aux)
 	} else if (asc->chip_ver == 0x10) {
 		aprint_normal(": AR8316 Ethernet Switch\n");
 		asc->mii_lo_first = 0;
+#ifdef PHY4_RGMII
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
 		/* work around for phy4 rgmii mode */
@@ -461,13 +462,24 @@ athswattach(device_t parent, device_t self, void *aux)
 		/* tx delay */
 		arswitch_writedbg(self, 4, 0x5, 0x3d47);
 		delay(1000);    /* 1ms, again to let things settle */
+#else
+		arswitch_writereg(self, AR8X16_REG_MODE,
+		    AR8X16_MODE_RGMII_PORT4_SWITCH);
+		arswitch_writereg(self, AR8X16_REG_PORT_STS(5), 0x1280);
+		/* same setting PHY4 as PHY3 */
+		int t;
+		for (i = 0; i < 32; ++i) {
+			t = arswitch_readdbg(self, 3, i);
+			arswitch_writedbg(self, 4, i, t);
+		}
+
+#endif
 /* not work strang behaviour ???
 		arswitch_writereg(self, AR8X16_REG_MASK_CTRL,
 		    AR8X16_MASK_CTRL_SOFT_RESET);
 		delay(1000);
 */
 #ifdef _DEBUG
-		int i;
 		for (i = 0;i < 6; ++i)
 		aprint_normal_dev(self, "PORT STS %d %x\n", i,
 		    arswitch_readreg(self, 0x100 * (i + 1)));
