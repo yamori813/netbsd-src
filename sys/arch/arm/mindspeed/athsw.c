@@ -52,6 +52,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/mii/mvphyreg.h>
 #include <arm/mindspeed/arswitchreg.h>
 
+//#define _DEBUG
+
 #define	MV_PORT(sc)	((sc)->mii_phy - 16)	/* PHY # to switch port */
 #define	MV_CPU_PORT	5			/* port # of CPU port */
 
@@ -353,12 +355,14 @@ athswattach(device_t parent, device_t self, void *aux)
 	asc->chip_ver = (swid & AR8X16_MASK_CTRL_VER_MASK) >>
 	    AR8X16_MASK_CTRL_VER_SHIFT;
 
-	aprint_naive(": Media interface\n");
+	aprint_normal("\n");
 	if (asc->chip_ver == 0x13) {
-		aprint_normal(": QCA8337 Ethernet Switch\n");
+		aprint_normal_dev(self,
+		    "QCA8337 Ethernet Switch (ver %d rev %d)\n",
+		    asc->chip_ver, asc->chip_rev);
 		asc->mii_lo_first = 1;
 		int t;
-#if 0
+#ifdef _DEBUG
 		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL0);
 		printf("FWD CTRL0 %x\n", t);
 		t = arswitch_readreg(self, AR8327_REG_FWD_CTRL1);
@@ -433,7 +437,7 @@ athswattach(device_t parent, device_t self, void *aux)
 		arswitch_writereg(self, AR8327_REG_PORT_VLAN1(port), t);
 #endif
 
-#if 0
+#ifdef _DEBUG
 		for (port = 0; port < 7; ++port) {
 			uint32_t reg = arswitch_readreg(self,
 			    AR8327_REG_PORT_LOOKUP(port));
@@ -450,11 +454,15 @@ athswattach(device_t parent, device_t self, void *aux)
 		}
 #endif
 	} else if (asc->chip_ver == 0x10) {
-		aprint_normal(": AR8316 Ethernet Switch\n");
+		aprint_normal_dev(self,
+		    "AR8316 Ethernet Switch (ver %d rev %d)\n",
+		    asc->chip_ver, asc->chip_rev);
 		asc->mii_lo_first = 0;
 #ifdef PHY4_RGMII
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_ISO);
+		aprint_normal_dev(self,
+		    "MAC port == RGMII, port 4 = dedicated PHY\n");
 		/* work around for phy4 rgmii mode */
 		arswitch_writedbg(self, 4, 0x12, 0x480c);
 		/* rx delay */
@@ -463,8 +471,11 @@ athswattach(device_t parent, device_t self, void *aux)
 		arswitch_writedbg(self, 4, 0x5, 0x3d47);
 		delay(1000);    /* 1ms, again to let things settle */
 #else
+		/* all phy connect to switch */
 		arswitch_writereg(self, AR8X16_REG_MODE,
 		    AR8X16_MODE_RGMII_PORT4_SWITCH);
+		aprint_normal_dev(self,
+		    "MAC port == RGMII, port 4 = switch port\n");
 		arswitch_writereg(self, AR8X16_REG_PORT_STS(5), 0x1280);
 		/* same setting PHY4 as PHY3 */
 		int t;
@@ -482,17 +493,17 @@ athswattach(device_t parent, device_t self, void *aux)
 #ifdef _DEBUG
 		for (i = 0;i < 6; ++i)
 		aprint_normal_dev(self, "PORT STS %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1)));
+		    arswitch_readreg(self, AR8X16_REG_PORT_STS(i)));
 		for (i = 0;i < 6; ++i)
 		aprint_normal_dev(self, "PORT CTRL %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1) + 4));
+		    arswitch_readreg(self, AR8X16_REG_PORT_CTRL(i)));
 		for (i = 0;i < 6; ++i)
 		aprint_normal_dev(self, "PORT VLAN %d %x\n", i,
-		    arswitch_readreg(self, 0x100 * (i + 1) + 8));
-#endif
+		    arswitch_readreg(self,AR8X16_REG_PORT_VLAN(i)));
 		aprint_normal_dev(self, "arswitch %x mode %x\n",
 		    arswitch_readreg(self, AR8X16_REG_MASK_CTRL),
 		    arswitch_readreg(self, AR8X16_REG_MODE));
+#endif
 	} else {
 		aprint_normal(": Unknown Ethernet Switch\n");
 	}
