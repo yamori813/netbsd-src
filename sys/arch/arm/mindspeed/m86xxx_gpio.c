@@ -501,7 +501,7 @@ gpio_attach(device_t parent, device_t self, void *aux)
 
 	/* ZDS block selected (Zarlink le88264) : same as original */
 	reg = GPIO_READ(gpio, GPIO_MISC_PIN_SELECT_REG);
-	reg &= ~(2 << 4);
+	reg &= ~(3 << 4);
 	reg |= (1 << 4);
 	GPIO_WRITE(gpio, GPIO_MISC_PIN_SELECT_REG, reg);
 
