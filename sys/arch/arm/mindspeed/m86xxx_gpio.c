@@ -104,6 +104,26 @@ struct gpio_softc {
 #define	GPIO_WRITE(gpio, reg, val) \
 	bus_space_write_4((gpio)->gpio_memt, (gpio)->gpio_memh, (reg), (val))
 
+/*
+
+GPIO_PIN_SELECT_REG		0x58	0xf755577d (Barebox)
+GPIO_63_32_PIN_SELECT_REG	0xdc	0x5f577f77 (Barebox)
+
+GPIO_0 I SW(Function)
+GPIO_1 I SW(Reset)
+GPIO_4 O LED
+GPIO_5 O QCA8337 Reset
+GPIO_6 O LED
+GPIO_9 O USB OTG Power
+GPIO_10 O USB XHCI Power
+GPIO_16 O LEG
+GPIO_25 O Relay
+GPIO_27 O HW RESET
+
+GPIO_? I USB OTG OverCurrent
+GPIO_? I USB XHCI OverCurrent
+*/
+
 void
 gpio_pic_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
@@ -424,26 +444,6 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		    aa->aa_size, aa->aa_addr, error);
 		return;
 	}
-/*
-
-GPIO_PIN_SELECT_REG		0x58	0xf755577d (Barebox)
-GPIO_63_32_PIN_SELECT_REG	0xdc	0x5f577f77 (Barebox)
-
-GPIO_0 I SW(Function)
-GPIO_1 I SW(Reset)
-GPIO_4 O LED
-GPIO_5 O QCA8337 Reset
-GPIO_6 O LED
-GPIO_9 O USB OTG Power
-GPIO_10 O USB XHCI Power
-GPIO_16 O LEG
-GPIO_25 O Relay
-GPIO_27 O HW RESET
-
-GPIO_? I USB OTG OverCurrent
-GPIO_? I USB XHCI OverCurrent
-*/
-
 #if 0
 	uint32_t i, j, k, val;
 	int sel, oe, out;
