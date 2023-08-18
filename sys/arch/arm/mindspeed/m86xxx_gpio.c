@@ -63,6 +63,11 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #define GPIN(n)			(1 << n)
 #define RESET_BIT		27
 
+/* for GPIO_PIN_SELECT_REG and GPIO_PIN_SELECT_REG1 */
+#define GSEL_MASK(n)		(3 << ((n % 16) << 1))
+#define GSEL(n, i)		(i << ((n % 16) << 1))
+
+#if NOT_USE
 static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
 static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
 static int gpio_pic_find_pending_irqs(struct pic_softc *);
@@ -74,6 +79,7 @@ const struct pic_ops gpio_pic_ops = {
 	.pic_find_pending_irqs = gpio_pic_find_pending_irqs,
 	.pic_establish_irq = gpio_pic_establish_irq,
 };
+#endif
 
 struct gpio_softc {
 	device_t gpio_dev;
@@ -124,10 +130,10 @@ GPIO_? I USB OTG OverCurrent
 GPIO_? I USB XHCI OverCurrent
 */
 
+#if NOT_USE
 void
 gpio_pic_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
-#if 0
 	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
 	KASSERT(irq_base == 0);
 
@@ -140,13 +146,11 @@ gpio_pic_unblock_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 	if (irq_mask & gpio->gpio_level_mask)
 		GPIO_WRITE(gpio, GEMINI_GPIO_INTRCLR,
 		    irq_mask & gpio->gpio_level_mask);
-#endif
 }
 
 void
 gpio_pic_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 {
-#if 0
 	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
 	KASSERT(irq_base == 0);
 
@@ -159,13 +163,11 @@ gpio_pic_block_irqs(struct pic_softc *pic, size_t irq_base, uint32_t irq_mask)
 	if (irq_mask & gpio->gpio_edge_mask)
 		GPIO_WRITE(gpio, GEMINI_GPIO_INTRCLR,
 		    irq_mask & gpio->gpio_edge_mask);
-#endif
 }
 
 int
 gpio_pic_find_pending_irqs(struct pic_softc *pic)
 {
-#if 0
 	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
 	uint32_t pending;
 
@@ -178,7 +180,6 @@ gpio_pic_find_pending_irqs(struct pic_softc *pic)
 	 * Now find all the pending bits and mark them as pending.
 	 */
 	(void) pic_mark_pending_sources(&gpio->gpio_pic, 0, pending);
-#endif
 
 	return 1;
 }
@@ -186,7 +187,6 @@ gpio_pic_find_pending_irqs(struct pic_softc *pic)
 void
 gpio_pic_establish_irq(struct pic_softc *pic, struct intrsource *is)
 {
-#if 0
 	struct gpio_softc * const gpio = PIC_TO_SOFTC(pic);
 	KASSERT(is->is_irq < 32);
 	uint32_t irq_mask = __BIT(is->is_irq);
@@ -258,8 +258,8 @@ gpio_pic_establish_irq(struct pic_softc *pic, struct intrsource *is)
 		(*is->is_pic->pic_ops->pic_establish_irq)(is->is_pic, is);
 	} 
 #endif
-#endif
 }
+#endif
 
 static int gpio_match(device_t, cfdata_t, void *);
 static void gpio_attach(device_t, device_t, void *);
@@ -422,15 +422,13 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	struct axi_attach_args * const aa = aux;
 	struct gpio_softc * const gpio = device_private(self);
 	int error;
-//	int oen, i;
-//	int oepins[] = {16, 18, 19, 20, 21, 22, 23, 28};
 	uint32_t reg;
 
-/*
+#if NOT_USE
 	if (aa->apba_intr == OBIOCF_INTR_DEFAULT)
 		panic("\n%s: no intr assigned", device_xname(self));
+#endif
 
-*/
 	if (aa->aa_size != 0x10000)	/* APB is 64K boundly */
 		aa->aa_size = 0x10000;
 
@@ -444,7 +442,8 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		    aa->aa_size, aa->aa_addr, error);
 		return;
 	}
-#if 0
+
+#ifdef _DEBUG
 	uint32_t i, j, k, val;
 	int sel, oe, out;
 	for (k = 0; k < 2; ++k) {
@@ -501,8 +500,8 @@ gpio_attach(device_t parent, device_t self, void *aux)
 
 	/* ZDS block selected (Zarlink le88264) : same as original */
 	reg = GPIO_READ(gpio, GPIO_MISC_PIN_SELECT_REG);
-	reg &= ~(3 << 4);
-	reg |= (1 << 4);
+	reg &= ~(3 << 2);
+	reg |= (1 << 2);
 	GPIO_WRITE(gpio, GPIO_MISC_PIN_SELECT_REG, reg);
 
 	/* QCA8337 Reset is GPIO_5. Same as reference design */
@@ -522,7 +521,7 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	/* USB Power ON */
 
 	reg = GPIO_READ(gpio, GPIO_PIN_SELECT_REG);
-	reg &= ~(GPIN(9) | GPIN(10));
+	reg &= ~(GSEL_MASK(9) | GSEL_MASK(10));
 	GPIO_WRITE(gpio, GPIO_PIN_SELECT_REG, reg);
 
 	reg = GPIO_READ(gpio, GPIO_OE_REG);
@@ -532,25 +531,8 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	reg |= (GPIN(9) | GPIN(10));
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
-#if 0
-	oen = 0;
-	for (i = 0; i < sizeof(oepins) / 4; ++i) {
-		oen |= (1 << oepins[i]);
-	}
-        GPIO_WRITE(gpio, GPIO_OE_REG, 
-	    GPIO_READ(gpio, GPIO_OE_REG) | oen);
 
-	/* make Status LED is Green */
-	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, GPIN(RESET_BIT) | GPIN(21));
-	/* do reset */
-/*
-        GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
-	    GPIO_READ(gpio, GPIO_OUTPUT_REG) & ~GPIN(RESET_BIT));
-*/
-	/* USB Power ON */
-        GPIO_WRITE(gpio, GPIO_OUTPUT_REG,
-	    GPIO_READ(gpio, GPIO_OUTPUT_REG) | GPIN(16));
-#if 0
+#if NOT_USE
 	if (oa->obio_intrbase != OBIOCF_INTRBASE_DEFAULT) {
 		gpio->gpio_pic.pic_ops = &gpio_pic_ops;
 		strlcpy(gpio->gpio_pic.pic_name, device_xname(self),
@@ -564,7 +546,6 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		KASSERT(gpio->gpio_is != NULL);
 		aprint_normal(", intr %d", oa->obio_intr);
 	}
-#endif
 #endif
 	aprint_normal("\n");
 #if NGPIO > 0
