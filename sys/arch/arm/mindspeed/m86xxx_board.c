@@ -358,6 +358,12 @@ m86xxx_device_register(device_t self, void *aux)
 		return;
 	}
 
+	/* Comcerto 2000 PL310 offset */
+	if (device_is_a(self, "arml2cc")) {
+                prop_dictionary_set_uint32(dict, "offset", 0x1000);
+		return;
+	}
+
 }
 
 #ifdef MULTIPROCESSOR
