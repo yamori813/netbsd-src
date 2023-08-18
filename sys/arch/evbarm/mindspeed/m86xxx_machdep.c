@@ -188,8 +188,6 @@ static const struct boot_physmem bp_first256 = {
 #define JUMP_TO_KERNEL_START_1          0xe3a00020      /* mov  r0, #32 */
 #define JUMP_TO_KERNEL_START_2          0xe590f000      /* ldr  pc, [r0] */
 
-#define M86_ARMCORE_SIZE		0x20000
-
 void
 m86xxx_mpstart(void)
 {

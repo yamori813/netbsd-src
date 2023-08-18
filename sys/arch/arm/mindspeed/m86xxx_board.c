@@ -49,6 +49,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 #include <net/if_ether.h>
 
 #include <arm/cortex/a9tmr_var.h>
+#include <arm/cortex/pl310_var.h>
 #include <arm/mainbus/mainbus.h>
 
 #include <arm/mindspeed/m86xxx_reg.h>
@@ -227,12 +228,28 @@ static uint32_t m86xxx_get_axi_clk(void)
 	return m86xxx_get_clk_freq(AXI_CLK_CNTRL_0, AXI_CLK_DIV_CNTRL);
 }
 
+static void m86xxx_l2ccinit(void);
+static void m86xxx_l2ccinit(void)
+{
+	bus_space_tag_t m86xxx_armcore_bst = &m83_bs_tag;
+	bus_space_handle_t m86xxx_armcore_bsh;
+
+	int error = bus_space_map(m86xxx_armcore_bst, A9_PERIPH_BASE,
+	    M86_ARMCORE_SIZE, 0, &m86xxx_armcore_bsh);
+	if (error)
+		panic("L2CC map error");
+	arml2cc_init(m86xxx_armcore_bst, m86xxx_armcore_bsh, 0x10000);
+
+	bus_space_unmap(m86xxx_armcore_bst, m86xxx_armcore_bsh,
+	    M86_ARMCORE_SIZE);
+}
 
 void
 m86xxx_bootstrap(vaddr_t iobase)
 {
 
 	baseaddr = iobase;
+	uint32_t reg;
 
 	/* XXX why double value? */
 	clock_info.clk_arm = m86xxx_get_arm_clk() * 1000 * 1000 * 2;
@@ -240,9 +257,14 @@ m86xxx_bootstrap(vaddr_t iobase)
 
 	curcpu()->ci_data.cpu_cc_freq = clock_info.clk_arm;
 
+	/* Enable the L2CC clk  */
+	reg = readl(L2CC_CLK_CNTRL);
+	reg |= CLK_DOMAIN_MASK;
+	writel(L2CC_CLK_CNTRL, reg);
+
 	/* Enable  clock USB2 and USB3 */
 
-	uint32_t reg = readl(AXI_CLK_CNTRL_2);
+	reg = readl(AXI_CLK_CNTRL_2);
 	reg |= (CLK_DOMAIN_USB0_MASK | CLK_DOMAIN_USB1_MASK);
 	writel(AXI_CLK_CNTRL_2, reg);
 
@@ -323,6 +345,9 @@ m86xxx_bootstrap(vaddr_t iobase)
 	writel(PFE_RESET, 0);
 	writel(GEMTX_RESET, 0);
 */
+
+	m86xxx_l2ccinit();
+
 }
 
 void
