@@ -238,7 +238,7 @@ static void m86xxx_l2ccinit(void)
 	    M86_ARMCORE_SIZE, 0, &m86xxx_armcore_bsh);
 	if (error)
 		panic("L2CC map error");
-	arml2cc_init(m86xxx_armcore_bst, m86xxx_armcore_bsh, 0x10000);
+	arml2cc_init(m86xxx_armcore_bst, m86xxx_armcore_bsh, L2CC_BASE);
 
 	bus_space_unmap(m86xxx_armcore_bst, m86xxx_armcore_bsh,
 	    M86_ARMCORE_SIZE);
