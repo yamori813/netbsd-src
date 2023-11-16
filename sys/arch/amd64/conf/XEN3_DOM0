@@ -1,4 +1,4 @@
-# $NetBSD: XEN3_DOM0,v 1.197 2022/08/07 02:52:23 simonb Exp $
+# $NetBSD: XEN3_DOM0,v 1.197.4.3 2023/10/18 16:53:04 martin Exp $
 
 # XEN3_DOM0 machine description file
 #
@@ -14,7 +14,7 @@ include 	"arch/amd64/conf/std.xen"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident		"XEN3_DOM0-$Revision: 1.197 $"
+#ident		"XEN3_DOM0-$Revision: 1.197.4.3 $"
 
 maxusers	32		# estimated number of users
 
@@ -107,7 +107,7 @@ powernow0	at cpu0		# AMD PowerNow! and Cool'n'Quiet (non-ACPI)
 options 	BUFQ_PRIOCSCAN
 
 # Diagnostic/debugging support options
-options 	DIAGNOSTIC	# inexpensive kernel consistency checks
+#options 	DIAGNOSTIC	# inexpensive kernel consistency checks
 				# XXX to be commented out on release branch
 #options 	DEBUG		# expensive debugging checks/support
 #options 	LOCKDEBUG	# expensive locking checks/support
@@ -439,8 +439,8 @@ options 	PMS_SYNAPTICS_TOUCHPAD	# Enable support for Synaptics Touchpads
 options 	PMS_ELANTECH_TOUCHPAD	# Enable support for Elantech Touchpads
 options 	PMS_ALPS_TOUCHPAD	# Enable support for Alps Touchpads
 vga*		at pci? dev ? function ?
-#genfb*		at pci? dev ? function ?# Needs acpi_md_vesa_modenum
-					# in acpi_wakeup.c (!xenpv)
+genfb*		at pci? dev ? function ?
+
 #options 	VCONS_DRAW_INTR
 #wsdisplay*	at vga? console ?
 wsdisplay*	at wsemuldisplaydev?
@@ -841,6 +841,7 @@ gem*	at pci? dev ? function ?	# Apple GMAC and Sun ERI gigabit enet
 gsip*	at pci? dev ? function ?	# NS83820 Gigabit Ethernet
 hme*	at pci? dev ? function ?	# Sun Microelectronics STP2002-STQ
 iavf*	at pci? dev ? function ?	# Intel Adaptive Virtual Function
+igc*	at pci? dev ? function ?	# Intel I225 2.5 gigabit
 ipw*	at pci? dev ? function ?	# Intel PRO/Wireless 2100
 iwi*	at pci? dev ? function ?	# Intel PRO/Wireless 2200BG
 iwm*	at pci? dev ? function ?	# Intel Centrino 7260

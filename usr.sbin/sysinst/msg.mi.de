@@ -1,4 +1,4 @@
-/*	$NetBSD: msg.mi.de,v 1.43 2022/12/15 15:32:04 martin Exp $	*/
+/*	$NetBSD: msg.mi.de,v 1.43.2.2 2023/11/02 14:12:03 sborrill Exp $	*/
 
 /*
  * Copyright 1997 Piermont Information Systems Inc.
@@ -152,7 +152,7 @@ message sectors
 {Sektoren}
 
 message mountpoint
-{Mountpoint (oder 'kein(e)'))}
+{Mountpoint (oder '-')}
 
 message cylname
 {Zyl}
@@ -1120,7 +1120,7 @@ message Use_Empty_Parts {Partitionen frei definieren}
  *  $1 = short version of $0		MBR
  */
 message Use_Different_Part_Scheme
-{Alles löschen, anderes Partitionierungsverfahren statt $1 verwenden}
+{Alles löschen, anders partitionieren (statt $1)}
 
 message Gigabytes	{Gigabyte}
 message Megabytes	{Megabyte}

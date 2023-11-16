@@ -1,4 +1,4 @@
-$NetBSD: pcidevs,v 1.1471.2.5 2023/08/21 12:26:12 martin Exp $
+$NetBSD: pcidevs,v 1.1471.2.10 2023/11/03 08:59:29 martin Exp $
 
 /*
  * Copyright (c) 1995, 1996 Christopher G. Demetriou
@@ -1510,6 +1510,7 @@ product ASMEDIA ASM1061_01	0x0601	ASM1061 AHCI SATA III Controller
 product ASMEDIA ASM1061_02	0x0602	ASM1061 AHCI SATA III Controller
 product ASMEDIA ASM1061_11	0x0611	ASM1061 AHCI SATA III Controller
 product ASMEDIA ASM1061_12	0x0612	ASM1061 AHCI SATA III Controller
+product ASMEDIA ASM1062_JMB575	0x0624	ASM1062 + JMB575 Port Multiplier
 product ASMEDIA ASM106X		0x0625	ASM106x AHCI SATA III Controller
 product	ASMEDIA	ASM1042		0x1042	ASM1042 USB 3.0 Host Controller
 product ASMEDIA ASM1083		0x1080	ASM1083/1085 PCIe-PCI Bridge
@@ -3933,8 +3934,13 @@ product INTEL I219_LM11		0x0d4c	I219-LM (11) Ethernet Connection
 product INTEL I219_V11		0x0d4d	I219-V (11) Ethernet Connection
 product INTEL I219_LM10		0x0d4e	I219-LM (10) Ethernet Connection
 product INTEL I219_V10		0x0d4f	I219-V (10) Ethernet Connection
+product INTEL I225_IT		0x0d9f	I225-IT Ethernet Connection
 product INTEL I219_LM12		0x0d53	I219-LM (12) Ethernet Connection
 product INTEL I219_V12		0x0d55	I219-V (12) Ethernet Connection
+product INTEL I219_LM23		0x0dc5	I219-LM (23) Ethernet Connection
+product INTEL I219_V23		0x0dc6	I219-V (23) Ethernet Connection
+product INTEL I219_LM22		0x0dc7	I219-LM (22) Ethernet Connection
+product INTEL I219_V22		0x0dc8	I219-V (22) Ethernet Connection
 product INTEL E5V2_DMI2		0x0e00	E5 v2 DMI2
 product INTEL E5V2_PCIE_1	0x0e01	E5 v2 PCIe x4 (DMI2 Mode)
 product INTEL E5V2_PCIE_2	0x0e02	E5 v2 PCIe
@@ -4249,6 +4255,8 @@ product INTEL 82439HX		0x1250	82439HX (TXC) System Controller
 product INTEL I226_LM		0x125b	I226-LM Ethernet
 product INTEL I226_V		0x125c	I226-V Ethernet
 product INTEL I226_IT		0x125d	I226-IT Ethernet
+product INTEL I221_V		0x125e	I221-V Ethernet Connection
+product INTEL I226_BLANK_NVM	0x125f	I226 Ethernet Connection (blankNVM)
 product INTEL C3K_X553_10G	0x1306	C3000 X553 10G Ethernet
 product INTEL C3K_X553_1G	0x1307	C3000 X553 1G Ethernet
 product INTEL 82870P2_PPB	0x1460	82870P2 P64H2 PCI-PCI Bridge
@@ -4303,6 +4311,7 @@ product INTEL I350_DA4	 	0x1546	I350 Quad port Gigabit Connection
 product INTEL 82599_SFP_SF_QP	0x154a	82599 10 GbE Controller
 product INTEL XL710_VF		0x154c	XL710 Ethernet Virtual Function
 product INTEL 82599_SFP_SF2	0x154d	82599 (SFP+) 10 GbE Controller
+product INTEL 82599_LS		0x154f	82599 LS 10G Ethernet
 product INTEL 82599EN_SFP	0x1557	82599 10 GbE Controller
 product INTEL 82599_QSFP_SF_QP	0x1558	X520 10 GbE QSFP+
 product INTEL I218_V		0x1559	I218-V Ethernet Connection
@@ -4374,9 +4383,12 @@ product INTEL C3K_X553_SGMII	0x15e4	C3000 X553 1GbE SGMII (10G SKU)
 product INTEL C3K_X553_SGMII_L	0x15e5	C3000 X553 1GbE SGMII (non-10G SKU)
 product INTEL I225_LM		0x15f2	I225 LM Ethernet
 product INTEL I225_V		0x15f3	I225 V Ethernet
+product INTEL I220_V		0x15f7	I220-V Ethernet Connection
+product INTEL I225_BLANK_NVM	0x15fd	I225 Ethernet Connection (blankNVM)
 product INTEL I219_LM15		0x15f4	I219-LM (15) Ethernet Connection
 product INTEL I219_V15		0x15f5	I219-V (15) Ethernet Connection
 product INTEL I210_SGMII_WOF	0x15f6	I210 Ethernet (SGMII)
+product INTEL I225_I		0x15f8	I225-I Ethernet Connection
 product INTEL I219_LM14		0x15f9	I219-LM (14) Ethernet Connection
 product INTEL I219_V14		0x15fa	I219-V (14) Ethernet Connection
 product INTEL I219_LM13		0x15fb	I219-LM (13) Ethernet Connection
@@ -5409,6 +5421,9 @@ product INTEL XE5_V3_BRA4	0x2ffb  Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Ag
 product INTEL XE5_V3_SADBR1	0x2ffc  Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers
 product INTEL XE5_V3_SADBR2	0x2ffd  Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers
 product INTEL XE5_V3_SADBR3	0x2ffe  Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers
+product INTEL I225_K		0x3100	I225-K Ethernet Connection
+product INTEL I225_K2		0x3101	I225-K2 Ethernet Connection
+product INTEL I226_K		0x3102	I226-K Ethernet Connection
 product INTEL WIFI_LINK_3165_1	0x3165	Dual Band Wireless AC 3165
 product INTEL WIFI_LINK_3165_2	0x3166	Dual Band Wireless AC 3165
 product INTEL GLK_IGD_1		0x3184	UHD Graphics 605
@@ -6281,6 +6296,8 @@ product INTEL ADL_N_CNVI_4	0x54f3	Alder Lake-N CNVi WiFi
 product INTEL ADL_N_GSPI_2	0x54fb	Alder Lake-N GSPI 2
 product INTEL ADL_N_ISH		0x54fc	Alder Lake-N Integrated Sensor Hub
 product INTEL ADL_N_SCS_UFS	0x54ff	Alder Lake-N UFS
+product INTEL I225_LMVP		0x5502	I225-LMvP Ethernet Connection
+product INTEL I226_LMVP		0x5503	I226-LMvP Ethernet Connection
 product INTEL I219_LM18		0x550a	I219-LM (18) Ethernet Connection
 product INTEL I219_V18		0x550b	I219-V (18) Ethernet Connection
 product INTEL I219_LM19		0x550c	I219-LM (19) Ethernet Connection
@@ -7650,6 +7667,7 @@ product MELLANOX MT28800VF	0x101a	ConnectX-5 Ex VF
 product MELLANOX MT28908	0x101b	ConnectX-6
 product MELLANOX MT28908VF	0x101c	ConnectX-6 VF
 product MELLANOX MT2892		0x101d	ConnectX-6 Dx
+product MELLANOX MT2894		0x101f	ConnectX-6 Lx
 product MELLANOX MT23108	0x5a44	InfiniHost (Tavor)
 product MELLANOX MT23108_PCI	0x5a46	InfiniHost PCI Bridge (Tavor)
 product MELLANOX MT25204_OLD	0x5e8c	InfiniHost III Lx (old Sinai)
@@ -8806,7 +8824,21 @@ product PERICOM PI7C21P100	0x01a7	PI7C21P100 PCIX-PCIX
 product PERICOM PI7C9X20303UL	0x0303	PI7C9X20303UL 3port 3lane PCIe switch
 product PERICOM PI7C9X20505GP	0x0505	PI7C9X20505GP 5port 5lane PCIe switch
 product PERICOM PI7C9X20508GP	0x0508	PI7C9X20508GP 5port 8lane PCIe switch
+product PERICOM PI7C9X2G303EL	0x2303	PI7C9X2G303EL 3port 3lane PCIe Gen2 switch
+product PERICOM PI7C9X2G304EL	0x2304	PI7C9X2G304EL 3port 4lane PCIe Gen2 switch
+product PERICOM PI7C9X2G308GP	0x2308	PI7C9X2G308GP 3port 8lane PCIe Gen2 switch
+product PERICOM PI7C9X2G312GP	0x2312	PI7C9X2G312GP 3port 12lane PCIe Gen2 switch
 product PERICOM PI7C9X2G404SL	0x2404	PI7C9X2G404SL 4port 4lane PCIe Gen2 switch
+product PERICOM PI7C9X2G608GP	0x2608	PI7C9X2G608GP 6port 8lane PCIe Gen2 switch
+product PERICOM PI7C9X2G612GP	0x2612	PI7C9X2G612GP 6port 12lane PCIe Gen2 switch
+product PERICOM PI7C9X2G912GP	0x2912	PI7C9X2G912GP 9port 12lane PCIe Gen2 switch
+product PERICOM PI7C9X2G808PR	0x8608	PI7C9X2G808PR 8port 8lane PCIe Gen2 switch
+product PERICOM PI7C9X2G304EV	0xb304	PI7C9X2G304EV 3port 4lane PCIe Gen2 switch
+product PERICOM PI7C9X2G404EV	0xb404	PI7C9X2G404EV 4port 4lane PCIe Gen2 switch
+product PERICOM PI7C9X3G808GP	0xc008	PI7C9X3G808GP 8port 8lane PCIe Gen3 switch
+product PERICOM PI7C9X3G816GP	0xc016	PI7C9X3G816GP 8port 16lane PCIe Gen3 switch
+product PERICOM PI7C9X3G1224GP	0xc124	PI7C9X3G1224GP 12port 24lane PCIe Gen3 switch
+product PERICOM PI7C9X3G1632GP	0xc232	PI7C9X3G1632GP 16port 32lane PCIe Gen3 switch
 product PERICOM PI7C8140A	0x8140	PI7C8140A 2 port PCI-PCI Bridge
 product PERICOM PI7C8148	0x8148	PI7C8148 Asynchronous 2 port PCI-PCI Bridge
 product PERICOM PI7C8152	0x8152	PI7C8152 2 port PCI-PCI Bridge
