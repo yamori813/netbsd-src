@@ -423,7 +423,7 @@ star_build_devmap(struct pmap_devmap *devmap, int ndevmap)
 			devmap[n].pd_size = star_soc_devtable[i].size;
 			devmap[n].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
 //			devmap[n].pd_cache = PTE_NOCACHE;
-			devmap[n].pd_flags = DEVMAP_FLAGS;
+//			devmap[n].pd_flags = DEVMAP_FLAGS;
 
 			n++;
 			if (n >= ndevmap)

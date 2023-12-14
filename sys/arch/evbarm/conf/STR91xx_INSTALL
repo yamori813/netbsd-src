@@ -7,4 +7,6 @@
 include "arch/evbarm/conf/STR91xx"
 include "arch/evbarm/conf/INSTALL"
 
-options BOOTHOWTO=RB_SINGLE
+no config netbsd
+config netbsd root on ? type ?
+

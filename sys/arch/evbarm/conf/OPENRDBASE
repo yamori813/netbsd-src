@@ -142,8 +142,8 @@ options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
 #makeoptions	COPY_SYMTAB=1
 #options 	AUDIO_DEBUG=2
 
-config		netbsd		root on ? type ?
-#config		netbsd		root on sd0 type ffs
+#config		netbsd		root on ? type ?
+config		netbsd		root on wd0 type ffs
 
 # The main bus device
 mainbus0 at root

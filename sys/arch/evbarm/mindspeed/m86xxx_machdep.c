@@ -72,7 +72,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #define	KERNEL_VM_BASE		(KERNEL_BASE + 0x40000000)
 #define KERNEL_VM_SIZE		0x0C000000
-#define KERNEL_IO_VBASE		VM_KERNEL_IO_BASE
+//#define KERNEL_IO_VBASE		VM_KERNEL_IO_BASE
+#define KERNEL_IO_VBASE		0xf0000000
 
 extern int _end[];
 extern int KERNEL_BASE_phys[];
