@@ -1,4 +1,4 @@
-/*	$NetBSD: m_netbsd.c,v 1.26 2022/07/15 06:39:06 mrg Exp $	*/
+/*	$NetBSD: m_netbsd.c,v 1.26.2.2 2023/12/18 14:08:37 martin Exp $	*/
 
 /*
  * top - a top users display for Unix
@@ -20,6 +20,14 @@
  * and should work for:
  *	NetBSD-2.0	(when released)
  * -
+ * NetBSD-4.0 updates from Christos Zoulas.
+ * NetBSD-5.0 updates from Andrew Doran, Mindaugas Rasiukevicius and
+ * Christos Zoulas.
+ * NetBSD-6.0 updates from matthew green, Christos Zoulas, and
+ * Mindaugas Rasiukevicius.
+ * NetBSD-8 updates from Leonardo Taccari.
+ * NetBSD-10 updates from Christos Zoulas and matthew green.
+ *
  * top does not need to be installed setuid or setgid with this module.
  *
  * LIBS: -lkvm
@@ -37,12 +45,12 @@
  *		Andrew Doran <ad@NetBSD.org>
  *
  *
- * $Id: m_netbsd.c,v 1.26 2022/07/15 06:39:06 mrg Exp $
+ * $Id: m_netbsd.c,v 1.26.2.2 2023/12/18 14:08:37 martin Exp $
  */
 #include <sys/cdefs.h>
 
 #ifndef lint
-__RCSID("$NetBSD: m_netbsd.c,v 1.26 2022/07/15 06:39:06 mrg Exp $");
+__RCSID("$NetBSD: m_netbsd.c,v 1.26.2.2 2023/12/18 14:08:37 martin Exp $");
 #endif
 
 #include <sys/param.h>
@@ -50,6 +58,9 @@ __RCSID("$NetBSD: m_netbsd.c,v 1.26 2022/07/15 06:39:06 mrg Exp $");
 #include <sys/sysctl.h>
 #include <sys/sched.h>
 #include <sys/swap.h>
+#include <sys/socket.h>
+
+#include <net/route.h>
 
 #include <uvm/uvm_extern.h>
 
@@ -166,9 +177,10 @@ const char *memorynames[] = {
 	NULL
 };
 
-long swap_stats[6];
+long swap_stats[9];
 const char *swapnames[] = {
-	"K Total, ", "K Used, ", "K Free ", " Pools: ", "K Used, ",
+	"K Total, ", "K Used, ", "K Free ", " Pools: ", "K Used ",
+	" Network: ", "K In, ", "K Out, ",
 	NULL
 };
 
@@ -445,11 +457,60 @@ format_header(char *uname_field)
 	return(header);
 }
 
+static void
+get_network_kilobytes(long *kb_in, long *kb_out)
+{
+	struct if_msghdr *ifm;
+	int mib[6] = { CTL_NET, AF_ROUTE, 0, 0, NET_RT_IFLIST, 0 };
+	struct rt_msghdr *rtm;
+	struct if_data *ifd = NULL;
+	static char *buf = NULL;
+	static size_t olen;
+	char *next, *lim;
+	size_t len;
+	static uint64_t last_bytes_in;
+	static uint64_t last_bytes_out;
+	uint64_t cur_bytes_in = 0;
+	uint64_t cur_bytes_out = 0;
+
+	if (sysctl(mib, 6, NULL, &len, NULL, 0) == -1)
+		err(1, "sysctl");
+	if (len > olen) {
+		free(buf);
+		if ((buf = malloc(len)) == NULL)
+			err(1, NULL);
+		olen = len;
+	}
+	if (sysctl(mib, 6, buf, &len, NULL, 0) == -1)
+		err(1, "sysctl");
+
+	lim = buf + len;
+	for (next = buf; next < lim; next += rtm->rtm_msglen) {
+		rtm = (struct rt_msghdr *)next;
+		if (rtm->rtm_version != RTM_VERSION)
+			continue;
+		switch (rtm->rtm_type) {
+		case RTM_IFINFO:
+			ifm = (struct if_msghdr *)next;
+			ifd = &ifm->ifm_data;
+
+			cur_bytes_in += ifd->ifi_ibytes;
+			cur_bytes_out += ifd->ifi_obytes;
+			break;
+		}
+	}
+
+	*kb_in = (cur_bytes_in - last_bytes_in) / 1024;
+	*kb_out = (cur_bytes_out - last_bytes_out) / 1024;
+	last_bytes_in = cur_bytes_in;
+	last_bytes_out = cur_bytes_out;
+}
+
 void
 get_system_info(struct system_info *si)
 {
 	size_t ssize;
-	int mib[2];
+	int mib[6];
 	struct uvmexp_sysctl uvmexp;
 	struct swapent *sep;
 	u_int64_t totalsize, totalinuse;
@@ -531,8 +592,10 @@ get_system_info(struct system_info *si)
 
 	swap_stats[4] = pagetok(uvmexp.poolpages);
 
+	get_network_kilobytes(&swap_stats[6], &swap_stats[7]);
+
 	memory_stats[6] = -1;
-	swap_stats[3] = swap_stats[5] = -1;
+	swap_stats[3] = swap_stats[5] = swap_stats[8] = -1;
 
 	/* set arrays and strings */
 	si->cpustates = cpu_states;
@@ -762,18 +825,20 @@ get_lwp_info(struct system_info *si, struct process_select *sel,
 		 * status field.  threads with L_SYSTEM set are system
 		 * threads---these get ignored unless show_sysprocs is set.
 		 */
-		if (lp->l_stat != 0 && (show_system || ((lp->l_flag & LW_SYSTEM) == 0))) {
+		if (lp->l_stat != 0 &&
+		    (show_system || ((lp->l_flag & LW_SYSTEM) == 0))) {
 			total_lwps++;
 			process_states[(unsigned char) lp->l_stat]++;
 			if (lp->l_stat != LSZOMB &&
 			    (show_idle || (lp->l_pctcpu != 0) || 
-			    (lp->l_stat == LSRUN || lp->l_stat == LSONPROC)) &&
+			     (lp->l_stat == LSRUN || lp->l_stat == LSONPROC)) &&
 			    (!show_uid || uid_from_thread(lp) == sel->uid) &&
 			    (!show_command ||
-			     strstr(get_command(sel, proc_from_thread(lp)),
-				 show_command) != NULL)) {
-					*lrefp++ = lp;
-					active_lwps++;
+			     ((pp = proc_from_thread(lp)) != NULL &&
+			      strstr(get_command(sel, pp),
+				     show_command) != NULL))) {
+				*lrefp++ = lp;
+				active_lwps++;
 			}
 		}
 	}
@@ -1152,6 +1217,8 @@ compare_pid(pp1, pp2)
 		struct kinfo_lwp *l2 = *(struct kinfo_lwp **) pp2;
 		struct kinfo_proc2 *p1 = proc_from_thread(l1);
 		struct kinfo_proc2 *p2 = proc_from_thread(l2);
+		if (p1 == NULL || p2 == NULL)
+			return -1;
 		return p2->p_pid - p1->p_pid;
 	} else {
 		struct kinfo_proc2 *p1 = *(struct kinfo_proc2 **) pp1;
@@ -1169,6 +1236,8 @@ compare_command(pp1, pp2)
 		struct kinfo_lwp *l2 = *(struct kinfo_lwp **) pp2;
 		struct kinfo_proc2 *p1 = proc_from_thread(l1);
 		struct kinfo_proc2 *p2 = proc_from_thread(l2);
+		if (p1 == NULL || p2 == NULL)
+			return -1;
 		return strcmp(p2->p_comm, p1->p_comm);
 	} else {
 		struct kinfo_proc2 *p1 = *(struct kinfo_proc2 **) pp1;
@@ -1186,6 +1255,8 @@ compare_username(pp1, pp2)
 		struct kinfo_lwp *l2 = *(struct kinfo_lwp **) pp2;
 		struct kinfo_proc2 *p1 = proc_from_thread(l1);
 		struct kinfo_proc2 *p2 = proc_from_thread(l2);
+		if (p1 == NULL || p2 == NULL)
+			return -1;
 		return strcmp(p2->p_login, p1->p_login);
 	} else {
 		struct kinfo_proc2 *p1 = *(struct kinfo_proc2 **) pp1;
