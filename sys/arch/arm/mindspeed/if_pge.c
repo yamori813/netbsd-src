@@ -163,7 +163,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_enaddr[0] = 0xd4;
 	sc->sc_enaddr[1] = 0x94;
 	sc->sc_enaddr[2] = 0xa1;
-	sc->sc_enaddr[3] = 0x97;
+	sc->sc_enaddr[3] = 0x98;
 	sc->sc_enaddr[4] = 0x03;
 	sc->sc_enaddr[5] = 0x94 + device_unit(self);
 
