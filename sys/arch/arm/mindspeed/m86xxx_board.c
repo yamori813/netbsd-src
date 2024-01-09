@@ -375,11 +375,11 @@ m86xxx_device_register(device_t self, void *aux)
 	 */
 	if (device_is_a(self, "arma9tmr") || device_is_a(self, "a9wdt")) {
 		/*
-		 * This clock always runs at (arm_clk div 2) and only goes
+		 * This clock always runs at (arm_clk div 4) and only goes
 		 * to timers that are part of the A9 MP core subsystem.
 		 */
                 prop_dictionary_set_uint32(dict, "frequency",
-		    clock_info.clk_arm / 2);
+		    clock_info.clk_arm / 4);
 		return;
 	}
 
