@@ -254,8 +254,8 @@ bcmeth_ccb_match(device_t parent, cfdata_t cf, void *aux)
 
 #ifdef DIAGNOSTIC
 	const int port = cf->cf_loc[BCMCCBCF_PORT];
-#endif
 	KASSERT(port == BCMCCBCF_PORT_DEFAULT || port == loc->loc_port);
+#endif
 
 	return 1;
 }
@@ -352,13 +352,12 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_soft_ih = softint_establish(SOFTINT_MPSAFE | SOFTINT_NET,
 	    bcmeth_soft_intr, sc);
 
-	if (sc->sc_ih == NULL) {
-		aprint_error_dev(self, "failed to establish interrupt %d\n",
-		     loc->loc_intrs[0]);
+	if (sc->sc_soft_ih == NULL) {
+		aprint_error_dev(self, "failed to establish soft interrupt\n");
 		goto fail_3;
 	}
 
-	sc->sc_ih = intr_establish(loc->loc_intrs[0], IPL_VM, IST_LEVEL,
+	sc->sc_ih = intr_establish(loc->loc_intrs[0], IPL_NET, IST_LEVEL,
 	    bcmeth_intr, sc);
 
 	if (sc->sc_ih == NULL) {

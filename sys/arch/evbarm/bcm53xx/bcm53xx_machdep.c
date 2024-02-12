@@ -114,6 +114,12 @@ int comcnmode = CONMODE | CLOCAL;
 #include <sys/kgdb.h>
 #endif
 
+#ifdef VERBOSE_INIT_ARM
+#define VPRINTF(...)	printf(__VA_ARGS__)
+#else
+#define VPRINTF(...)	__nothing
+#endif
+
 static void
 earlyconsputc(dev_t dev, int c)
 {
@@ -148,58 +154,54 @@ static struct consdev earlycons = {
  */
 
 static const struct pmap_devmap devmap[] = {
-	{
+	DEVMAP_ENTRY(
 		KERNEL_IO_IOREG_VBASE,
 		BCM53XX_IOREG_PBASE,		/* 0x18000000 */
-		BCM53XX_IOREG_SIZE,		/* 2MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
-	{
+		BCM53XX_IOREG_SIZE		/* 2MB */
+	),
+	DEVMAP_ENTRY(
 		KERNEL_IO_ARMCORE_VBASE,
 		BCM53XX_ARMCORE_PBASE,		/* 0x19000000 */
-		BCM53XX_ARMCORE_SIZE,		/* 1MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
-	{
+		BCM53XX_ARMCORE_SIZE		/* 1MB */
+	),
+	DEVMAP_ENTRY(
 		KERNEL_IO_ROM_REGION_VBASE,
 		BCM53XX_ROM_REGION_PBASE,	/* 0xfff00000 */
-		BCM53XX_ROM_REGION_SIZE,	/* 1MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
+		BCM53XX_ROM_REGION_SIZE		/* 1MB */
+	),
 #if NPCI > 0
-	{
+	DEVMAP_ENTRY(
 		KERNEL_IO_PCIE0_OWIN_VBASE,
 		BCM53XX_PCIE0_OWIN_PBASE,	/* 0x08000000 */
-		BCM53XX_PCIE0_OWIN_SIZE,	/* 4MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
-	{
+		BCM53XX_PCIE0_OWIN_SIZE		/* 4MB */
+	),
+	DEVMAP_ENTRY(
 		KERNEL_IO_PCIE1_OWIN_VBASE,
 		BCM53XX_PCIE1_OWIN_PBASE,	/* 0x40000000 */
-		BCM53XX_PCIE1_OWIN_SIZE,	/* 4MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
-	{
+		BCM53XX_PCIE1_OWIN_SIZE		/* 4MB */
+	),
+	DEVMAP_ENTRY(
 		KERNEL_IO_PCIE2_OWIN_VBASE,
 		BCM53XX_PCIE2_OWIN_PBASE,	/* 0x48000000 */
-		BCM53XX_PCIE2_OWIN_SIZE,	/* 4MB */
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
-	},
+		BCM53XX_PCIE2_OWIN_SIZE		/* 4MB */
+	),
 #endif /* NPCI > 0 */
 	{ 0, 0, 0, 0, 0 }
 };
 
-static const struct boot_physmem bp_first256 = {
-	.bp_start = 0x80000000 / NBPG,
-	.bp_pages = 0x10000000 / NBPG,
-	.bp_freelist = VM_FREELIST_ISADMA,
-	.bp_flags = 0,
+static const struct boot_physmem bcm_physmem[] = {
+	[0] = {
+		.bp_start = 0x00000000 / NBPG,
+		.bp_pages = 0x08000000 / NBPG,
+		.bp_freelist = VM_FREELIST_ISADMA,
+		.bp_flags = 0,
+	},
+	[1] = {
+		.bp_start = 0x88000000 / NBPG,
+		.bp_pages = 0x08000000 / NBPG,
+		.bp_freelist = VM_FREELIST_ISADMA,
+		.bp_flags = 0,
+	}
 };
 
 #define BCM53xx_ROM_CPU_ENTRY	0xffff0400
@@ -285,9 +287,11 @@ initarm(void *arg)
 
 	cn_tab = &earlycons;
 
+	VPRINTF("devmap\n");
 	extern char ARM_BOOTSTRAP_LxPT[];
 	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, devmap);
 
+	VPRINTF("bootstrap\n");
 	bcm53xx_bootstrap(KERNEL_IO_IOREG_VBASE);
 
 #ifdef MULTIPROCESSOR
@@ -298,7 +302,9 @@ initarm(void *arg)
 #endif
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
 
+	VPRINTF("consinit ");
 	consinit();
+	VPRINTF("ok\n");
 
 	bcm53xx_cpu_softc_init(curcpu());
 	bcm53xx_print_clocks();
@@ -354,7 +360,9 @@ initarm(void *arg)
 	arm32_bootmem_init(KERN_VTOPHYS(KERNEL_BASE), memsize,
 	    (paddr_t)KERNEL_BASE_phys);
 
+#if 0
 	bcm53xx_dma_bootstrap(memsize);
+#endif
 
 	/*
 	 * This is going to do all the hard work of setting up the first and
@@ -376,7 +384,7 @@ initarm(void *arg)
 		/*
 		 * If we have more than 256MB
 		 */
-		arm_poolpage_vmfreelist = bp_first256.bp_freelist;
+		arm_poolpage_vmfreelist = bcm_physmem[1].bp_freelist;
 	}
 
 	/*
@@ -384,7 +392,8 @@ initarm(void *arg)
 	 * non-default VM allocations.
 	 */
 	vaddr_t sp = initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE,
-	    (bigmem_p ? &bp_first256 : NULL), (bigmem_p ? 1 : 0));
+	    ((memsize >> 20) > 128 ? bcm_physmem : NULL),
+	    ((memsize >> 20) > 128 ? 2 : 0));
 
 	/*
 	 * initarm_common flushes cache if required before AP start
@@ -432,4 +441,28 @@ bcm53xx_system_reset(void)
 {
 	bus_space_write_4(bcm53xx_ioreg_bst, bcm53xx_ioreg_bsh,
 	    MISC_WATCHDOG, 1);
+}
+
+void __noasan
+bcm53xx_platform_early_putchar(char c)
+{
+#ifdef CONSADDR
+
+	volatile uint8_t *uartaddr;
+	if(cpu_earlydevice_va_p()) {
+		uartaddr = (volatile uint8_t *)KERNEL_IO_VBASE;
+
+		while ((uartaddr[5] & (1 << 6)) == 0)
+			;
+
+		uartaddr[0] = c;
+	} else {
+		uartaddr = (volatile uint8_t *)CONSADDR;
+
+		while ((uartaddr[5] & (1 << 6)) == 0)
+			;
+
+		uartaddr[0] = c;
+	}
+#endif
 }

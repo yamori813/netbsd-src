@@ -138,8 +138,8 @@ bcmpax_ccb_match(device_t parent, cfdata_t cf, void *aux)
 
 #ifdef DIAGNOSTIC
 	const int port = cf->cf_loc[BCMCCBCF_PORT];
-#endif
 	KASSERT(port == BCMCCBCF_PORT_DEFAULT || port == loc->loc_port);
+#endif
 
 	return 1;
 }

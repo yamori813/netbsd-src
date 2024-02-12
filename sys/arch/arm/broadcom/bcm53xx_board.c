@@ -71,6 +71,17 @@ static struct cpu_softc cpu_softc;
 
 struct arm32_dma_range bcm53xx_dma_ranges[] = {
 #ifdef BCM5301X
+#if 1
+	[0] = {
+		.dr_sysbase = 0x00000000,
+		.dr_busbase = 0x00000000,
+		.dr_len = 0x08000000,
+	},
+	[1] = {
+		.dr_sysbase = 0x88000000,
+		.dr_busbase = 0x88000000,
+	}
+#else
 	[0] = {
 		.dr_sysbase = 0x80000000,
 		.dr_busbase = 0x80000000,
@@ -79,6 +90,7 @@ struct arm32_dma_range bcm53xx_dma_ranges[] = {
 		.dr_sysbase = 0x90000000,
 		.dr_busbase = 0x90000000,
 	},
+#endif
 #elif defined(BCM563XX)
 	[0] = {
 		.dr_sysbase = 0x60000000,
@@ -101,6 +113,18 @@ struct arm32_bus_dma_tag bcm53xx_dma_tag = {
 
 struct arm32_dma_range bcm53xx_coherent_dma_ranges[] = {
 #ifdef BCM5301X
+#if 1
+	[0] = {
+		.dr_sysbase = 0x00000000,
+		.dr_busbase = 0x00000000,
+		.dr_len = 0x08000000,
+		.dr_flags = _BUS_DMAMAP_COHERENT,
+	},
+	[1] = {
+		.dr_sysbase = 0x88000000,
+		.dr_busbase = 0x88000000,
+	},
+#else
 	[0] = {
 		.dr_sysbase = 0x80000000,
 		.dr_busbase = 0x80000000,
@@ -110,6 +134,7 @@ struct arm32_dma_range bcm53xx_coherent_dma_ranges[] = {
 		.dr_sysbase = 0x90000000,
 		.dr_busbase = 0x90000000,
 	},
+#endif
 #elif defined(BCM563XX)
 	[0] = {
 		.dr_sysbase = 0x60000000,
@@ -562,6 +587,7 @@ bcm53xx_bootstrap(vaddr_t iobase)
 #endif
 }
 
+#if 0
 void
 bcm53xx_dma_bootstrap(psize_t memsize)
 {
@@ -585,6 +611,7 @@ bcm53xx_dma_bootstrap(psize_t memsize)
 	KASSERT(bcm53xx_bounce_dma_tag._ranges[0].dr_flags == _BUS_DMAMAP_COHERENT);
 #endif
 }
+#endif
 
 #ifdef MULTIPROCESSOR
 void
