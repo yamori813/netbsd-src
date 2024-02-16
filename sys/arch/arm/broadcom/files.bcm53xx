@@ -63,6 +63,12 @@ attach	ohci at bcmusb with ohci_bcmusb
 attach	ehci at bcmusb with ehci_bcmusb
 file	arch/arm/broadcom/bcm53xx_usb.c		bcmusb_ccb
 
+# USB3 Host Controller (XHCI)
+device	bcmxusb { }
+attach	bcmxusb at bcmccb with bcmxusb_ccb
+attach	xhci at bcmxusb with xhci_bcmxusb
+file	arch/arm/broadcom/bcm53xx_usb3.c	bcmxusb_ccb
+
 # External Mass Media Controller (SDHC)
 attach	sdhc at bcmccb with sdhc_ccb
 file	arch/arm/broadcom/bcm53xx_sdhc.c	sdhc_ccb

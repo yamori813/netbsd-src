@@ -133,6 +133,7 @@ static const struct bcm_locators bcmccb_locators[] = {
 	    IRQ_NAND_RO_CTLR_READY, IRQ_NAND_RB_B,
 	    IRQ_NAND_ECC_MIPS_UNCORR, IRQ_NAND_ECC_MIPS_CORR } },
 	{ "bcmusb", EHCI_BASE, 0x2000, BCMCCBCF_PORT_DEFAULT, 1, { IRQ_USB2 } },
+	{ "bcmxusb", XHCI_BASE, 0x1000, BCMCCBCF_PORT_DEFAULT, 1, { IRQ_USB3 } },
 };
 
 static int

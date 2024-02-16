@@ -149,7 +149,7 @@ makeoptions	COPY_SYMTAB=1
 
 ## USB Debugging options
 options USB_DEBUG
-options EHCI_DEBUG
+#options EHCI_DEBUG
 options OHCI_DEBUG
 options UHUB_DEBUG
 
@@ -251,6 +251,10 @@ uhub*		at uhub? port ?
 umass*		at uhub? port ? configuration ? interface ?
 scsibus*	at scsi?
 sd*		at scsibus? target ? lun ?
+
+bcmxusb*	at bcmccb0
+xhci*		at bcmxusb0
+usb*		at xhci?
 
 # USB Ethernet adapters
 axe*		at uhub? port ? configuration ? interface ?

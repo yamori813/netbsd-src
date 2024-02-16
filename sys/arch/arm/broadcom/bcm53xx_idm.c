@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ARM Interconnect Device Management (PL368) driver */
+
 #include "opt_broadcom.h"
 #include "locators.h"
 
@@ -162,7 +164,8 @@ static const struct idm_info bcm53xx_idm_info[] = {
 	{ IDM_AMAC1_BASE, "bcmeth", 1, bcmeth_unreset },
 	{ IDM_AMAC2_BASE, "bcmeth", 2, bcmeth_unreset },
 	{ IDM_AMAC3_BASE, "bcmeth", 3, bcmeth_unreset },
-	{ IDM_USB3_BASE, "xhci", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
+//	{ IDM_USB3_BASE, "xhci", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
+	{ IDM_USB3_BASE, "bcmxusb", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
 	{ IDM_SDIO_BASE, "sdhc", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ IDM_USB2_BASE, "bcmusb", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 };
