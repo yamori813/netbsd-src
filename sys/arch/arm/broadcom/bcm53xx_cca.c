@@ -177,6 +177,11 @@ bcmcca_mainbus_attach(device_t parent, device_t self, void *aux)
 	aprint_normal_dev(sc->sc_dev, "interrupting at irq %d\n", IRQ_CCA);
 
 	bcmcca_uart_attach(sc);
+
+	/* WZR-1750DHP2 USB VCC ON */
+	bcmcca_write_4(sc, GPIO_OUT,
+	    (bcmcca_read_4(sc, GPIO_OUT) & ~(1 << 10)) | (1 << 9));
+
 #if NGPIO > 0
 	bcmcca_gpio_attach(sc);
 #endif

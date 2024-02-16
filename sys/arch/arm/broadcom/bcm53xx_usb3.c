@@ -57,8 +57,6 @@ struct bcmxusb_softc {
 	bus_dma_tag_t usbsc_dmat;
 	bus_space_tag_t usbsc_bst;
 	bus_space_handle_t usbsc_xhci_bsh;
-	bus_space_handle_t usbsc_dmu_bsh;
-	bus_space_handle_t usbsc_mii_bsh;
 
 	device_t usbsc_xhci_dev;
 	void *usbsc_xhci_sc;
@@ -100,7 +98,6 @@ xhci_bcmxusb_match(device_t parent, cfdata_t cf, void *aux)
 static void
 xhci_bcmxusb_attach(device_t parent, device_t self, void *aux)
 {
-//	struct bcmxusb_softc * const usbsc = device_private(parent);
 	struct xhci_softc * const sc = device_private(self);
 	struct bcmxusb_attach_args * const usbaa = aux;
 
@@ -162,50 +159,19 @@ bcmxusb_ccb_match(device_t parent, cfdata_t cf, void *aux)
 	return 1;
 }
 
-inline void
-bcmxusb_mii_write_4(struct bcmxusb_softc *sc, uint32_t v)
-{
-	while(bus_space_read_4(sc->usbsc_bst, sc->usbsc_mii_bsh, 0) & __BIT(8))
-		delay(1);
-	bus_space_write_4(sc->usbsc_bst, sc->usbsc_mii_bsh, 4, 0x587e8000);
-}
-
 void
 bcmxusb_ccb_attach(device_t parent, device_t self, void *aux)
 {
 	struct bcmxusb_softc * const usbsc = device_private(self);
 	const struct bcmccb_attach_args * const ccbaa = aux;
 	const struct bcm_locators * const loc = &ccbaa->ccbaa_loc;
-	uint32_t straps_ctrl;
 
 	usbsc->usbsc_bst = ccbaa->ccbaa_ccb_bst;
 	usbsc->usbsc_dmat = ccbaa->ccbaa_dmat;
 
 	bus_space_subregion(usbsc->usbsc_bst, ccbaa->ccbaa_ccb_bsh,
 	    loc->loc_offset, 0x1000, &usbsc->usbsc_xhci_bsh);
-	bus_space_subregion(usbsc->usbsc_bst, ccbaa->ccbaa_ccb_bsh,
-	    DMU_BASE, 0x1000, &usbsc->usbsc_dmu_bsh);
-	bus_space_subregion(usbsc->usbsc_bst, ccbaa->ccbaa_ccb_bsh,
-	    MII_BASE, 0x1000, &usbsc->usbsc_mii_bsh);
 
-	/* Power On GPIO 10 LOW */
-	bus_space_write_4(usbsc->usbsc_bst, ccbaa->ccbaa_ccb_bsh, 0x64,
-	bus_space_read_4(usbsc->usbsc_bst, ccbaa->ccbaa_ccb_bsh, 0x64) & ~(1 << 10));
-
-	/* Check strapping of PCIE/USB3 SEL */
-	straps_ctrl = bus_space_read_4(usbsc->usbsc_bst, usbsc->usbsc_dmu_bsh, 0x2a0);
-	if((straps_ctrl & 0x10) == 0)
-		return;
-	bus_space_write_4(usbsc->usbsc_bst, usbsc->usbsc_mii_bsh, 0x800, 0x0000009a);
-
-	bcmxusb_mii_write_4(usbsc, 0x587e8000);
-	bcmxusb_mii_write_4(usbsc, 0x582a6400);
-	bcmxusb_mii_write_4(usbsc, 0x587e80e0);
-	bcmxusb_mii_write_4(usbsc, 0x580a009c);
-	bcmxusb_mii_write_4(usbsc, 0x587e8040);
-	bcmxusb_mii_write_4(usbsc, 0x580a21d3);
-	bcmxusb_mii_write_4(usbsc, 0x58061003);
-	
 	aprint_naive("\n");
 	aprint_normal("\n");
 
