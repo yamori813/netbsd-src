@@ -38,12 +38,7 @@
 /*
  * Macroses for READ / WRITE over parent MDIO / MII
  */
-#if 1
-#define ROBOSW_WRITEREG(r, v) 						\
-	bcm53xx_srab_write_4(r, v)
-#define ROBOSW_READREG(r)						\
-	bcm53xx_srab_read_4(r)
-#else
+#ifndef SRAB_BASE
 #define ROBOSW_WRITEREG(r, v)						\
 	if (MDIO_WRITEREG(sc->sc_parent, ROBOSW_PSEUDOPHY_ADDR, r, v)) {\
 		device_printf(sc->sc_dev, "WRITEREG failed: %x/%x\n", r,\
