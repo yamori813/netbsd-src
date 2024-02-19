@@ -38,7 +38,7 @@
 /*
  * Macroses for READ / WRITE over parent MDIO / MII
  */
-#ifndef SRAB_BASE
+#ifndef SRAB_BASE	/* for NetBSD */
 #define ROBOSW_WRITEREG(r, v)						\
 	if (MDIO_WRITEREG(sc->sc_parent, ROBOSW_PSEUDOPHY_ADDR, r, v)) {\
 		device_printf(sc->sc_dev, "WRITEREG failed: %x/%x\n", r,\
