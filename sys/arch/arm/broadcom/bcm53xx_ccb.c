@@ -184,7 +184,7 @@ bcmccb_mainbus_attach(device_t parent, device_t self, void *aux)
 
 #ifdef BCM5301X
 		if (strcmp(loc->loc_name, "bcmsw") == 0) {
-			bcm53xx_srab_init();	// need this for ethernet.
+			bcm53xx_srab_init(sc->sc_dev);	// need this for ethernet.
 		}
 #endif
 

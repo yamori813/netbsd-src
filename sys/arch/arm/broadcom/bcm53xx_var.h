@@ -110,7 +110,7 @@ psize_t	bcm53xx_memprobe(void);
 void	bcm53xx_dma_bootstrap(psize_t);
 void	bcm53xx_print_clocks(void);
 void	bcm53xx_rng_start(bus_space_tag_t, bus_space_handle_t);
-void	bcm53xx_srab_init(void);
+void	bcm53xx_srab_init(device_t);
 uint32_t	bcm53xx_srab_read_4(u_int);
 uint64_t	bcm53xx_srab_read_8(u_int);
 void	bcm53xx_srab_write_4(u_int, uint32_t);

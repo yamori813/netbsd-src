@@ -668,13 +668,20 @@ bcm53xx_device_register(device_t self, void *aux)
 	}
 }
 
+/*
+ * BCM4707, 4708 and 4709 use ChipcommonB Switch Register Access Bridge Registers (SRAB)
+ * to access the switch registers
+ */
+
 #ifdef SRAB_BASE
 static kmutex_t srab_lock __cacheline_aligned;
 
 void
-bcm53xx_srab_init(void)
+bcm53xx_srab_init(device_t dev)
 {
 	mutex_init(&srab_lock, MUTEX_DEFAULT, IPL_VM);
+
+	device_printf(dev, "Robo Switch init\n");
 
 	bcm53xx_srab_write_4(0x0079, 0x90);	// reset switch
 	for (u_int port = 0; port < 8; port++) {
