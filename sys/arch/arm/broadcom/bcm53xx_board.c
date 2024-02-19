@@ -62,6 +62,8 @@ __KERNEL_RCSID(1, "$NetBSD: bcm53xx_board.c,v 1.25.30.1 2024/02/16 12:07:07 skrl
 #include <arm/broadcom/bcm53xx_reg.h>
 #include <arm/broadcom/bcm53xx_var.h>
 
+#include <arm/broadcom/robosw_reg.h>
+
 bus_space_tag_t bcm53xx_ioreg_bst = &bcmgen_bs_tag;
 bus_space_handle_t bcm53xx_ioreg_bsh;
 bus_space_tag_t bcm53xx_armcore_bst = &bcmgen_bs_tag;
@@ -681,7 +683,9 @@ bcm53xx_srab_init(device_t dev)
 {
 	mutex_init(&srab_lock, MUTEX_DEFAULT, IPL_VM);
 
-	device_printf(dev, "Robo Switch init\n");
+	int switchid;
+	switchid = bcm53xx_srab_read_4(SWITCH_DEVICEID & 0xffff);
+	device_printf(dev, "Robo Switch init %x\n", switchid);
 
 	bcm53xx_srab_write_4(0x0079, 0x90);	// reset switch
 	for (u_int port = 0; port < 8; port++) {
