@@ -256,9 +256,9 @@
 
 #ifdef SRAB_PRIVATE
 #define SRAB_CMDSTAT		0x002c
-#define  SRA_PAGE		__BITS(16,8)
-#define  SRA_OFFSET		__BITS(24,8)
-#define  SRA_PAGEOFFSET		__BITS(16,16)
+#define  SRA_PAGE		__BITS(16,23)
+#define  SRA_OFFSET		__BITS(24,31)
+#define  SRA_PAGEOFFSET		__BITS(16,31)
 #define  SRA_RST		__BIT(2)
 #define  SRA_WRITE		__BIT(1)
 #define  SRA_GORDYN		__BIT(0)
