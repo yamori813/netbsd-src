@@ -56,6 +56,10 @@ device	bcmeth { } : ether, ifnet, arp
 attach	bcmeth at bcmccb with bcmeth_ccb
 file	arch/arm/broadcom/bcm53xx_eth.c		bcmeth_ccb
 
+device	amac { } : ether, ifnet, arp
+attach	amac at bcmccb with amac_ccb
+file	arch/arm/broadcom/if_amac.c		amac_ccb
+
 # USB2 Host Controller (EHCI)
 device	bcmusb { }
 attach	bcmusb at bcmccb with bcmusb_ccb

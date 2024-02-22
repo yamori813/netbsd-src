@@ -160,10 +160,14 @@ static const struct idm_info bcm53xx_idm_info[] = {
 	{ IDM_PCIE_M0_BASE, "bcmpax", 0, bcmccb_idm_unreset },
 	{ IDM_PCIE_M1_BASE, "bcmpax", 1, bcmccb_idm_unreset },
 	{ IDM_PCIE_M2_BASE, "bcmpax", 2, bcmpax2_idm_unreset },
+#ifdef USE_AMAC
+	{ IDM_AMAC0_BASE, "amac", 0, bcmeth_unreset },
+#else
 	{ IDM_AMAC0_BASE, "bcmeth", 0, bcmeth_unreset },
 	{ IDM_AMAC1_BASE, "bcmeth", 1, bcmeth_unreset },
 	{ IDM_AMAC2_BASE, "bcmeth", 2, bcmeth_unreset },
 	{ IDM_AMAC3_BASE, "bcmeth", 3, bcmeth_unreset },
+#endif
 //	{ IDM_USB3_BASE, "xhci", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
 	{ IDM_USB3_BASE, "bcmxusb", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
 	{ IDM_SDIO_BASE, "sdhc", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },

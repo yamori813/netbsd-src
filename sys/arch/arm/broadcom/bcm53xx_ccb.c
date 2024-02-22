@@ -113,12 +113,16 @@ static const struct bcm_locators bcmccb_locators[] = {
 	{ "bcmcru", CRU_BASE, 0x1000, BCMCCBCF_PORT_DEFAULT },
 	{ "bcmdmu", DMU_BASE, 0x1000, BCMCCBCF_PORT_DEFAULT },
 	{ "bcmddr", DDR_BASE, 0x1000, BCMCCBCF_PORT_DEFAULT, 1, { IRQ_DDR_CONTROLLER } },
+#ifdef USE_AMAC
+	{ "amac", GMAC0_BASE, 0x1000, 0, 1, { IRQ_GMAC0 }, },
+#else
 	{ "bcmeth", GMAC0_BASE, 0x1000, 0, 1, { IRQ_GMAC0 }, },
 	{ "bcmeth", GMAC1_BASE, 0x1000, 1, 1, { IRQ_GMAC1 }, },
 #ifdef GMAC2_BASE
 	{ "bcmeth", GMAC2_BASE, 0x1000, 2, 1, { IRQ_GMAC2 }, },
 #endif
 	// { "bcmeth", GMAC3_BASE, 0x1000, 3, 1, { IRQ_GMAC3 }, },
+#endif
 	{ "bcmpax", PCIE0_BASE, 0x1000, 0, 6, { IRQ_PCIE_INT0 }, },
 	{ "bcmpax", PCIE1_BASE, 0x1000, 1, 6, { IRQ_PCIE_INT1 }, },
 #ifdef PCIE2_BASE
