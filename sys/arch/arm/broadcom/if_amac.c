@@ -112,6 +112,7 @@ struct amac_softc {
 	bool			sc_attached;
 	struct amac_ring_data	*sc_rdp;
 	struct mii_data		sc_mii;
+	volatile u_int		sc_txhead;
 	volatile u_int		sc_txnext;
 	volatile u_int		sc_rxhead;
 	void			*sc_ih;
@@ -448,6 +449,7 @@ amac_start(struct ifnet *ifp)
 	amac_write_4(sc, GMAC_XMTPTR, sc->sc_txnext * 16);
 
 	if (txstart >= 0) {
+		sc->sc_txhead = txstart;
 		ifp->if_timer = 300;	/* not immediate interrupt */
 	}
 
@@ -624,6 +626,7 @@ amac_init(struct ifnet *ifp)
 	intmask = DESCPROTOERR | DATAERR | DESCERR;
 
 	sc->sc_txnext = 0;
+	sc->sc_txhead = 0;
 
 	/* Init circular RX list. */
 	for (i = 0; i < AMAC_RX_RING_CNT; i++) {
@@ -841,53 +844,32 @@ amac_txintr(void *arg)
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
 	int i, remain;
 	bool handled = false;
-	uint32_t cur, act;
+	uint32_t cur;
 
 	uint32_t xmtsts0 = amac_read_4(sc, GMAC_XMTSTATUS0);
-	uint32_t xmtsts1 = amac_read_4(sc, GMAC_XMTSTATUS1);
-	i = sc->sc_txnext;
-	cur = __SHIFTOUT(xmtsts0, RCV_CURRDSCR);
-	act = __SHIFTOUT(xmtsts1, RCV_ACTIVEDSCR);
+	cur = __SHIFTOUT(xmtsts0, XMT_CURRDSCR);
 	remain = 0;
-//	i = TXDESC_PREV(sc->sc_txnext);
-printf("MORI %d-%d-%d,", i, cur, act);
-	i = cur;
-	i = act;
-	bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
-	    0, rdp->tx_dm[i]->dm_mapsize,
-	    BUS_DMASYNC_POSTWRITE);
-	bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
-
-	m_freem(rdp->tx_mb[i]);
-	rdp->tx_mb[i] = NULL;
-
-	if_statinc(ifp, if_opackets);
-
-	handled = true;
-
-#if 0
-
-	bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-	    0, sizeof(struct tTXdesc) * AMAC_TX_RING_CNT, BUS_DMASYNC_PREREAD);
-	for (i = 0; i < AMAC_TX_RING_CNT; i++) {
-		if (!(sc->sc_txdesc_ring[i].tx_ctl & GEMTX_USED_MASK)) {
+	for(i = sc->sc_txhead;i != cur; i = TXDESC_NEXT(i)) {
+		if (!(sc->sc_txdesc_ring[i].txdb_flags & TXDB_FLAG_SF)) {
 			++remain;
 			continue;
 		}
 
-		if ((sc->sc_txdesc_ring[i].tx_ctl & GEMTX_BUFRET) == 0)
-			continue;
+		bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
+		    0, rdp->tx_dm[i]->dm_mapsize,
+		    BUS_DMASYNC_POSTWRITE);
+		bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
 
-		sc->sc_txbusy = false;
+		if (rdp->tx_mb[i] != NULL) {
+			m_freem(rdp->tx_mb[i]);
+			rdp->tx_mb[i] = NULL;
 
-		sc->sc_txdesc_ring[i].tx_ctl = GEMTX_USED_MASK;
-		bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
-		    sizeof(struct tTXdesc) * i, sizeof(struct tTXdesc),
-		    BUS_DMASYNC_PREWRITE);
+			if_statinc(ifp, if_opackets);
 
+			handled = true;
+		}
 	}
 
-#endif
 	if (remain == 0)
 		ifp->if_timer = 0;
 	if (handled)
