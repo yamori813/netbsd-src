@@ -402,7 +402,7 @@ amac_start(struct ifnet *ifp)
 		bus_dmamap_sync(sc->sc_bdt, dm, 0, dm->dm_mapsize,
 		    BUS_DMASYNC_PREWRITE);
 
-//		if (txstart == -1)
+		if (txstart == -1)
 			txstart = sc->sc_txnext;
 		for (seg = 0; seg < dm->dm_nsegs; seg++) {
 			sc->sc_txdesc_ring[sc->sc_txnext].txdb_addrlo =
@@ -443,7 +443,6 @@ amac_start(struct ifnet *ifp)
 			    sizeof(struct tTXdesc), BUS_DMASYNC_PREWRITE);
 			sc->sc_txnext = TXDESC_NEXT(sc->sc_txnext);
 		}
-//		amac_write_4(sc, GEM_SCH_BLOCK + SCH_PACKET_QUEUED, len);
 		bpf_mtap(ifp, m, BPF_D_OUT);
 	}
 	amac_write_4(sc, GMAC_XMTPTR, sc->sc_txnext * 16);
@@ -726,25 +725,6 @@ amac_stop(struct ifnet *ifp, int disable)
 
 	amac_write_4(sc, UNIMAC_COMMAND_CONFIG,
 	     amac_read_4(sc, UNIMAC_COMMAND_CONFIG) & ~SW_RESET);
-#if 0
-//	callout_stop(&sc->sc_tick_ch);
-	mii_down(&sc->sc_mii);
-
-	amac_write_4(sc, GEM_IP + GEM_IRQ_ENABLE, 0);
-
-	reg = amac_read_4(sc, GEM_IP + GEM_NET_CONTROL);
-	reg &= ~(GEM_TX_EN | GEM_RX_EN);
-	amac_write_4(sc, GEM_IP + GEM_NET_CONTROL, reg);
-
-	/* Release any queued transmit buffers. */
-	for (i = 0; i < AMAC_TX_RING_CNT; i++) {
-		if (rdp->tx_mb[i] != NULL) {
-			bus_dmamap_unload(sc->sc_bdt, rdp->tx_dm[i]);
-			m_freem(rdp->tx_mb[i]);
-			rdp->tx_mb[i] = NULL;
-		}
-	}
-#endif
 
 	ifp->if_flags &= ~IFF_RUNNING;
 	ifp->if_timer = 0;
