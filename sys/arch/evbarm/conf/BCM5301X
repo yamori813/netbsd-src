@@ -202,7 +202,9 @@ makphy*		at mii?
 ukphy*		at mii?
 
 bcmmdio0	at bcmccb0
-bcmeth*		at bcmccb? port ?
+#bcmeth*		at bcmccb? port ?
+options		USE_AMAC
+amac*		at bcmccb? port ?
 
 # SDHC controllers
 sdhc0		at bcmccb0
