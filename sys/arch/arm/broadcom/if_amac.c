@@ -800,27 +800,14 @@ static int
 amac_rxintr(void *arg)
 {
 	struct amac_softc * const sc = arg;
-	u_int i, cur, act;
+	uint32_t i, cur;
 	int rxsts, length;
 	struct amac_ring_data * const rdp = sc->sc_rdp;
 	struct mbuf *m;
 	struct ifnet *ifp = &sc->sc_ec.ec_if;
 
 	uint32_t rcvsts0 = amac_read_4(sc, GMAC_RCVSTATUS0);
-	uint32_t rcvsts1 = amac_read_4(sc, GMAC_RCVSTATUS1);
-//	i = sc->sc_rxhead;
 	cur = __SHIFTOUT(rcvsts0, RCV_CURRDSCR);
-	act = __SHIFTOUT(rcvsts1, RCV_ACTIVEDSCR);
-	i = RXDESC_PREV(act);
-	i = RXDESC_PREV(cur);
-	i = sc->sc_rxhead;
-/*
-	if (sc->sc_rxhead != RXDESC_PREV(cur)) {
-		aprint_error_dev(sc->sc_dev, "RX Error %d %d %d\n", sc->sc_rxhead,
-		    cur, act);
-	}
-*/
-//printf("MORIRXSTS %d, %d, ", i, cur);
 	for (i = sc->sc_rxhead; i != cur; i = RXDESC_NEXT(i)) {
 		bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 		    sizeof(struct tRXdesc) * i, sizeof(struct tRXdesc),
@@ -831,14 +818,7 @@ amac_rxintr(void *arg)
 		    BUS_DMASYNC_POSTREAD);
 		memcpy(&rxsts, m->m_data, 4);
 		length = __SHIFTOUT(rxsts, RXSTS_FRAMELEN);
-/*
-	int desc_count = __SHIFTOUT(rxsts, RXSTS_DESC_COUNT) + 1;
-printf("%d,", desc_count);
-printf("%d-%d: %02x %02x %02x, ", length, sc->sc_rcvoffset,
-m->m_data[sc->sc_rcvoffset], m->m_data[sc->sc_rcvoffset+1], m->m_data[sc->sc_rcvoffset+2]);
-*/
 		m->m_pkthdr.len = m->m_len = length;
-//		m_adj(m, sc->sc_rcvoffset;
 		m->m_data += sc->sc_rcvoffset;
 		m_set_rcvif(m, ifp);
 		if_percpuq_enqueue(ifp->if_percpuq, m);
@@ -865,12 +845,12 @@ amac_txintr(void *arg)
 
 	uint32_t xmtsts0 = amac_read_4(sc, GMAC_XMTSTATUS0);
 	uint32_t xmtsts1 = amac_read_4(sc, GMAC_XMTSTATUS1);
-//	i = sc->sc_rxhead;
+	i = sc->sc_txnext;
 	cur = __SHIFTOUT(xmtsts0, RCV_CURRDSCR);
 	act = __SHIFTOUT(xmtsts1, RCV_ACTIVEDSCR);
 	remain = 0;
 //	i = TXDESC_PREV(sc->sc_txnext);
-//printf("MORI %d-%d-%d,", i, cur, act);
+printf("MORI %d-%d-%d,", i, cur, act);
 	i = cur;
 	i = act;
 	bus_dmamap_sync(sc->sc_bdt, rdp->tx_dm[i],
