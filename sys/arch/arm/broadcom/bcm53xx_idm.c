@@ -157,6 +157,7 @@ static const struct idm_info bcm53xx_idm_info[] = {
 	{ 0, "bcmi2c", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ 0, "bcmmdio", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ 0, "bcmrng", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
+	{ 0, "bcmdmu", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ IDM_PCIE_M0_BASE, "bcmpax", 0, bcmccb_idm_unreset },
 	{ IDM_PCIE_M1_BASE, "bcmpax", 1, bcmccb_idm_unreset },
 	{ IDM_PCIE_M2_BASE, "bcmpax", 2, bcmpax2_idm_unreset },

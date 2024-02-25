@@ -403,6 +403,8 @@
 #define DMU_CRU_RESET_IPROC	__BIT(1)
 #define DMU_CRU_RESET_CMICD	__BIT(0)
 
+#define DMU_PVTMON_CONTROL0	0x2c0
+
 #endif /* DMU_PRIVATE */
 
 #ifdef DDR_PRIVATE

@@ -48,6 +48,10 @@ device	bcmrng
 attach	bcmrng at bcmccb with bcmrng_ccb
 file	arch/arm/broadcom/bcm53xx_rng.c		bcmrng_ccb	needs-flag
 
+device	bcmdmu
+attach	bcmdmu at bcmccb with bcmdmu_ccb
+file	arch/arm/broadcom/bcm53xx_dmu.c		bcmdmu_ccb
+
 device	bcmmdio : mii
 attach	bcmmdio at bcmccb with bcmmdio_ccb
 file	arch/arm/broadcom/bcm53xx_mdio.c	bcmmdio_ccb
