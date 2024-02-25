@@ -37,3 +37,4 @@ makeoptions	LOADADDRESS="0x00008000"
 # Prevent the addition of a command line -DKERNEL_BASE_VOFFSET= as it
 # is done at runtime.
 makeoptions	KERNEL_VOFFSET_RUNTIME=1
+options 	MD_CPU_HATCH=bcm53xx_cpu_hatch
