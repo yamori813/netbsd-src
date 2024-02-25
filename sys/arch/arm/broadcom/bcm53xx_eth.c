@@ -35,7 +35,7 @@
 
 #include <sys/cdefs.h>
 
-__KERNEL_RCSID(1, "$NetBSD: bcm53xx_eth.c,v 1.42 2022/09/17 19:41:18 thorpej Exp $");
+__KERNEL_RCSID(1, "$NetBSD: bcm53xx_eth.c,v 1.42.4.2 2024/02/18 16:25:25 martin Exp $");
 
 #include <sys/param.h>
 #include <sys/atomic.h>
@@ -252,10 +252,8 @@ bcmeth_ccb_match(device_t parent, cfdata_t cf, void *aux)
 	if (strcmp(cf->cf_name, loc->loc_name))
 		return 0;
 
-#ifdef DIAGNOSTIC
-	const int port = cf->cf_loc[BCMCCBCF_PORT];
+	const int port __diagused = cf->cf_loc[BCMCCBCF_PORT];
 	KASSERT(port == BCMCCBCF_PORT_DEFAULT || port == loc->loc_port);
-#endif
 
 	return 1;
 }
@@ -346,7 +344,7 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 	    (PRI_USER + MAXPRI_USER) / 2, IPL_NET, WQ_MPSAFE|WQ_PERCPU);
 	if (error) {
 		aprint_error(": failed to create workqueue: %d\n", error);
-		goto fail_2;
+		goto fail_1;
 	}
 
 	sc->sc_soft_ih = softint_establish(SOFTINT_MPSAFE | SOFTINT_NET,
@@ -354,7 +352,11 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 
 	if (sc->sc_soft_ih == NULL) {
 		aprint_error_dev(self, "failed to establish soft interrupt\n");
+<<<<<<< HEAD
 		goto fail_3;
+=======
+		goto fail_2;
+>>>>>>> upstream/netbsd-10
 	}
 
 	sc->sc_ih = intr_establish(loc->loc_intrs[0], IPL_NET, IST_LEVEL,
@@ -363,7 +365,7 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 	if (sc->sc_ih == NULL) {
 		aprint_error_dev(self, "failed to establish interrupt %d\n",
 		     loc->loc_intrs[0]);
-		goto fail_4;
+		goto fail_3;
 	} else {
 		aprint_normal_dev(self, "interrupting on irq %d\n",
 		     loc->loc_intrs[0]);
@@ -427,8 +429,6 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 
 	return;
 
-fail_4:
-	intr_disestablish(sc->sc_ih);
 fail_3:
 	softint_disestablish(sc->sc_soft_ih);
 fail_2:
