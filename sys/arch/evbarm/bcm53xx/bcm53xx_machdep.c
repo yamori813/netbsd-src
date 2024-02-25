@@ -234,7 +234,8 @@ bcm53xx_mpstart(void)
 	bus_space_tag_t bcm53xx_rom_bst = &bcmgen_bs_tag;
 	bus_space_handle_t bcm53xx_rom_entry_bsh;
 
-	int error = bus_space_map(bcm53xx_rom_bst, BCM53xx_ROM_CPU_ENTRY,
+//	int error = bus_space_map(bcm53xx_rom_bst, BCM53xx_ROM_CPU_ENTRY,
+	bus_space_map(bcm53xx_rom_bst, BCM53xx_ROM_CPU_ENTRY,
 	    4, 0, &bcm53xx_rom_entry_bsh);
 
 	/*
@@ -242,7 +243,7 @@ bcm53xx_mpstart(void)
 	 * SKU ROM but setting the magic LUT address to our own mp_start
 	 * routine.
 	 */
-	bus_space_write_4(bcm53xx_rom_bst, bcm53xx_rom_entry_bsh, mpstart);
+	bus_space_write_4(bcm53xx_rom_bst, bcm53xx_rom_entry_bsh, 0, mpstart);
 
 	dsb(sy);
 	sev();
@@ -256,7 +257,7 @@ bcm53xx_mpstart(void)
                 }
 
                 if (i == 0) {
-                        ret++;
+//                        ret++;
                         aprint_error("cpu%d: WARNING: AP failed to start\n",
                             cpuindex);
                 }
@@ -327,9 +328,11 @@ initarm(void *arg)
 #if defined(VERBOSE_INIT_ARM) || 1
 	printf("initarm: Configuring system");
 #ifdef MULTIPROCESSOR
+/*
 	printf(" (%u cpu%s, hatched %#x)",
 	    arm_cpu_max + 1, arm_cpu_max + 1 ? "s" : "",
 	    arm_cpu_hatched);
+*/
 #endif
 	printf(", CLIDR=%010o CTR=%#x PMUSERSR=%#x",
 	    armreg_clidr_read(), armreg_ctr_read(), armreg_pmuserenr_read());
