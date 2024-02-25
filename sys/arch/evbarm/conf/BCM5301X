@@ -214,6 +214,9 @@ ld*		at sdmmc?
 # Random Number Generator
 bcmrng0		at bcmccb0
 
+# Device Management Unit
+bcmdmu0		at bcmccb0
+
 # NAND controller
 #bcmnand0	at bcmccb0
 
