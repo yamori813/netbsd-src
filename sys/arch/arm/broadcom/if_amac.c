@@ -822,16 +822,14 @@ amac_txintr(void *arg)
 	struct amac_softc * const sc = arg;
 	struct amac_ring_data * const rdp = sc->sc_rdp;
 	struct ifnet * const ifp = &sc->sc_ec.ec_if;
-	int i, remain;
+	int i;
 	bool handled = false;
 	uint32_t cur;
 
 	uint32_t xmtsts0 = amac_read_4(sc, GMAC_XMTSTATUS0);
 	cur = __SHIFTOUT(xmtsts0, XMT_CURRDSCR);
-	remain = 0;
 	for(i = sc->sc_txhead;i != cur; i = TXDESC_NEXT(i)) {
 		if (!(sc->sc_txdesc_ring[i].txdb_flags & TXDB_FLAG_SF)) {
-			++remain;
 			continue;
 		}
 
@@ -850,8 +848,8 @@ amac_txintr(void *arg)
 		}
 	}
 
-	if (remain == 0)
-		ifp->if_timer = 0;
+	ifp->if_timer = 0;
+
 	if (handled)
 		if_schedule_deferred_start(ifp);
 
