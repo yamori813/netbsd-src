@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2024 Hiroki Mori
  * Copyright (c) 2012 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
