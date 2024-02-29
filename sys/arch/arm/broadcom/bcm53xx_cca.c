@@ -86,8 +86,8 @@ struct bcmcca_softc {
 	bus_space_handle_t sc_bsh;
 	struct com_softc *sc_com_softc[2];
 	void *sc_ih;
-#if NGPIO > 0
 	uint32_t sc_gpiopins;
+#if NGPIO > 0
 	struct gpio_chipset_tag sc_gpio_gc;
 	gpio_pin_t sc_gpio_pins[BCM53XX_GPIO_PINS];
 

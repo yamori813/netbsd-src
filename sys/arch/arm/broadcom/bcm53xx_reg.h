@@ -195,7 +195,7 @@
 #define INTMASK_GPIOINT			__BIT(0)	// 1 = enabled
 
 /* Only bits [23:0] are used in the GPIO registers */
-#define	BCM53XX_GPIO_PINS		32
+#define	BCM53XX_GPIO_PINS		24
 #define GPIO_INPUT			0x060		// RO
 #define GPIO_OUT			0x064
 #define GPIO_OUTEN			0x068
