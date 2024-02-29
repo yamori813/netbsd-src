@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2024 Hiroki Mori
  * Copyright (c) 2012 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -66,8 +67,17 @@ static void bcmcca_mainbus_attach(device_t, device_t, void *);
 
 struct bcmcca_softc;
 static void bcmcca_uart_attach(struct bcmcca_softc *sc);
+
 #if NGPIO > 0
+#include <sys/gpio.h>
+#include <dev/gpio/gpiovar.h>
+
 static void bcmcca_gpio_attach(struct bcmcca_softc *sc);
+
+static int bcmcca_gpio_pin_read(void *, int);
+static void bcmcca_gpio_pin_write(void *, int, int);
+static void bcmcca_gpio_pin_ctl(void *, int, int);
+static int bcmcca_gpio_pin_getflags(struct bcmcca_softc *, int);
 #endif
 
 struct bcmcca_softc {
@@ -76,7 +86,13 @@ struct bcmcca_softc {
 	bus_space_handle_t sc_bsh;
 	struct com_softc *sc_com_softc[2];
 	void *sc_ih;
+#if NGPIO > 0
 	uint32_t sc_gpiopins;
+	struct gpio_chipset_tag sc_gpio_gc;
+	gpio_pin_t sc_gpio_pins[BCM53XX_GPIO_PINS];
+
+	uint32_t sc_pin_shared;
+#endif
 };
 
 struct bcmcca_attach_args {
@@ -90,6 +106,8 @@ struct bcmcca_attach_args {
 static struct bcmcca_softc bcmcca_sc = {
 	.sc_gpiopins = 0xffffff,	/* assume all 24 pins are available */
 };
+
+int com_done = 0;
 
 CFATTACH_DECL_NEW(bcmcca, 0,
 	bcmcca_mainbus_match, bcmcca_mainbus_attach, NULL, NULL);
@@ -263,6 +281,9 @@ com_cca_match(device_t parent, cfdata_t cf, void *aux)
 	KASSERT(ccaaa->ccaaa_offset == CCA_UART0_BASE || ccaaa->ccaaa_offset == CCA_UART1_BASE);
 	KASSERT(bcmcca_sc.sc_com_softc[ccaaa->ccaaa_channel] == NULL);
 
+	if (com_done)
+		return 0;
+
 	if (channel != BCMCCACF_CHANNEL_DEFAULT && channel != ccaaa->ccaaa_channel)
 		return 0;
 
@@ -302,11 +323,128 @@ com_cca_attach(device_t parent, device_t self, void *aux)
 static void
 bcmcca_gpio_attach(struct bcmcca_softc *sc)
 {
+	struct gpiobus_attach_args gba;
+	int pin;
+
 	/*
 	 * First see if there are any pins being used as GPIO pins...
 	 */
-	uint32_t v = bcmcca_read(sc, CRU_BASE + CRU_GPIO_SELECT);
+/*
+	uint32_t v = bcmcca_read_4(sc, CRU_BASE + CRU_GPIO_SELECT);
 	if (v == 0)
 		return;
+*/
+
+	sc->sc_gpio_gc.gp_cookie = sc;
+	sc->sc_gpio_gc.gp_gc_open = NULL;
+	sc->sc_gpio_gc.gp_gc_close = NULL;
+	sc->sc_gpio_gc.gp_pin_read = bcmcca_gpio_pin_read;
+	sc->sc_gpio_gc.gp_pin_write = bcmcca_gpio_pin_write;
+	sc->sc_gpio_gc.gp_pin_ctl = bcmcca_gpio_pin_ctl;
+
+	for (pin = 0; pin < BCM53XX_GPIO_PINS; pin++) {
+		sc->sc_gpio_pins[pin].pin_num = pin;
+		if (sc->sc_pin_shared & (1 << pin)) {
+			/* this pin is used by other function */
+			sc->sc_gpio_pins[pin].pin_caps = 0;
+			sc->sc_gpio_pins[pin].pin_flags = 0;
+			sc->sc_gpio_pins[pin].pin_state = 0;
+		} else {
+			sc->sc_gpio_pins[pin].pin_caps =
+			    GPIO_PIN_INPUT | GPIO_PIN_OUTPUT;
+			sc->sc_gpio_pins[pin].pin_flags =
+			    bcmcca_gpio_pin_getflags(sc, pin);
+			sc->sc_gpio_pins[pin].pin_state =
+			    bcmcca_gpio_pin_read(sc, pin);
+
+#if 0
+			printf("%s: pin%d: %s%s\n", device_xname(sc->sc_dev),
+			    pin,
+			    (sc->sc_gpio_pins[pin].pin_flags & GPIO_PIN_INPUT) ?
+			    "input" : "",
+			    (sc->sc_gpio_pins[pin].pin_flags & GPIO_PIN_OUTPUT) ?
+			    "output" : "");
+#endif
+		}
+	}
+	gba.gba_gc = &sc->sc_gpio_gc;
+	gba.gba_pins = sc->sc_gpio_pins;
+	gba.gba_npins = BCM53XX_GPIO_PINS;
+
+	com_done = 1;
+
+	config_found(sc->sc_dev, &gba, gpiobus_print, CFARGS_NONE);
+}
+
+static int
+bcmcca_gpio_pin_read(void *arg, int pin)
+{
+	struct bcmcca_softc *sc;
+	uint32_t val;
+
+	sc = (struct bcmcca_softc *)arg;
+
+	if (sc->sc_pin_shared & (1 << pin))
+		return GPIO_PIN_LOW;
+
+	val = bcmcca_read_4(sc, GPIO_INPUT);
+
+	return (val & (1 << pin)) ? GPIO_PIN_HIGH : GPIO_PIN_LOW;
+}
+
+static void
+bcmcca_gpio_pin_write(void *arg, int pin, int value)
+{
+	struct bcmcca_softc *sc;
+	uint32_t pinbit;
+	uint32_t val;
+
+	sc = (struct bcmcca_softc *)arg;
+
+	if (sc->sc_pin_shared & (1 << pin))
+		return;
+
+	pinbit = 1 << pin;
+	val = bcmcca_read_4(sc, GPIO_OUT);
+	if (value)
+		val |= pinbit;
+	else
+		val &= ~pinbit;
+	bcmcca_write_4(sc, GPIO_OUT, value);
+}
+
+static int
+bcmcca_gpio_pin_getflags(struct bcmcca_softc *sc, int pin)
+{
+	uint32_t pinbit, val;
+
+	pinbit = 1 << pin;
+	val = bcmcca_read_4(sc, GPIO_OUTEN);
+	if (val & pinbit)
+		return GPIO_PIN_OUTPUT;
+	else
+		return GPIO_PIN_INPUT;
+}
+
+static void
+bcmcca_gpio_pin_ctl(void *arg, int pin, int flags)
+{
+	struct bcmcca_softc *sc;
+	uint32_t pinbit, val;
+
+	sc = (struct bcmcca_softc *)arg;
+	pinbit = 1 << pin;
+
+	if (sc->sc_pin_shared & pinbit)
+		return;
+
+	if (flags & GPIO_PIN_INPUT) {
+		val = bcmcca_read_4(sc, GPIO_OUTEN);
+		bcmcca_write_4(sc, GPIO_OUTEN, val & ~pinbit);
+	}
+	if (flags & GPIO_PIN_OUTPUT) {
+		val = bcmcca_read_4(sc, GPIO_OUTEN);
+		bcmcca_write_4(sc, GPIO_OUTEN, val | pinbit);
+	}
 }
 #endif

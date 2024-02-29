@@ -186,6 +186,7 @@ bcmcca0		at mainbus?		# ChipCommonA
 options 	CONSPEED=115200
 com0		at bcmcca? channel 0
 com*		at bcmcca? channel 1
+gpio*		at bcmcca?
 
 # ChipCommonB Peripherals
 bcmccb0		at mainbus?		# ChipCommonB
