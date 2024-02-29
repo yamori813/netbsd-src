@@ -334,6 +334,7 @@ bcmcca_gpio_attach(struct bcmcca_softc *sc)
 	if (v == 0)
 		return;
 */
+	sc->sc_pin_shared = 0;
 
 	sc->sc_gpio_gc.gp_cookie = sc;
 	sc->sc_gpio_gc.gp_gc_open = NULL;
@@ -380,16 +381,21 @@ static int
 bcmcca_gpio_pin_read(void *arg, int pin)
 {
 	struct bcmcca_softc *sc;
-	uint32_t val;
+	uint32_t val, pinbit;
 
 	sc = (struct bcmcca_softc *)arg;
 
-	if (sc->sc_pin_shared & (1 << pin))
+	pinbit = 1 << pin;
+	if (sc->sc_pin_shared & pinbit)
 		return GPIO_PIN_LOW;
 
-	val = bcmcca_read_4(sc, GPIO_INPUT);
+	val = bcmcca_read_4(sc, GPIO_OUTEN);
+	if (val & pinbit)
+		val = bcmcca_read_4(sc, GPIO_OUT);
+	else
+		val = bcmcca_read_4(sc, GPIO_INPUT);
 
-	return (val & (1 << pin)) ? GPIO_PIN_HIGH : GPIO_PIN_LOW;
+	return (val & pinbit) ? GPIO_PIN_HIGH : GPIO_PIN_LOW;
 }
 
 static void
@@ -401,16 +407,16 @@ bcmcca_gpio_pin_write(void *arg, int pin, int value)
 
 	sc = (struct bcmcca_softc *)arg;
 
-	if (sc->sc_pin_shared & (1 << pin))
+	pinbit = 1 << pin;
+	if (sc->sc_pin_shared & pinbit)
 		return;
 
-	pinbit = 1 << pin;
 	val = bcmcca_read_4(sc, GPIO_OUT);
 	if (value)
 		val |= pinbit;
 	else
 		val &= ~pinbit;
-	bcmcca_write_4(sc, GPIO_OUT, value);
+	bcmcca_write_4(sc, GPIO_OUT, val);
 }
 
 static int
