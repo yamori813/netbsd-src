@@ -352,14 +352,10 @@ bcmeth_ccb_attach(device_t parent, device_t self, void *aux)
 
 	if (sc->sc_soft_ih == NULL) {
 		aprint_error_dev(self, "failed to establish soft interrupt\n");
-<<<<<<< HEAD
-		goto fail_3;
-=======
 		goto fail_2;
->>>>>>> upstream/netbsd-10
 	}
 
-	sc->sc_ih = intr_establish(loc->loc_intrs[0], IPL_NET, IST_LEVEL,
+	sc->sc_ih = intr_establish(loc->loc_intrs[0], IPL_VM, IST_LEVEL,
 	    bcmeth_intr, sc);
 
 	if (sc->sc_ih == NULL) {
