@@ -2,7 +2,7 @@
 #
 #
 
-include "arch/evbarm/conf/BCM5301X"
+include "arch/evbarm/conf/WZR-1750DHP"
 include "arch/evbarm/conf/INSTALL"
 
 options BOOTHOWTO=RB_SINGLE

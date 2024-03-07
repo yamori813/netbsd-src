@@ -73,17 +73,6 @@ static struct cpu_softc cpu_softc;
 
 struct arm32_dma_range bcm53xx_dma_ranges[] = {
 #ifdef BCM5301X
-#if 1
-	[0] = {
-		.dr_sysbase = 0x00000000,
-		.dr_busbase = 0x00000000,
-		.dr_len = 0x08000000,
-	},
-	[1] = {
-		.dr_sysbase = 0x88000000,
-		.dr_busbase = 0x88000000,
-	}
-#else
 	[0] = {
 		.dr_sysbase = 0x80000000,
 		.dr_busbase = 0x80000000,
@@ -92,7 +81,6 @@ struct arm32_dma_range bcm53xx_dma_ranges[] = {
 		.dr_sysbase = 0x90000000,
 		.dr_busbase = 0x90000000,
 	},
-#endif
 #elif defined(BCM563XX)
 	[0] = {
 		.dr_sysbase = 0x60000000,

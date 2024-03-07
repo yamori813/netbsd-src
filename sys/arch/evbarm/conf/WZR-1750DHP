@@ -27,13 +27,12 @@ options 	UVMHIST
 options 	BCMETH_COUNTERS
 #options 	MULTIPROCESSOR
 options 	CPU_CORTEX
-# still 256M not work
-options 	MEMSIZE=128
+# WZR-1750DHP and WZR-1750DHP2
+options 	MEMSIZE=512
 options 	BCM5301X
 #options 	PMAPCOUNTERS
 options 	BUSDMA_COUNTERS
-#makeoptions	KERNEL_BASE_PHYS="0x80100000"
-makeoptions	KERNEL_BASE_PHYS="0x00008000"
+makeoptions	KERNEL_BASE_PHYS="0x80008000"
 options		EARLYCONS=bcm53xx,CONSADDR=0x18000300
 
 # Architecture options

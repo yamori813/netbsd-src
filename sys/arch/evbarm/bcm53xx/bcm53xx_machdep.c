@@ -186,22 +186,14 @@ static const struct pmap_devmap devmap[] = {
 		BCM53XX_PCIE2_OWIN_SIZE		/* 4MB */
 	),
 #endif /* NPCI > 0 */
-	{ 0, 0, 0, 0, 0 }
+	DEVMAP_ENTRY_END
 };
 
-static const struct boot_physmem bcm_physmem[] = {
-	[0] = {
-		.bp_start = 0x00000000 / NBPG,
-		.bp_pages = 0x08000000 / NBPG,
-		.bp_freelist = VM_FREELIST_ISADMA,
-		.bp_flags = 0,
-	},
-	[1] = {
-		.bp_start = 0x88000000 / NBPG,
-		.bp_pages = 0x08000000 / NBPG,
-		.bp_freelist = VM_FREELIST_ISADMA,
-		.bp_flags = 0,
-	}
+static const struct boot_physmem bp_first256 = {
+	.bp_start = 0x80000000 / NBPG,
+	.bp_pages = 0x10000000 / NBPG,
+	.bp_freelist = VM_FREELIST_ISADMA,
+	.bp_flags = 0,
 };
 
 #define BCM53xx_ROM_CPU_ENTRY	0xffff0400
@@ -285,6 +277,8 @@ initarm(void *arg)
 	 */
 	if (set_cpufuncs())		// starts PMC counter
 		panic("cpu not recognized!");
+
+	kern_vtopdiff = 0;
 
 	cn_tab = &earlycons;
 
@@ -387,7 +381,7 @@ initarm(void *arg)
 		/*
 		 * If we have more than 256MB
 		 */
-		arm_poolpage_vmfreelist = bcm_physmem[1].bp_freelist;
+		arm_poolpage_vmfreelist = bp_first256.bp_freelist;
 	}
 
 	/*
@@ -395,8 +389,8 @@ initarm(void *arg)
 	 * non-default VM allocations.
 	 */
 	vaddr_t sp = initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE,
-	    ((memsize >> 20) > 128 ? bcm_physmem : NULL),
-	    ((memsize >> 20) > 128 ? 2 : 0));
+//	    (bigmem_p ? &bp_first256 : NULL), (bigmem_p ? 1 : 0));
+	    NULL, 0);
 
 	/*
 	 * initarm_common flushes cache if required before AP start
