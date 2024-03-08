@@ -196,9 +196,16 @@ bcmcca_mainbus_attach(device_t parent, device_t self, void *aux)
 
 	bcmcca_uart_attach(sc);
 
+#ifdef WZR_1750DHP
 	/* WZR-1750DHP2 USB VCC ON */
 	bcmcca_write_4(sc, GPIO_OUT,
 	    (bcmcca_read_4(sc, GPIO_OUT) & ~(1 << 10)) | (1 << 9));
+#endif
+#ifdef WXR_1750DHP
+	/* WXR-1750DHP2 USB VCC ON */
+	bcmcca_write_4(sc, GPIO_OUT,
+	    bcmcca_read_4(sc, GPIO_OUT) | (1 << 10));
+#endif
 
 #if NGPIO > 0
 	bcmcca_gpio_attach(sc);
