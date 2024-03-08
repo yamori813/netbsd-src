@@ -50,6 +50,8 @@ static void bcmmdio_ccb_attach(device_t, device_t, void *);
 CFATTACH_DECL_NEW(bcmmdio_ccb, sizeof(struct bcmmdio_softc),
 	bcmmdio_ccb_match, bcmmdio_ccb_attach, NULL, NULL);
 
+static void bcmmdio_busywait(struct bcmmdio_softc *);
+
 static inline uint32_t
 bcmmdio_read_4(struct bcmmdio_softc *sc, bus_size_t o)
 {
@@ -103,6 +105,23 @@ bcmmdio_ccb_attach(device_t parent, device_t self, void *aux)
 
 	aprint_naive("\n");
 	aprint_normal(": MDIO bus @ %u MHz\n", freq / 1000000);
+
+	/* BCM4707 USB3 PHY initialize */
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 31, 0x8000));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 10, 0x6400));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 31, 0x80e0));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 2, 0x009c));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 31, 0x8040));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 2, 0x21d3));
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 1, 0x1003));
+	bcmmdio_busywait(sc);
 }
 
 static void
