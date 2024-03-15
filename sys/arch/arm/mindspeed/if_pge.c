@@ -198,7 +198,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 
 	for (i = 0; i < PGE_RX_RING_CNT; i++) {
 		sc->sc_rxdesc_ring[i].data = 0;
-		if (i == PGE_TX_RING_CNT - 1)
+		if (i == PGE_RX_RING_CNT - 1)
 			sc->sc_rxdesc_ring[i].next = (struct bufDesc *)paddr;
 		else
 			sc->sc_rxdesc_ring[i].next = (struct bufDesc *)paddr +
@@ -885,10 +885,11 @@ printf("\n");
 				if_percpuq_enqueue(ifp->if_percpuq, m);
 			}
 			pge_new_rxbuf(sc, i);
-
+/*
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_rxdesc_dmamap,
 			    sizeof(struct bufDesc) * i, sizeof(struct bufDesc),
 			    BUS_DMASYNC_PREWRITE);
+*/
 			sc->sc_rxhead = RXDESC_NEXT(sc->sc_rxhead);
 			++count;
 		} else {
