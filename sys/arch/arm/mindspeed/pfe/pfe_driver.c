@@ -220,7 +220,8 @@ static void pfe_hif_init(struct pfe *pfe)
 	reg = pge_read_4(pge_sc, HIF_RX_CTRL);
 	pge_write_4(pge_sc, HIF_RX_CTRL, reg | HIF_CTRL_BDP_CH_START_WSTB);
 
-	hif_init();
+//	hif_init();
+	hif_nocpy_init();
 
 	hif_tx_enable();
 	hif_rx_enable();
