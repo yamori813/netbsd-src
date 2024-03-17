@@ -247,8 +247,11 @@ static void pfe_hif_init(struct pfe *pfe)
  */
 static int pfe_hw_init(struct pfe *pfe)
 {
-
+#ifdef CONFIG_NOFIRMWARE
+	printk("%s: start used boot loader downloaded fiemware\n", __func__);
+#else
 	printk("%s: start \n", __func__);
+#endif
 
 	pfe_class_init(pfe);
 
