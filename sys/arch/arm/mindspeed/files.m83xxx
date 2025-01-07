@@ -55,6 +55,11 @@ file	arch/arm/mindspeed/m83xxx_com.c		m83xxx_com
 attach ehci at ahb with ehci_ahb
 file	arch/arm/mindspeed/m83xxx_ehci.c	ehci_ahb
 
+# PCIe controller
+device	m83pcie: pcibus
+attach m83pcie at ahb
+file	arch/arm/mindspeed/m83xxx_pcie.c	m83pcie		needs-flag
+
 # Ethernet
 device  cge: ether, ifnet, arp, mii, mii_phy
 attach  cge at apb

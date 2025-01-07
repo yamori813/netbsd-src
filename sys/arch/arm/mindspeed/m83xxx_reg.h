@@ -29,8 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M63XXX_REG_H_
-#define _ARM_MINDSPEED_M86XXX_REG_H_
+#ifndef _ARM_MINDSPEED_M83XXX_REG_H_
+#define _ARM_MINDSPEED_M83XXX_REG_H_
 
 /***** Physical address on AHB Bus *****/
 
@@ -139,6 +139,7 @@
 #define	GPIO_INPUT_REG			0x10
 #define	GPIO_APB_WS			0x14
 #define	GPIO_USB_PHY_CONF_REG		0x18	/* 0x002D64C2 */
+#define	GPIO_SYSTEM_CONFIG		0x1c
 #define	GPIO_LOCK_REG			0x38
 #define	GPIO_IOCTRL_REG			0x44
 /* USB PHY Built-In-Self-Test ? */
@@ -147,8 +148,83 @@
 #define GPIO_PIN_SELECT_REG		0x58
 
 #define	CLK_DDR_PCIE_CLK_CNTRL		0x18
+
+#define USB_DIV_BYPASS		(1 << 30)
+#define IPSEC1_DIV_BYPASS	(1 << 29)
+#define IPSEC0_DIV_BYPASS	(1 << 28)
+#define PCIE_DIV_BYPASS		(1 << 27)
+#define DDR_DIV_BYPASS		(1 << 26)
+
+#define USB_DIV_VAL_OFFSET	20
+#define USB_DIV_VAL_MASK	(0x3f << USB_DIV_VAL_OFFSET)
+
+#define IPSEC_DIV1_VAL_OFFSET	16
+#define IPSEC_DIV1_VAL_MASK	(0xf << IPSEC_DIV0_VAL_OFFSET)
+
+#define IPSEC_DIV0_VAL_OFFSET	12
+#define IPSEC_DIV0_VAL_MASK	(0xf << IPSEC_DIV1_VAL_OFFSET)
+
+#define PCIE_DIV_VAL_OFFSET	8
+#define PCIE_DIV_VAL_MASK	(0xf << PCIE_DIV_VAL_OFFSET)
+
+#define DDR_DIV_VAL_OFFSET	4
+#define DDR_DIV_VAL_MASK	(0xf << DDR_DIV_VAL_OFFSET)
+
+#define USB_MUX_SEL		(1 << 3)
+#define IPSEC_MUX_SEL		(1 << 2)
+#define PCIE_MUX_SEL		(1 << 1)
+#define DDR_MUX_SEL		(1 << 0)
+
 #define	CLK_CLK_PWR_DWN			0x40
+
+#define USB_REFCLK_PD		(1 << 24)
+#define USB_AHBCLK_PD		(1 << 19)
+#define PCIE1_AHBCLK_PD		(1 << 15)
+#define PCIE0_AHBCLK_PD		(1 << 14)
+#define PCIE_REFCLK_NP_PD	(1 << 6)
+#define ARM0_FCLK_PD		(1 << 0)
+#define ARM1_FCLK_PD		(1 << 1)
+#define GEMAC0_REFCLK_PD	(1 << 2)
+#define GEMAC1_REFCLK_PD	(1 << 3)
+#define PHY_REFCLK_PD		(1 << 4)
+#define DDR_CLK_PD		(1 << 5)
+#define IPSEC_CORECLK_PD	(1 << 8)
+#define ARM0_AHBCLK_PD		(1 << 9)
+#define ARM1_AHBCLK_PD		(1 << 10)
+#define GEMAC0_AHBCLK_PD	(1 << 11)
+#define GEMAC1_AHBCLK_PD	(1 << 12)
+#define DDRCTRL_AHBCLK_PD	(1 << 13)
+#define TDM_AHBCLK_PD		(1 << 16)
+#define MDMA_AHBCLK_PD		(1 << 17)
+#define UART_AHBCLK_PD		(1 << 18)
+#define I2CSPI_AHBCLK_PD	(1 << 20)
+#define IPSEC_AHBCLK_PD		(1 << 21)
+#define TDM_CLK_PD		(1 << 22)
+#define IPSEC2_AHBCLK_PD	(1 << 23)
+
 #define	BLOCK_RESET_REG			0x100
+
+#define USB_REF_RESET_N		(1 << 20)
+#define NO_BAL_DDR_REF_RST	(1 << 19)
+#define IPSEC2_AHB_RST		(1 << 18)
+#define RNG_RST			(1 << 17)
+#define IPSEC_CORE_RST		(1 << 16)
+#define IPSEC_AHB_RST		(1 << 15)
+#define USB_AHB_RESET_N		(1 << 14)
+#define TDM_REF_RST		(1 << 13)
+#define TDM_AHB_RST		(1 << 12)
+#define DDR_REF_RST		(1 << 11)
+#define DDR_AHB_RST		(1 << 10)
+#define PCIE1_REF_RST		(1 << 9)
+#define PCIE0_REF_RST		(1 << 8)
+#define PCIE1_AHB_RST		(1 << 7)
+#define PCIE0_AHB_RST		(1 << 6)
+#define GEMAC1_PHY_RST		(1 << 5)
+#define GEMAC0_PHY_RST		(1 << 4)
+#define GEMAC1_AHB_RST		(1 << 3)
+#define GEMAC0_AHB_RST		(1 << 2)
+#define ARM1_AHB_RST		(1 << 1)
+#define ARM0_AHB_RST		(1 << 0)
 
 #define	EXP_SW_RST_R			0x000
 #define	EXP_CS_EN_R			0x004
@@ -159,4 +235,4 @@
 #define	EXP_CSx_TMG3_R			0x058
 #define	EXP_CLOCK_DIV_R			0x06C
 
-#endif /* _ARM_MINDSPEED_M86XXX_REG_H_ */
+#endif /* _ARM_MINDSPEED_M83XXX_REG_H_ */
