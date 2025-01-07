@@ -491,10 +491,10 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 int
 m83pcie_intr(void *priv)
 {
-#if 0
 	struct m83pcie_softc *sc = priv;
 	struct m83pcie_ih *pcie_ih;
 
+#if 0
 	for (int i = 0; i < 8; i++) {
 		uint32_t v = PCIE_READ(sc, PCIE_PL_MSICIN_STATUS + i * 0xC);
 		int bit;
@@ -504,6 +504,7 @@ m83pcie_intr(void *priv)
 			v &= ~__BIT(bit);
 		}
 	}
+#endif
 
 	mutex_enter(&sc->sc_lock);
 	int rv = 0;
@@ -520,8 +521,6 @@ m83pcie_intr(void *priv)
 	mutex_exit(&sc->sc_lock);
 
 	return rv;
-#endif
-	return 0;
 }
 
 static void

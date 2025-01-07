@@ -163,7 +163,7 @@ cge1		at apb? addr 0x10190000 intr 7
 
 ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
 
-m83pcie0	at ahb? addr 0x10010000 size 0x10000 intr 15
+m83pcie0	at ahb? addr 0x10010000 size 0x10000 intr 14
 options		PCI_NETBSD_CONFIGURE
 
 pci*		at m83pcie?
