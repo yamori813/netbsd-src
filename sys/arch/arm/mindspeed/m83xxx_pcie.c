@@ -432,7 +432,7 @@ m83pcie_configure(void *cookie)
 	    IMX6_PCIE_IO_BASE, IMX6_PCIE_IO_SIZE);
 */
 	pciconf_resource_add(pcires, PCICONF_RESOURCE_MEM,
-	    AHB_PCIe0_BASE, 0x10000000);
+	    AHB_PCIe0_BASE, PCIe_MEM_SIZE);
 
 	int error = pci_configure_bus(&sc->sc_pc, pcires, 0, arm_dcache_align);
 

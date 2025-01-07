@@ -48,6 +48,8 @@
 #define AHB_DDR_BASE			0x80000000
 #define AHB_HIGHMEMDDR_BASE		0xFFFF0000
 
+#define PCIe_MEM_SIZE			0x10000000
+
 /***** Physical address of IO on APB Bus *****/
 
 #define APB_TDM_BASE			0x10000000
