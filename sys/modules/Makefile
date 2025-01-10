@@ -1,7 +1,8 @@
-#	$NetBSD: Makefile,v 1.274.2.2 2023/12/30 19:13:50 martin Exp $
+#	$NetBSD: Makefile,v 1.274.2.7 2024/10/09 13:25:10 martin Exp $
 
 .include <bsd.own.mk>
 
+.if !make(includes)
 # For all platforms
 
 # Modules for compatibility with earlier versions of NetBSD
@@ -109,7 +110,9 @@ SUBDIR+=	if_vlan
 SUBDIR+=	if_wg
 SUBDIR+=	iic
 SUBDIR+=	ip_ecn
+.if ${MKIPFILTER:Uno} != no
 SUBDIR+=	ipl
+.endif
 SUBDIR+=	kernfs
 SUBDIR+=	layerfs
 SUBDIR+=	lfs
@@ -258,14 +261,8 @@ SUBDIR+=	ubsec
 .endif
 
 .if ${MKSLJIT} != "no"
-# No modules for 32-bit arm, mips and powerpc yet.
-.if ${MACHINE_ARCH} == "aarch64" || \
-    ${MACHINE_ARCH} == "i386"    || \
-    ${MACHINE_ARCH} == "sparc"   || \
-    ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	bpfjit
 SUBDIR+=	sljit
-.endif
 .endif
 
 #
@@ -285,13 +282,16 @@ SUBDIR+=	acpibut
 SUBDIR+=	acpicpu
 SUBDIR+=	acpidalb
 SUBDIR+=	acpifan
+SUBDIR+=	acpihed
 SUBDIR+=	acpilid
 SUBDIR+=	acpipmtr
 SUBDIR+=	acpitz
 SUBDIR+=	acpivga
+SUBDIR+=	acpivmgenid
 SUBDIR+=	acpiwdrt
 SUBDIR+=	acpiwmi
 SUBDIR+=	aibs
+SUBDIR+=	apei
 SUBDIR+=	asus
 SUBDIR+=	fujbp
 SUBDIR+=	fujhk
@@ -501,5 +501,7 @@ SUBDIR+=	vioscsi
 .endif
 
 SUBDIR+=	examples	# build these regularly to avoid bit-rot
+
+.endif
 
 .include <bsd.subdir.mk>

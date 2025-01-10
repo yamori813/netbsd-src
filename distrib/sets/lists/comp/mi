@@ -1,4 +1,4 @@
-#	$NetBSD: mi,v 1.2425.2.4 2024/02/25 15:47:58 martin Exp $
+#	$NetBSD: mi,v 1.2425.2.11 2024/10/14 17:20:20 martin Exp $
 #
 # Note: don't delete entries from here - mark them as "obsolete" instead.
 ./etc/mtree/set.comp				comp-sys-root
@@ -3560,6 +3560,7 @@
 ./usr/include/tss/tss_typedef.h			comp-c-include		tpm
 ./usr/include/ttyent.h				comp-c-include
 ./usr/include/tzfile.h				comp-c-include
+./usr/include/uchar.h				comp-c-include
 ./usr/include/ucontext.h			comp-c-include
 ./usr/include/ufs/ext2fs/ext2fs.h		comp-c-include
 ./usr/include/ufs/ext2fs/ext2fs_dinode.h	comp-c-include
@@ -6715,6 +6716,9 @@
 ./usr/share/man/cat3/bufferevent_write_buffer.0 comp-obsolete		obsolete
 ./usr/share/man/cat3/byteorder.0		comp-c-catman		.cat
 ./usr/share/man/cat3/bzero.0			comp-c-catman		.cat
+./usr/share/man/cat3/c16rtomb.0			comp-c-catman		.cat
+./usr/share/man/cat3/c32rtomb.0			comp-c-catman		.cat
+./usr/share/man/cat3/c8rtomb.0			comp-c-catman		.cat
 ./usr/share/man/cat3/cabs.0			comp-c-catman		complex,.cat
 ./usr/share/man/cat3/cabsf.0			comp-c-catman		complex,.cat
 ./usr/share/man/cat3/cabsl.0			comp-c-catman		complex,.cat
@@ -9065,8 +9069,12 @@
 ./usr/share/man/cat3/math.0			comp-c-catman		.cat
 ./usr/share/man/cat3/mblen.0			comp-c-catman		.cat
 ./usr/share/man/cat3/mbrlen.0			comp-c-catman		.cat
+./usr/share/man/cat3/mbrtoc16.0			comp-c-catman		.cat
+./usr/share/man/cat3/mbrtoc32.0			comp-c-catman		.cat
+./usr/share/man/cat3/mbrtoc8.0			comp-c-catman		.cat
 ./usr/share/man/cat3/mbrtowc.0			comp-c-catman		.cat
 ./usr/share/man/cat3/mbsinit.0			comp-c-catman		.cat
+./usr/share/man/cat3/mbsnrtowcs.0		comp-c-catman		.cat
 ./usr/share/man/cat3/mbsrtowcs.0		comp-c-catman		.cat
 ./usr/share/man/cat3/mbstowcs.0			comp-c-catman		.cat
 ./usr/share/man/cat3/mbtowc.0			comp-c-catman		.cat
@@ -10816,9 +10824,10 @@
 ./usr/share/man/cat3/sysexits.0			comp-c-catman		.cat
 ./usr/share/man/cat3/syslog.0			comp-c-catman		.cat
 ./usr/share/man/cat3/syslog_r.0			comp-c-catman		.cat
-./usr/share/man/cat3/syslog_ss.0		comp-obsolete		obsolete
+./usr/share/man/cat3/syslog_ss.0		comp-c-catman		.cat
 ./usr/share/man/cat3/syslogp.0			comp-c-catman		.cat
 ./usr/share/man/cat3/syslogp_r.0		comp-c-catman		.cat
+./usr/share/man/cat3/syslogp_ss.0		comp-c-catman		.cat
 ./usr/share/man/cat3/system.0			comp-c-catman		.cat
 ./usr/share/man/cat3/t_freent.0			comp-obsolete		obsolete
 ./usr/share/man/cat3/t_getent.0			comp-obsolete		obsolete
@@ -10976,6 +10985,7 @@
 ./usr/share/man/cat3/tzset.0			comp-c-catman		.cat
 ./usr/share/man/cat3/tzsetwall.0		comp-c-catman		.cat
 ./usr/share/man/cat3/ualarm.0			comp-c-catman		.cat
+./usr/share/man/cat3/uchar.0			comp-c-catman		.cat
 ./usr/share/man/cat3/uid_from_user.0		comp-c-catman		.cat
 ./usr/share/man/cat3/ukfs.0			comp-c-catman		.cat,rump
 ./usr/share/man/cat3/ulimit.0			comp-c-catman		.cat
@@ -11055,9 +11065,10 @@
 ./usr/share/man/cat3/vswscanf.0			comp-c-catman		.cat
 ./usr/share/man/cat3/vsyslog.0			comp-c-catman		.cat
 ./usr/share/man/cat3/vsyslog_r.0		comp-c-catman		.cat
-./usr/share/man/cat3/vsyslog_ss.0		comp-obsolete		obsolete
+./usr/share/man/cat3/vsyslog_ss.0		comp-c-catman		.cat
 ./usr/share/man/cat3/vsyslogp.0			comp-c-catman		.cat
 ./usr/share/man/cat3/vsyslogp_r.0		comp-c-catman		.cat
+./usr/share/man/cat3/vsyslogp_ss.0		comp-c-catman		.cat
 ./usr/share/man/cat3/vtimes.0			comp-obsolete		obsolete
 ./usr/share/man/cat3/vwarn.0			comp-c-catman		.cat
 ./usr/share/man/cat3/vwarnc.0			comp-c-catman		.cat
@@ -11105,6 +11116,7 @@
 ./usr/share/man/cat3/wcsncmp.0			comp-c-catman		.cat
 ./usr/share/man/cat3/wcsncpy.0			comp-c-catman		.cat
 ./usr/share/man/cat3/wcsnlen.0			comp-c-catman		.cat
+./usr/share/man/cat3/wcsnrtombs.0		comp-c-catman		.cat
 ./usr/share/man/cat3/wcspbrk.0			comp-c-catman		.cat
 ./usr/share/man/cat3/wcsrchr.0			comp-c-catman		.cat
 ./usr/share/man/cat3/wcsrtombs.0		comp-c-catman		.cat
@@ -11773,6 +11785,7 @@
 ./usr/share/man/cat9/crypto_newsession.0	comp-sys-catman		.cat
 ./usr/share/man/cat9/crypto_register.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/crypto_unregister.0	comp-sys-catman		.cat
+./usr/share/man/cat9/crashme.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/csf.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/ctob.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/ctod.0			comp-sys-catman		.cat
@@ -12126,6 +12139,8 @@
 ./usr/share/man/cat9/le64enc.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/le64toh.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/linedisc.0			comp-sys-catman		.cat
+./usr/share/man/cat9/lmax.0			comp-sys-catman		.cat
+./usr/share/man/cat9/lmin.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/localcount.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/lock.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/locking.0			comp-sys-catman		.cat
@@ -12488,6 +12503,7 @@
 ./usr/share/man/cat9/pool_sethardlimit.0	comp-sys-catman		.cat
 ./usr/share/man/cat9/pool_sethiwat.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/pool_setlowat.0		comp-sys-catman		.cat
+./usr/share/man/cat9/portfeatures.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/postsig.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/powerhook_disestablish.0	comp-sys-catman		.cat
 ./usr/share/man/cat9/powerhook_establish.0	comp-sys-catman		.cat
@@ -12819,7 +12835,11 @@
 ./usr/share/man/cat9/ufetch_long.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/ufetch_ptr.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/ufetch_short.0		comp-sys-catman		.cat
+./usr/share/man/cat9/uimax.0			comp-sys-catman		.cat
+./usr/share/man/cat9/uimin.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/uiomove.0			comp-sys-catman		.cat
+./usr/share/man/cat9/ulmax.0			comp-sys-catman		.cat
+./usr/share/man/cat9/ulmin.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/ungetnewvnode.0		comp-obsolete		obsolete
 ./usr/share/man/cat9/untimeout.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/uprintf.0			comp-sys-catman		.cat
@@ -12907,6 +12927,7 @@
 ./usr/share/man/cat9/vdead_check.0		comp-sys-catman		.cat
 ./usr/share/man/cat9/vdevgone.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/veriexec.0			comp-sys-catman		.cat
+./usr/share/man/cat9/versioningsyscalls.0	comp-sys-catman		.cat
 ./usr/share/man/cat9/vfinddev.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/vflush.0			comp-sys-catman		.cat
 ./usr/share/man/cat9/vflushbuf.0		comp-sys-catman		.cat
@@ -15193,6 +15214,9 @@
 ./usr/share/man/html3/bufferevent_write_buffer.html	comp-obsolete		obsolete
 ./usr/share/man/html3/byteorder.html		comp-c-htmlman		html
 ./usr/share/man/html3/bzero.html		comp-c-htmlman		html
+./usr/share/man/html3/c16rtomb.html		comp-c-htmlman		html
+./usr/share/man/html3/c32rtomb.html		comp-c-htmlman		html
+./usr/share/man/html3/c8rtomb.html		comp-c-htmlman		html
 ./usr/share/man/html3/cabs.html			comp-c-htmlman		complex,html
 ./usr/share/man/html3/cabsf.html		comp-c-htmlman		complex,html
 ./usr/share/man/html3/cabsl.html		comp-c-htmlman		complex,html
@@ -17475,8 +17499,12 @@
 ./usr/share/man/html3/math.html			comp-c-htmlman		html
 ./usr/share/man/html3/mblen.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbrlen.html		comp-c-htmlman		html
+./usr/share/man/html3/mbrtoc16.html		comp-c-htmlman		html
+./usr/share/man/html3/mbrtoc32.html		comp-c-htmlman		html
+./usr/share/man/html3/mbrtoc8.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbrtowc.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbsinit.html		comp-c-htmlman		html
+./usr/share/man/html3/mbsnrtowcs.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbsrtowcs.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbstowcs.html		comp-c-htmlman		html
 ./usr/share/man/html3/mbtowc.html		comp-c-htmlman		html
@@ -19219,8 +19247,10 @@
 ./usr/share/man/html3/sysexits.html		comp-c-htmlman		html
 ./usr/share/man/html3/syslog.html		comp-c-htmlman		html
 ./usr/share/man/html3/syslog_r.html		comp-c-htmlman		html
+./usr/share/man/html3/syslog_ss.html		comp-c-htmlman		html
 ./usr/share/man/html3/syslogp.html		comp-c-htmlman		html
 ./usr/share/man/html3/syslogp_r.html		comp-c-htmlman		html
+./usr/share/man/html3/syslogp_ss.html		comp-c-htmlman		html
 ./usr/share/man/html3/system.html		comp-c-htmlman		html
 ./usr/share/man/html3/t_freent.html		comp-obsolete		obsolete
 ./usr/share/man/html3/t_getent.html		comp-obsolete		obsolete
@@ -19366,6 +19396,7 @@
 ./usr/share/man/html3/tzset.html		comp-c-htmlman		html
 ./usr/share/man/html3/tzsetwall.html		comp-c-htmlman		html
 ./usr/share/man/html3/ualarm.html		comp-c-htmlman		html
+./usr/share/man/html3/uchar.html		comp-c-htmlman		html
 ./usr/share/man/html3/uid_from_user.html	comp-c-htmlman		html
 ./usr/share/man/html3/ukfs.html			comp-c-htmlman		html,rump
 ./usr/share/man/html3/ulimit.html		comp-c-htmlman		html
@@ -19443,8 +19474,10 @@
 ./usr/share/man/html3/vswscanf.html		comp-c-htmlman		html
 ./usr/share/man/html3/vsyslog.html		comp-c-htmlman		html
 ./usr/share/man/html3/vsyslog_r.html		comp-c-htmlman		html
+./usr/share/man/html3/vsyslog_ss.html		comp-c-htmlman		html
 ./usr/share/man/html3/vsyslogp.html		comp-c-htmlman		html
 ./usr/share/man/html3/vsyslogp_r.html		comp-c-htmlman		html
+./usr/share/man/html3/vsyslogp_ss.html		comp-c-htmlman		html
 ./usr/share/man/html3/vwarn.html		comp-c-htmlman		html
 ./usr/share/man/html3/vwarnc.html		comp-c-htmlman		html
 ./usr/share/man/html3/vwarnx.html		comp-c-htmlman		html
@@ -19491,6 +19524,7 @@
 ./usr/share/man/html3/wcsncmp.html		comp-c-htmlman		html
 ./usr/share/man/html3/wcsncpy.html		comp-c-htmlman		html
 ./usr/share/man/html3/wcsnlen.html		comp-c-htmlman		html
+./usr/share/man/html3/wcsnrtombs.html		comp-c-htmlman		html
 ./usr/share/man/html3/wcspbrk.html		comp-c-htmlman		html
 ./usr/share/man/html3/wcsrchr.html		comp-c-htmlman		html
 ./usr/share/man/html3/wcsrtombs.html		comp-c-htmlman		html
@@ -20126,6 +20160,7 @@
 ./usr/share/man/html9/crypto_newsession.html	comp-sys-htmlman	html
 ./usr/share/man/html9/crypto_register.html	comp-sys-htmlman	html
 ./usr/share/man/html9/crypto_unregister.html	comp-sys-htmlman	html
+./usr/share/man/html9/crashme.html		comp-sys-htmlman	html
 ./usr/share/man/html9/csf.html			comp-sys-htmlman	html
 ./usr/share/man/html9/ctob.html			comp-sys-htmlman	html
 ./usr/share/man/html9/ctod.html			comp-sys-htmlman	html
@@ -20471,6 +20506,8 @@
 ./usr/share/man/html9/le64enc.html		comp-sys-htmlman	html
 ./usr/share/man/html9/le64toh.html		comp-sys-htmlman	html
 ./usr/share/man/html9/linedisc.html		comp-sys-htmlman	html
+./usr/share/man/html9/lmax.html			comp-sys-htmlman	html
+./usr/share/man/html9/lmin.html			comp-sys-htmlman	html
 ./usr/share/man/html9/localcount.html		comp-sys-htmlman	html
 ./usr/share/man/html9/lock.html			comp-sys-htmlman	html
 ./usr/share/man/html9/locking.html		comp-sys-htmlman	html
@@ -20829,6 +20866,7 @@
 ./usr/share/man/html9/pool_sethardlimit.html	comp-sys-htmlman	html
 ./usr/share/man/html9/pool_sethiwat.html	comp-sys-htmlman	html
 ./usr/share/man/html9/pool_setlowat.html	comp-sys-htmlman	html
+./usr/share/man/html9/portfeatures.html		comp-sys-htmlman	html
 ./usr/share/man/html9/postsig.html		comp-sys-htmlman	html
 ./usr/share/man/html9/powerhook_disestablish.html	comp-sys-htmlman	html
 ./usr/share/man/html9/powerhook_establish.html	comp-sys-htmlman	html
@@ -21137,7 +21175,11 @@
 ./usr/share/man/html9/ufetch_long.html		comp-sys-htmlman	html
 ./usr/share/man/html9/ufetch_ptr.html		comp-sys-htmlman	html
 ./usr/share/man/html9/ufetch_short.html		comp-sys-htmlman	html
+./usr/share/man/html9/uimax.html		comp-sys-htmlman	html
+./usr/share/man/html9/uimin.html		comp-sys-htmlman	html
 ./usr/share/man/html9/uiomove.html		comp-sys-htmlman	html
+./usr/share/man/html9/ulmax.html		comp-sys-htmlman	html
+./usr/share/man/html9/ulmin.html		comp-sys-htmlman	html
 ./usr/share/man/html9/ungetnewvnode.html	comp-obsolete		obsolete
 ./usr/share/man/html9/untimeout.html		comp-sys-htmlman	html
 ./usr/share/man/html9/uprintf.html		comp-sys-htmlman	html
@@ -21212,6 +21254,7 @@
 ./usr/share/man/html9/vdead_check.html		comp-sys-htmlman	html
 ./usr/share/man/html9/vdevgone.html		comp-sys-htmlman	html
 ./usr/share/man/html9/veriexec.html		comp-sys-htmlman	html
+./usr/share/man/html9/versioningsyscalls.html	comp-sys-htmlman	html
 ./usr/share/man/html9/vfinddev.html		comp-sys-htmlman	html
 ./usr/share/man/html9/vflush.html		comp-sys-htmlman	html
 ./usr/share/man/html9/vflushbuf.html		comp-sys-htmlman	html
@@ -23528,6 +23571,9 @@
 ./usr/share/man/man3/bufferevent_write_buffer.3 comp-obsolete		obsolete
 ./usr/share/man/man3/byteorder.3		comp-c-man		.man
 ./usr/share/man/man3/bzero.3			comp-c-man		.man
+./usr/share/man/man3/c16rtomb.3			comp-c-man		.man
+./usr/share/man/man3/c32rtomb.3			comp-c-man		.man
+./usr/share/man/man3/c8rtomb.3			comp-c-man		.man
 ./usr/share/man/man3/cabs.3			comp-c-man		complex,.man
 ./usr/share/man/man3/cabsf.3			comp-c-man		complex,.man
 ./usr/share/man/man3/cabsl.3			comp-c-man		complex,.man
@@ -25890,8 +25936,12 @@
 ./usr/share/man/man3/math.3			comp-c-man		.man
 ./usr/share/man/man3/mblen.3			comp-c-man		.man
 ./usr/share/man/man3/mbrlen.3			comp-c-man		.man
+./usr/share/man/man3/mbrtoc16.3			comp-c-man		.man
+./usr/share/man/man3/mbrtoc32.3			comp-c-man		.man
+./usr/share/man/man3/mbrtoc8.3			comp-c-man		.man
 ./usr/share/man/man3/mbrtowc.3			comp-c-man		.man
 ./usr/share/man/man3/mbsinit.3			comp-c-man		.man
+./usr/share/man/man3/mbsnrtowcs.3		comp-c-man		.man
 ./usr/share/man/man3/mbsrtowcs.3		comp-c-man		.man
 ./usr/share/man/man3/mbstowcs.3			comp-c-man		.man
 ./usr/share/man/man3/mbtowc.3			comp-c-man		.man
@@ -27660,9 +27710,10 @@
 ./usr/share/man/man3/sysexits.3			comp-c-man		.man
 ./usr/share/man/man3/syslog.3			comp-c-man		.man
 ./usr/share/man/man3/syslog_r.3			comp-c-man		.man
-./usr/share/man/man3/syslog_ss.3		comp-obsolete		obsolete
+./usr/share/man/man3/syslog_ss.3		comp-c-man		.man
 ./usr/share/man/man3/syslogp.3			comp-c-man		.man
 ./usr/share/man/man3/syslogp_r.3		comp-c-man		.man
+./usr/share/man/man3/syslogp_ss.3		comp-c-man		.man
 ./usr/share/man/man3/system.3			comp-c-man		.man
 ./usr/share/man/man3/t_freent.3			comp-obsolete		obsolete
 ./usr/share/man/man3/t_getent.3			comp-obsolete		obsolete
@@ -27820,6 +27871,7 @@
 ./usr/share/man/man3/tzset.3			comp-c-man		.man
 ./usr/share/man/man3/tzsetwall.3		comp-c-man		.man
 ./usr/share/man/man3/ualarm.3			comp-c-man		.man
+./usr/share/man/man3/uchar.3			comp-c-man		.man
 ./usr/share/man/man3/uid_from_user.3		comp-c-man		.man
 ./usr/share/man/man3/ukfs.3			comp-c-man		.man,rump
 ./usr/share/man/man3/ulimit.3			comp-c-man		.man
@@ -27899,9 +27951,10 @@
 ./usr/share/man/man3/vswscanf.3			comp-c-man		.man
 ./usr/share/man/man3/vsyslog.3			comp-c-man		.man
 ./usr/share/man/man3/vsyslog_r.3		comp-c-man		.man
-./usr/share/man/man3/vsyslog_ss.3		comp-obsolete		obsolete
+./usr/share/man/man3/vsyslog_ss.3		comp-c-man		.man
 ./usr/share/man/man3/vsyslogp.3			comp-c-man		.man
 ./usr/share/man/man3/vsyslogp_r.3		comp-c-man		.man
+./usr/share/man/man3/vsyslogp_ss.3		comp-c-man		.man
 ./usr/share/man/man3/vtimes.3			comp-obsolete		obsolete
 ./usr/share/man/man3/vwarn.3			comp-c-man		.man
 ./usr/share/man/man3/vwarnc.3			comp-c-man		.man
@@ -27949,6 +28002,7 @@
 ./usr/share/man/man3/wcsncmp.3			comp-c-man		.man
 ./usr/share/man/man3/wcsncpy.3			comp-c-man		.man
 ./usr/share/man/man3/wcsnlen.3			comp-c-man		.man
+./usr/share/man/man3/wcsnrtombs.3		comp-c-man		.man
 ./usr/share/man/man3/wcspbrk.3			comp-c-man		.man
 ./usr/share/man/man3/wcsrchr.3			comp-c-man		.man
 ./usr/share/man/man3/wcsrtombs.3		comp-c-man		.man
@@ -28616,6 +28670,7 @@
 ./usr/share/man/man9/crypto_newsession.9	comp-sys-man		.man
 ./usr/share/man/man9/crypto_register.9		comp-sys-man		.man
 ./usr/share/man/man9/crypto_unregister.9	comp-sys-man		.man
+./usr/share/man/man9/crashme.9			comp-sys-man		.man
 ./usr/share/man/man9/csf.9			comp-sys-man		.man
 ./usr/share/man/man9/ctob.9			comp-sys-man		.man
 ./usr/share/man/man9/ctod.9			comp-sys-man		.man
@@ -28969,6 +29024,8 @@
 ./usr/share/man/man9/le64enc.9			comp-sys-man		.man
 ./usr/share/man/man9/le64toh.9			comp-sys-man		.man
 ./usr/share/man/man9/linedisc.9			comp-sys-man		.man
+./usr/share/man/man9/lmax.9			comp-sys-man		.man
+./usr/share/man/man9/lmin.9			comp-sys-man		.man
 ./usr/share/man/man9/localcount.9		comp-sys-man		.man
 ./usr/share/man/man9/lock.9			comp-sys-man		.man
 ./usr/share/man/man9/locking.9			comp-sys-man		.man
@@ -29331,6 +29388,7 @@
 ./usr/share/man/man9/pool_sethardlimit.9	comp-sys-man		.man
 ./usr/share/man/man9/pool_sethiwat.9		comp-sys-man		.man
 ./usr/share/man/man9/pool_setlowat.9		comp-sys-man		.man
+./usr/share/man/man9/portfeatures.9		comp-sys-man		.man
 ./usr/share/man/man9/postsig.9			comp-sys-man		.man
 ./usr/share/man/man9/powerhook_disestablish.9	comp-sys-man		.man
 ./usr/share/man/man9/powerhook_establish.9	comp-sys-man		.man
@@ -29662,7 +29720,11 @@
 ./usr/share/man/man9/ufetch_long.9		comp-sys-man		.man
 ./usr/share/man/man9/ufetch_ptr.9		comp-sys-man		.man
 ./usr/share/man/man9/ufetch_short.9		comp-sys-man		.man
+./usr/share/man/man9/uimax.9			comp-sys-man		.man
+./usr/share/man/man9/uimin.9			comp-sys-man		.man
 ./usr/share/man/man9/uiomove.9			comp-sys-man		.man
+./usr/share/man/man9/ulmax.9			comp-sys-man		.man
+./usr/share/man/man9/ulmin.9			comp-sys-man		.man
 ./usr/share/man/man9/ungetnewvnode.9		comp-obsolete		obsolete
 ./usr/share/man/man9/untimeout.9		comp-sys-man		.man
 ./usr/share/man/man9/uprintf.9			comp-sys-man		.man
@@ -29750,6 +29812,7 @@
 ./usr/share/man/man9/vdead_check.9		comp-sys-man		.man
 ./usr/share/man/man9/vdevgone.9			comp-sys-man		.man
 ./usr/share/man/man9/veriexec.9			comp-sys-man		.man
+./usr/share/man/man9/versioningsyscalls.9	comp-sys-man		.man
 ./usr/share/man/man9/vfinddev.9			comp-sys-man		.man
 ./usr/share/man/man9/vflush.9			comp-sys-man		.man
 ./usr/share/man/man9/vflushbuf.9		comp-sys-man		.man

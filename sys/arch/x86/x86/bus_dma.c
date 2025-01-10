@@ -1,4 +1,4 @@
-/*	$NetBSD: bus_dma.c,v 1.89 2022/08/20 23:48:51 riastradh Exp $	*/
+/*	$NetBSD: bus_dma.c,v 1.89.4.2 2024/10/04 11:40:52 martin Exp $	*/
 
 /*-
  * Copyright (c) 1996, 1997, 1998, 2007, 2020 The NetBSD Foundation, Inc.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: bus_dma.c,v 1.89 2022/08/20 23:48:51 riastradh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: bus_dma.c,v 1.89.4.2 2024/10/04 11:40:52 martin Exp $");
 
 /*
  * The following is included because _bus_dma_uiomove is derived from
@@ -207,7 +207,8 @@ _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
 	/* Always round the size. */
 	size = round_page(size);
 
-	KASSERT(boundary >= PAGE_SIZE || boundary == 0);
+	KASSERTMSG(boundary >= PAGE_SIZE || boundary == 0,
+	    "boundary=0x%"PRIxBUSSIZE, boundary);
 
 	/*
 	 * Allocate pages from the VM system.
@@ -389,7 +390,9 @@ _bus_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 	 */
 	map->dm_mapsize = 0;
 	map->dm_nsegs = 0;
-	KASSERT(map->dm_maxsegsz <= map->_dm_maxmaxsegsz);
+	KASSERTMSG(map->dm_maxsegsz <= map->_dm_maxmaxsegsz,
+	    "maxsegsz=0x%"PRIxBUSSIZE", maxmaxsegsz=0x%"PRIxBUSSIZE,
+	    map->dm_maxsegsz, map->_dm_maxmaxsegsz);
 
 	if (buflen > map->_dm_size)
 		return EINVAL;
@@ -517,9 +520,12 @@ _bus_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *m0,
 	 */
 	map->dm_mapsize = 0;
 	map->dm_nsegs = 0;
-	KASSERT(map->dm_maxsegsz <= map->_dm_maxmaxsegsz);
+	KASSERTMSG(map->dm_maxsegsz <= map->_dm_maxmaxsegsz,
+	    "maxsegsz=0x%"PRIxBUSSIZE", maxmaxsegsz=0x%"PRIxBUSSIZE,
+	    map->dm_maxsegsz, map->_dm_maxmaxsegsz);
 
-	KASSERT(m0->m_flags & M_PKTHDR);
+	KASSERTMSG(m0->m_flags & M_PKTHDR, "m0=%p m_flags=0x%x", m0,
+	    m0->m_flags);
 	if (m0->m_pkthdr.len > map->_dm_size)
 		return (EINVAL);
 
@@ -545,9 +551,15 @@ _bus_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *m0,
 			break;
 
 		case M_EXT|M_EXT_PAGES:
-			KASSERT(m->m_ext.ext_buf <= m->m_data);
-			KASSERT(m->m_data <=
-			    m->m_ext.ext_buf + m->m_ext.ext_size);
+			KASSERTMSG(m->m_ext.ext_buf <= m->m_data,
+			    "m=%p m_ext.ext_buf=%p m_ext.ext_size=%zu"
+			    " m_data=%p",
+			    m, m->m_ext.ext_buf, m->m_ext.ext_size, m->m_data);
+			KASSERTMSG((m->m_data <=
+				m->m_ext.ext_buf + m->m_ext.ext_size),
+			    "m=%p m_ext.ext_buf=%p m_ext.ext_size=%zu"
+			    " m_data=%p",
+			    m, m->m_ext.ext_buf, m->m_ext.ext_size, m->m_data);
 
 			offset = (vaddr_t)m->m_data -
 			    trunc_page((vaddr_t)m->m_ext.ext_buf);
@@ -655,7 +667,9 @@ _bus_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
 	 */
 	map->dm_mapsize = 0;
 	map->dm_nsegs = 0;
-	KASSERT(map->dm_maxsegsz <= map->_dm_maxmaxsegsz);
+	KASSERTMSG(map->dm_maxsegsz <= map->_dm_maxmaxsegsz,
+	    "maxsegsz=0x%"PRIxBUSSIZE", maxmaxsegsz=0x%"PRIxBUSSIZE,
+	    map->dm_maxsegsz, map->_dm_maxmaxsegsz);
 
 	resid = uio->uio_resid;
 	iov = uio->uio_iov;
@@ -732,7 +746,9 @@ _bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 	 */
 	map->dm_mapsize = 0;
 	map->dm_nsegs = 0;
-	KASSERT(map->dm_maxsegsz <= map->_dm_maxmaxsegsz);
+	KASSERTMSG(map->dm_maxsegsz <= map->_dm_maxmaxsegsz,
+	    "maxsegsz=0x%"PRIxBUSSIZE", maxmaxsegsz=0x%"PRIxBUSSIZE,
+	    map->dm_maxsegsz, map->_dm_maxmaxsegsz);
 
 	if (size0 > map->_dm_size)
 		return EINVAL;
@@ -811,8 +827,8 @@ _bus_dmamap_sync(bus_dma_tag_t t, bus_dmamap_t map, bus_addr_t offset,
 		    "bad offset 0x%"PRIxBUSADDR" >= 0x%"PRIxBUSSIZE,
 		    offset, map->dm_mapsize);
 		KASSERTMSG(len <= map->dm_mapsize - offset,
-		    "bad length 0x%"PRIxBUSADDR" + %"PRIxBUSSIZE
-		    " > %"PRIxBUSSIZE,
+		    "bad length 0x%"PRIxBUSADDR" + 0x%"PRIxBUSSIZE
+		    " > 0x%"PRIxBUSSIZE,
 		    offset, len, map->dm_mapsize);
 	}
 
@@ -1148,7 +1164,7 @@ _bus_dmamem_free(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs)
 /*
  * Common function for mapping DMA-safe memory.  May be called by
  * bus-specific DMA memory map functions.
- * This supports BUS_DMA_NOCACHE.
+ * This supports BUS_DMA_NOCACHE and BUS_DMA_PREFETCHABLE.
  */
 static int
 _bus_dmamem_map(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs,
@@ -1162,8 +1178,13 @@ _bus_dmamem_map(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs,
 	u_int pmapflags = PMAP_WIRED | VM_PROT_READ | VM_PROT_WRITE;
 
 	size = round_page(size);
+	KASSERTMSG(((flags & (BUS_DMA_NOCACHE|BUS_DMA_PREFETCHABLE)) !=
+		(BUS_DMA_NOCACHE|BUS_DMA_PREFETCHABLE)),
+	    "BUS_DMA_NOCACHE and BUS_DMA_PREFETCHABLE are mutually exclusive");
 	if (flags & BUS_DMA_NOCACHE)
 		pmapflags |= PMAP_NOCACHE;
+	if (flags & BUS_DMA_PREFETCHABLE)
+		pmapflags |= PMAP_WRITE_COMBINE;
 
 	va = uvm_km_alloc(kernel_map, size, 0, UVM_KMF_VAONLY | kmflags);
 

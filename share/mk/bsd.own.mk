@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.own.mk,v 1.1289.2.2 2023/10/20 16:04:59 martin Exp $
+#	$NetBSD: bsd.own.mk,v 1.1289.2.5 2024/07/03 18:38:55 martin Exp $
 
 # This needs to be before bsd.init.mk
 .if defined(BSD_MK_COMPAT_FILE)
@@ -458,6 +458,7 @@ TOOL_JOIN=		${TOOLDIR}/bin/${_TOOL_PREFIX}join
 TOOL_LLVM_TBLGEN=	${TOOLDIR}/bin/${_TOOL_PREFIX}llvm-tblgen
 TOOL_M4=		${TOOLDIR}/bin/${_TOOL_PREFIX}m4
 TOOL_MACPPCFIXCOFF=	${TOOLDIR}/bin/${_TOOL_PREFIX}macppc-fixcoff
+TOOL_MACPPCINSTALLBOOT=	${TOOLDIR}/bin/${_TOOL_PREFIX}macppc_installboot
 TOOL_MAKEFS=		${TOOLDIR}/bin/${_TOOL_PREFIX}makefs
 TOOL_MAKEINFO=		${TOOLDIR}/bin/${_TOOL_PREFIX}makeinfo
 TOOL_MAKEKEYS=		${TOOLDIR}/bin/${_TOOL_PREFIX}makekeys
@@ -473,6 +474,7 @@ TOOL_M68KELF2AOUT=	${TOOLDIR}/bin/${_TOOL_PREFIX}m68k-elf2aout
 TOOL_MIPSELF2ECOFF=	${TOOLDIR}/bin/${_TOOL_PREFIX}mips-elf2ecoff
 TOOL_MKCSMAPPER=	${TOOLDIR}/bin/${_TOOL_PREFIX}mkcsmapper
 TOOL_MKESDB=		${TOOLDIR}/bin/${_TOOL_PREFIX}mkesdb
+TOOL_MKHYBRID=		${TOOLDIR}/bin/${_TOOL_PREFIX}mkhybrid
 TOOL_MKLOCALE=		${TOOLDIR}/bin/${_TOOL_PREFIX}mklocale
 TOOL_MKMAGIC=		${TOOLDIR}/bin/${_TOOL_PREFIX}file
 TOOL_MKNOD=		${TOOLDIR}/bin/${_TOOL_PREFIX}mknod
@@ -1250,7 +1252,6 @@ MKRADEONFIRMWARE.x86_64=	yes
 MKRADEONFIRMWARE.i386=		yes
 MKRADEONFIRMWARE.aarch64=	yes
 MKAMDGPUFIRMWARE.x86_64=	yes
-MKAMDGPUFIRMWARE.i386=		yes
 
 # Only install the tegra firmware on evbarm.
 MKTEGRAFIRMWARE.evbarm=		yes
@@ -1285,6 +1286,21 @@ MKLLVMRT.i386=		yes
 MKLLVMRT.aarch64=	yes
 .endif
 
+# Just-in-time compiler for bpf, npf acceleration
+MKSLJIT.aarch64=	yes
+MKSLJIT.i386=		yes
+MKSLJIT.sparc=		yes
+#MKSLJIT.sparc64=	yes	# not suppored in sljit (yet?)
+MKSLJIT.x86_64=		yes
+#MKSLJIT.powerpc=	yes	# XXX
+#MKSLJIT.powerpc64=	yes	# XXX
+#MKSLJIT.mipsel=	yes	# XXX
+#MKSLJIT.mipseb=	yes	# XXX
+#MKSLJIT.mips64el=	yes	# XXX
+#MKSLJIT.mips64eb=	yes	# XXX
+#MKSLJIT.riscv32=	yes	# not until we update sljit
+#MKSLJIT.riscv64=	yes	# not until we update sljit
+
 # compat with old names
 MKDEBUGKERNEL?=${MKKDEBUG:Uno}
 MKDEBUGTOOLS?=${MKTOOLSDEBUG:Uno}
@@ -1317,12 +1333,6 @@ _MKVARS.no= \
 .for var in ${_MKVARS.no}
 ${var}?=	${${var}.${MACHINE_ARCH}:U${${var}.${MACHINE}:Uno}}
 .endfor
-
-.if ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "x86_64" || \
-    ${MACHINE_ARCH} == "sparc"
-MKSLJIT=	yes
-.endif
 
 #
 # Which platforms build the xorg-server drivers (as opposed

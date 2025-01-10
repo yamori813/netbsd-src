@@ -1,4 +1,4 @@
-.\"     $NetBSD: raidctl.8,v 1.79 2022/06/14 08:06:18 kre Exp $
+.\"     $NetBSD: raidctl.8,v 1.79.2.2 2024/04/28 12:12:00 martin Exp $
 .\"
 .\" Copyright (c) 1998, 2002 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -53,13 +53,17 @@
 .\" any improvements or extensions that they make and grant Carnegie the
 .\" rights to redistribute these changes.
 .\"
-.Dd June 13, 2022
+.Dd September 20, 2023
 .Dt RAIDCTL 8
 .Os
 .Sh NAME
 .Nm raidctl
 .Nd configuration utility for the RAIDframe disk driver
 .Sh SYNOPSIS
+.Nm
+.Ar dev
+.Ar command
+.Op Ar arg Op ...
 .Nm
 .Op Fl v
 .Fl A Op yes | no | forceroot | softroot
@@ -148,7 +152,27 @@ For more information about the RAIDframe disk device, see
 This document assumes the reader has at least rudimentary knowledge of
 RAID and RAID concepts.
 .Pp
-The command-line options for
+The simplified command-line options for
+.Nm
+are as follows:
+.Bl -tag -width indent
+.It Ic create Ar level Ar component1 Ar component2 Ar ...
+where
+.Ar level
+specifies the RAID level and is one of
+.Ar 0
+,
+.Ar 1 
+(or
+.Ar mirror
+), or
+.Ar 5
+and each of
+.Ar componentN
+specify the devices to be configured into the RAID set.
+.El
+.Pp
+The advanced command-line options for
 .Nm
 are as follows:
 .Bl -tag -width indent
@@ -322,9 +346,10 @@ if necessary, and immediately begins a reconstruction back to
 This is useful for reconstructing back onto a component after
 it has been replaced following a failure.
 .It Fl r Ar component Ar dev
-Remove the spare disk specified by
+Remove the specified
 .Ar component
-from the set of available spare components.
+from the RAID. The component must be in the failed, spare, or spared state
+in order to be removed.
 .It Fl S Ar dev
 Check the status of parity re-writing, component reconstruction, and
 component copyback.
@@ -369,6 +394,38 @@ for many others, or just simply
 .Pa /dev/rraid0[cd] ) .
 It is recommended that the partitions used to represent the
 RAID device are not used for file systems.
+.Ss Simple RAID configuration
+For simple RAID configurations using RAID levels 0 (simple striping),
+1 (mirroring), or 5 (striping with distributed parity)
+.Nm
+supports command-line configuration of RAID setups without
+the use of a configuration file.  For example,
+.Bd -literal -offset indent
+raidctl raid0 create 0 /dev/wd0e /dev/wd1e /dev/wd2e
+.Ed
+.Pp
+will create a RAID level 0 set on the device named
+.Pa raid0
+using the components
+.Pa /dev/wd0e ,
+.Pa /dev/wd1e ,
+and
+.Pa /dev/wd2e .
+Similarly,
+.Bd -literal -offset indent
+raidctl raid0 create mirror absent /dev/wd1e
+.Ed
+.Pp
+will create a RAID level 1 (mirror) set with an absent first component
+and
+.Pa /dev/wd1e
+as the second component.  In all cases the resulting RAID device will
+be marked as auto-configurable, will have a serial number set (based
+on the current time), and parity will be initialized (if the RAID level
+has parity and sufficent components are present).  Reasonable
+performance values are automatically used by default for other
+parameters normally specified in the configuration file.
+.Pp
 .Ss Configuration file
 The format of the configuration file is complex, and
 only an abbreviated treatment is given here.
@@ -539,6 +596,10 @@ for a more complete configuration file example.
 device special files.
 .El
 .Sh EXAMPLES
+The examples given in this section are for more complex
+setups than can be configured with the simplified command-line
+configuration option described early.
+.Pp
 It is highly recommended that before using the RAID driver for real
 file systems that the system administrator(s) become quite familiar
 with the use of
@@ -1005,10 +1066,9 @@ option will show:
 .Bd -literal -offset indent
 Components:
            /dev/sd1e: optimal
-           /dev/sd2e: spared
+           /dev/sd4e: optimal
            /dev/sd3e: optimal
-Spares:
-           /dev/sd4e: used_spare
+No spares.
 [...]
 Parity status: clean
 Reconstruction is 100% complete.
@@ -1016,62 +1076,10 @@ Parity Re-write is 100% complete.
 Copyback is 100% complete.
 .Ed
 .Pp
-At this point there are at least two options.
-First, if
+as
 .Pa /dev/sd2e
-is known to be good (i.e., the failure was either caused by
-.Fl f
-or
-.Fl F ,
-or the failed disk was replaced), then a copyback of the data can
-be initiated with the
-.Fl B
-option.
-In this example, this would copy the entire contents of
-.Pa /dev/sd4e
-to
-.Pa /dev/sd2e .
-Once the copyback procedure is complete, the
-status of the device would be (in part):
-.Bd -literal -offset indent
-Components:
-           /dev/sd1e: optimal
-           /dev/sd2e: optimal
-           /dev/sd3e: optimal
-Spares:
-           /dev/sd4e: spare
-.Ed
-.Pp
-and the system is back to normal operation.
-.Pp
-The second option after the reconstruction is to simply use
-.Pa /dev/sd4e
-in place of
-.Pa /dev/sd2e
-in the configuration file.
-For example, the configuration file (in part) might now look like:
-.Bd -literal -offset indent
-START array
-3 0
-
-START disks
-/dev/sd1e
-/dev/sd4e
-/dev/sd3e
-.Ed
-.Pp
-This can be done as
-.Pa /dev/sd4e
-is completely interchangeable with
-.Pa /dev/sd2e
-at this point.
-Note that extreme care must be taken when
-changing the order of the drives in a configuration.
-This is one of the few instances where the devices and/or
-their orderings can be changed without loss of data!
-In general, the ordering of components in a configuration file should
-.Em never
-be changed.
+has been removed and replaced with
+.Pa /dev/sd4e .
 .Pp
 If a component fails and there are no hot spares
 available on-line, the status of the RAID set might (in part) look like:
@@ -1101,7 +1109,7 @@ Spares:
 .Pp
 Reconstruction could then take place using
 .Fl F
-as describe above.
+as described above.
 .Pp
 A second option is to rebuild directly onto
 .Pa /dev/sd2e .

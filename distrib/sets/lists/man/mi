@@ -1,4 +1,4 @@
-# $NetBSD: mi,v 1.1757.2.8 2024/02/25 15:47:59 martin Exp $
+# $NetBSD: mi,v 1.1757.2.14 2024/10/09 13:25:11 martin Exp $
 #
 # Note: don't delete entries from here - mark them as "obsolete" instead.
 #
@@ -768,12 +768,14 @@
 ./usr/share/man/cat4/acpiec.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpiecdt.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpifan.0			man-sys-catman		.cat
+./usr/share/man/cat4/acpihed.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpilid.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpiout.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpipmtr.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpismbus.0		man-sys-catman		.cat
 ./usr/share/man/cat4/acpitz.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpivga.0			man-sys-catman		.cat
+./usr/share/man/cat4/acpivmgenid.0		man-sys-catman		.cat
 ./usr/share/man/cat4/acpiwdrt.0			man-sys-catman		.cat
 ./usr/share/man/cat4/acpiwmi.0			man-sys-catman		.cat
 ./usr/share/man/cat4/adb.0			man-sys-catman		.cat
@@ -895,6 +897,7 @@
 ./usr/share/man/cat4/amr.0			man-sys-catman		.cat
 ./usr/share/man/cat4/ams.0			man-sys-catman		.cat
 ./usr/share/man/cat4/an.0			man-sys-catman		.cat
+./usr/share/man/cat4/apei.0			man-sys-catman		.cat
 ./usr/share/man/cat4/aps.0			man-sys-catman		.cat
 ./usr/share/man/cat4/aq.0			man-sys-catman		.cat
 ./usr/share/man/cat4/arc/intro.0		man-sys-catman		.cat
@@ -1338,7 +1341,7 @@
 ./usr/share/man/cat4/i386/spic.0		man-sys-catman		.cat
 ./usr/share/man/cat4/i386/vald.0		man-obsolete		obsolete
 ./usr/share/man/cat4/i386/vesafb.0		man-obsolete		obsolete
-./usr/share/man/cat4/i386/viac7temp.0		man-sys-catman		.cat
+./usr/share/man/cat4/i386/viac7temp.0		man-obsolete		obsolete
 ./usr/share/man/cat4/i4b.0			man-obsolete		obsolete
 ./usr/share/man/cat4/i4bctl.0			man-obsolete		obsolete
 ./usr/share/man/cat4/i4bipr.0			man-obsolete		obsolete
@@ -2156,6 +2159,7 @@
 ./usr/share/man/cat4/x86/tco.0			man-sys-catman		.cat
 ./usr/share/man/cat4/x86/tprof_amdpmi.0		man-obsolete		obsolete
 ./usr/share/man/cat4/x86/tprof_pmi.0		man-obsolete		obsolete
+./usr/share/man/cat4/x86/viac7temp.0		man-sys-catman		.cat
 ./usr/share/man/cat4/x86/vmt.0			man-obsolete		obsolete
 ./usr/share/man/cat4/x86/vmx.0			man-obsolete		obsolete
 ./usr/share/man/cat4/xbd.0			man-sys-catman		.cat
@@ -4026,6 +4030,7 @@
 ./usr/share/man/html1/shar.html			man-util-htmlman	html
 ./usr/share/man/html1/shlock.html		man-util-htmlman	html
 ./usr/share/man/html1/shmif_dumpbus.html	man-util-htmlman	rump,html
+./usr/share/man/html1/shmif_pcapin.html		man-util-htmlman	rump,html
 ./usr/share/man/html1/shuffle.html		man-util-htmlman	html
 ./usr/share/man/html1/skey.html			man-util-htmlman	skey,html
 ./usr/share/man/html1/skeyaudit.html		man-util-htmlman	skey,html
@@ -4217,12 +4222,14 @@
 ./usr/share/man/html4/acpiec.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpiecdt.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpifan.html		man-sys-htmlman		html
+./usr/share/man/html4/acpihed.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpilid.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpiout.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpipmtr.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpismbus.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpitz.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpivga.html		man-sys-htmlman		html
+./usr/share/man/html4/acpivmgenid.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpiwdrt.html		man-sys-htmlman		html
 ./usr/share/man/html4/acpiwmi.html		man-sys-htmlman		html
 ./usr/share/man/html4/adb.html			man-sys-htmlman		html
@@ -4343,6 +4350,7 @@
 ./usr/share/man/html4/amr.html			man-sys-htmlman		html
 ./usr/share/man/html4/ams.html			man-sys-htmlman		html
 ./usr/share/man/html4/an.html			man-sys-htmlman		html
+./usr/share/man/html4/apei.html			man-sys-htmlman		html
 ./usr/share/man/html4/aps.html			man-sys-htmlman		html
 ./usr/share/man/html4/aq.html			man-sys-htmlman		html
 ./usr/share/man/html4/arc/intro.html		man-sys-htmlman		html
@@ -4726,7 +4734,7 @@
 ./usr/share/man/html4/i386/spic.html		man-sys-htmlman		html
 ./usr/share/man/html4/i386/vald.html		man-obsolete		obsolete
 ./usr/share/man/html4/i386/vesafb.html		man-obsolete		obsolete
-./usr/share/man/html4/i386/viac7temp.html	man-sys-htmlman		html
+./usr/share/man/html4/i386/viac7temp.html	man-obsolete		obsolete
 ./usr/share/man/html4/i915drm.html		man-sys-htmlman		html
 ./usr/share/man/html4/iavc.html			man-obsolete		obsolete
 ./usr/share/man/html4/iavf.html			man-sys-htmlman		html
@@ -5486,6 +5494,7 @@
 ./usr/share/man/html4/x86/tco.html		man-sys-htmlman		html
 ./usr/share/man/html4/x86/tprof_amdpmi.html	man-obsolete		obsolete
 ./usr/share/man/html4/x86/tprof_pmi.html	man-obsolete		obsolete
+./usr/share/man/html4/x86/viac7temp.html	man-sys-htmlman		html
 ./usr/share/man/html4/x86/vmt.html		man-obsolete		obsolete
 ./usr/share/man/html4/x86/vmx.html		man-obsolete		obsolete
 ./usr/share/man/html4/xbd.html			man-sys-htmlman		html
@@ -7148,6 +7157,7 @@
 ./usr/share/man/man1/shar.1			man-util-man		.man
 ./usr/share/man/man1/shlock.1			man-util-man		.man
 ./usr/share/man/man1/shmif_dumpbus.1		man-util-man		rump,.man
+./usr/share/man/man1/shmif_pcapin.1		man-util-man		rump,.man
 ./usr/share/man/man1/shuffle.1			man-util-man		.man
 ./usr/share/man/man1/skey.1			man-util-man		skey,.man
 ./usr/share/man/man1/skeyaudit.1		man-util-man		skey,.man
@@ -7360,12 +7370,14 @@
 ./usr/share/man/man4/acpiec.4			man-sys-man		.man
 ./usr/share/man/man4/acpiecdt.4			man-sys-man		.man
 ./usr/share/man/man4/acpifan.4			man-sys-man		.man
+./usr/share/man/man4/acpihed.4			man-sys-man		.man
 ./usr/share/man/man4/acpilid.4			man-sys-man		.man
 ./usr/share/man/man4/acpiout.4			man-sys-man		.man
 ./usr/share/man/man4/acpipmtr.4			man-sys-man		.man
 ./usr/share/man/man4/acpismbus.4		man-sys-man		.man
 ./usr/share/man/man4/acpitz.4			man-sys-man		.man
 ./usr/share/man/man4/acpivga.4			man-sys-man		.man
+./usr/share/man/man4/acpivmgenid.4		man-sys-man		.man
 ./usr/share/man/man4/acpiwdrt.4			man-sys-man		.man
 ./usr/share/man/man4/acpiwmi.4			man-sys-man		.man
 ./usr/share/man/man4/adb.4			man-sys-man		.man
@@ -7487,6 +7499,7 @@
 ./usr/share/man/man4/amr.4			man-sys-man		.man
 ./usr/share/man/man4/ams.4			man-sys-man		.man
 ./usr/share/man/man4/an.4			man-sys-man		.man
+./usr/share/man/man4/apei.4			man-sys-man		.man
 ./usr/share/man/man4/aps.4			man-sys-man		.man
 ./usr/share/man/man4/aq.4			man-sys-man		.man
 ./usr/share/man/man4/arc/intro.4		man-sys-man		.man
@@ -7930,7 +7943,7 @@
 ./usr/share/man/man4/i386/spic.4		man-sys-man		.man
 ./usr/share/man/man4/i386/vald.4		man-obsolete		obsolete
 ./usr/share/man/man4/i386/vesafb.4		man-obsolete		obsolete
-./usr/share/man/man4/i386/viac7temp.4		man-sys-man		.man
+./usr/share/man/man4/i386/viac7temp.4		man-obsolete		obsolete
 ./usr/share/man/man4/i4b.4			man-obsolete		obsolete
 ./usr/share/man/man4/i4bctl.4			man-obsolete		obsolete
 ./usr/share/man/man4/i4bipr.4			man-obsolete		obsolete
@@ -8748,6 +8761,7 @@
 ./usr/share/man/man4/x86/tco.4			man-sys-man		.man
 ./usr/share/man/man4/x86/tprof_amdpmi.4		man-obsolete		obsolete
 ./usr/share/man/man4/x86/tprof_pmi.4		man-obsolete		obsolete
+./usr/share/man/man4/x86/viac7temp.4		man-sys-man		.man
 ./usr/share/man/man4/x86/vmt.4			man-obsolete		obsolete
 ./usr/share/man/man4/x86/vmx.4			man-obsolete		obsolete
 ./usr/share/man/man4/xbd.4			man-sys-man		.man

@@ -1,4 +1,4 @@
-/*	$NetBSD: netbsd32_ioctl.c,v 1.120 2021/12/22 00:21:32 roy Exp $	*/
+/*	$NetBSD: netbsd32_ioctl.c,v 1.120.4.2 2024/11/17 16:16:11 martin Exp $	*/
 
 /*
  * Copyright (c) 1998, 2001 Matthew R. Green
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: netbsd32_ioctl.c,v 1.120 2021/12/22 00:21:32 roy Exp $");
+__KERNEL_RCSID(0, "$NetBSD: netbsd32_ioctl.c,v 1.120.4.2 2024/11/17 16:16:11 martin Exp $");
 
 #if defined(_KERNEL_OPT)
 #include "opt_ntp.h"
@@ -148,6 +148,20 @@ netbsd32_to_oifreq(struct netbsd32_oifreq *s32p, struct oifreq *p, u_long cmd)
 	 */
 	if (cmd == SIOCGIFDATA || cmd == SIOCZIFDATA)
 		p->ifr_data = (void *)NETBSD32PTR64(s32p->ifr_data);
+}
+
+static inline void
+netbsd32_to_ifdatareq(struct netbsd32_ifdatareq *s32p, struct ifdatareq *p, u_long cmd)
+{
+
+	memcpy(p, s32p, sizeof *s32p);
+	switch (cmd) {
+	case SIOCGIFDATA:
+	case SIOCZIFDATA:
+		netbsd32_to_timespec(&s32p->ifdr_data.ifi_lastchange,
+		    &p->ifdr_data.ifi_lastchange);
+		break;
+	}
 }
 
 static inline void
@@ -690,6 +704,20 @@ netbsd32_from_oifreq(struct oifreq *p,
 	memcpy(s32p, p, sizeof *s32p);
 	if (cmd == SIOCGIFDATA || cmd == SIOCZIFDATA)
 		NETBSD32PTR32(s32p->ifr_data, p->ifr_data);
+}
+
+static inline void
+netbsd32_from_ifdatareq(const struct ifdatareq *p, struct netbsd32_ifdatareq *p32, u_long cmd)
+{
+
+	memcpy(p32, p, sizeof *p32);
+	switch (cmd) {
+	case SIOCGIFDATA:
+	case SIOCZIFDATA:
+		netbsd32_from_timespec(&p->ifdr_data.ifi_lastchange,
+		    &p32->ifdr_data.ifi_lastchange);
+		break;
+	}
 }
 
 static inline void
@@ -1273,9 +1301,7 @@ netbsd32_ioctl(struct lwp *l,
 		syscallarg(netbsd32_u_long) com;
 		syscallarg(netbsd32_voidp) data;
 	} */
-	struct proc *p = l->l_proc;
 	struct file *fp;
-	struct filedesc *fdp;
 	u_long com;
 	int error = 0;
 	size_t size;
@@ -1283,7 +1309,6 @@ netbsd32_ioctl(struct lwp *l,
 	void *data, *memp = NULL;
 	void *data32, *memp32 = NULL;
 	unsigned int fd;
-	fdfile_t *ff;
 	int tmp;
 #define STK_PARAMS	128
 	uint64_t stkbuf[STK_PARAMS/sizeof(uint64_t)];
@@ -1315,7 +1340,6 @@ netbsd32_ioctl(struct lwp *l,
 	size32 = 0;
 	size = 0;
 
-	fdp = p->p_fd;
 	fd = SCARG(uap, fd);
 	if ((fp = fd_getfile(fd)) == NULL)
 		return EBADF;
@@ -1324,15 +1348,10 @@ netbsd32_ioctl(struct lwp *l,
 		goto out;
 	}
 
-	ff = atomic_load_consume(&fdp->fd_dt)->dt_ff[SCARG(uap, fd)];
 	switch (com = SCARG(uap, com)) {
-	case FIOCLEX:
-		ff->ff_exclose = true;
-		fdp->fd_exclose = true;
-		goto out;
-
 	case FIONCLEX:
-		ff->ff_exclose = false;
+	case FIOCLEX:
+		fd_set_exclose(l, fd, com == FIOCLEX);
 		goto out;
 	}
 
@@ -1537,6 +1556,10 @@ netbsd32_ioctl(struct lwp *l,
 	case SIOCSIFADDRPREF32:
 		IOCTL_STRUCT_CONV_TO(SIOCSIFADDRPREF, if_addrprefreq);
 
+	case SIOCGIFDATA32:
+		IOCTL_STRUCT_CONV_TO(SIOCGIFDATA, ifdatareq);
+	case SIOCZIFDATA32:
+		IOCTL_STRUCT_CONV_TO(SIOCZIFDATA, ifdatareq);
 
 	case OSIOCGIFFLAGS32:
 		IOCTL_STRUCT_CONV_TO(OSIOCGIFFLAGS, oifreq);

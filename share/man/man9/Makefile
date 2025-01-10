@@ -1,4 +1,4 @@
-#       $NetBSD: Makefile,v 1.465.2.1 2024/01/14 15:17:12 martin Exp $
+#       $NetBSD: Makefile,v 1.465.2.5 2024/09/20 11:00:20 martin Exp $
 
 #	Makefile for section 9 (kernel function and variable) manual pages.
 
@@ -14,7 +14,7 @@ MAN=	accept_filter.9 accf_data.9 accf_http.9 acl.9 \
 	cpu_idle.9 cpu_initclocks.9 cpu_need_resched.9 \
 	cpu_number.9 cpu_reboot.9 cpu_rootconf.9 \
 	cpu_startup.9 cpu_switchto.9 cpufreq.9 \
-	csf.9 ctod.9 \
+	crashme.9 csf.9 ctod.9 \
 	curproc.9 \
 	ddb.9 ddc.9 \
 	delay.9 devsw_attach.9 disk.9 disklabel.9 dksubr.9 dofileread.9 \
@@ -44,8 +44,8 @@ MAN=	accept_filter.9 accf_data.9 accf_http.9 acl.9 \
 	panic.9 pathbuf.9 pci.9 pci_configure_bus.9 pci_intr.9 \
 	pci_msi.9 pckbport.9 pcmcia.9 pcq.9 pcu.9 \
 	percpu.9 pfil.9 physio.9 pktqueue.9 pmap.9 pmatch.9 pmf.9 pool.9 \
-	pool_cache.9 powerhook_establish.9 ppsratecheck.9 preempt.9 \
-	proc_find.9 pserialize.9 pslist.9 psref.9 putter.9 \
+	pool_cache.9 portfeatures.9 powerhook_establish.9 ppsratecheck.9 \
+	preempt.9 proc_find.9 pserialize.9 pslist.9 psref.9 putter.9 \
 	radio.9 ras.9 rasops.9 ratecheck.9 resettodr.9 rnd.9 \
 	roundup.9 rssadapt.9 rt_timer.9 rwlock.9 RUN_ONCE.9 STACK.9 \
 	scanc.9 \
@@ -67,7 +67,8 @@ MAN+=	secmodel_suser.9 \
 	usbd_status.9 usbdi.9 usbnet.9 \
 	userret.9 ustore.9 \
 	uvm.9 uvm_hotplug.9 uvm_km.9 uvm_map.9 \
-	vattr.9 veriexec.9 vcons.9 vfs.9 vfs_hooks.9 vfsops.9 vfssubr.9 \
+	vattr.9 veriexec.9 vcons.9 versioningsyscalls.9 \
+	vfs.9 vfs_hooks.9 vfsops.9 vfssubr.9 \
 	video.9 vme.9 vnfileops.9 vnode.9 vnodeops.9 vnsubr.9 vmem.9  \
 	wapbl.9 wdc.9 workqueue.9 \
 	wsbell.9 wscons.9 wsdisplay.9 wsfont.9 wskbd.9 wsmouse.9 \
@@ -412,7 +413,13 @@ MLINKS+=iic.9 iic_acquire_bus.9 \
 	iic.9 iic_smbus_write_byte.9 \
 	iic.9 iic_smbus_read_byte.9 \
 	iic.9 iic_smbus_receive_byte.9
-MLINKS+=imax.9 imin.9
+MLINKS+=imax.9 imin.9 \
+	imax.9 lmax.9 \
+	imax.9 lmin.9 \
+	imax.9 uimax.9 \
+	imax.9 uimin.9 \
+	imax.9 ulmax.9 \
+	imax.9 ulmin.9
 MLINKS+=in4_cksum.9 in_cksum.9 \
 	in4_cksum.9 in6_cksum.9
 MLINKS+=ioasic.9 ioasic_intr_establish.9 \

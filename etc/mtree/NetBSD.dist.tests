@@ -1,4 +1,4 @@
-#	$NetBSD: NetBSD.dist.tests,v 1.197.2.1 2023/09/04 17:33:28 martin Exp $
+#	$NetBSD: NetBSD.dist.tests,v 1.197.2.5 2024/10/13 16:06:36 martin Exp $
 
 ./usr/libdata/debug/usr/tests
 ./usr/libdata/debug/usr/tests/atf
@@ -129,6 +129,7 @@
 ./usr/libdata/debug/usr/tests/lib/librumphijack
 ./usr/libdata/debug/usr/tests/lib/libskey
 ./usr/libdata/debug/usr/tests/lib/libsljit
+./usr/libdata/debug/usr/tests/lib/libstdc++
 ./usr/libdata/debug/usr/tests/lib/libtre
 ./usr/libdata/debug/usr/tests/lib/libusbhid
 ./usr/libdata/debug/usr/tests/lib/libutil
@@ -341,6 +342,7 @@
 ./usr/tests/lib/librumphijack
 ./usr/tests/lib/libskey
 ./usr/tests/lib/libsljit
+./usr/tests/lib/libstdc++
 ./usr/tests/lib/libtre
 ./usr/tests/lib/libtre/data
 ./usr/tests/lib/libusbhid
@@ -374,6 +376,7 @@
 ./usr/tests/net/if_lagg
 ./usr/tests/net/if_loop
 ./usr/tests/net/if_pppoe
+./usr/tests/net/if_shmif
 ./usr/tests/net/if_tap
 ./usr/tests/net/if_tun
 ./usr/tests/net/if_vether
@@ -443,6 +446,7 @@
 ./usr/tests/usr.bin/dirname
 ./usr/tests/usr.bin/find
 ./usr/tests/usr.bin/fstat
+./usr/tests/usr.bin/ftp
 ./usr/tests/usr.bin/gdb
 ./usr/tests/usr.bin/grep
 ./usr/tests/usr.bin/gzip
@@ -469,6 +473,7 @@
 ./usr/tests/usr.bin/sdiff
 ./usr/tests/usr.bin/sed
 ./usr/tests/usr.bin/shmif_dumpbus
+./usr/tests/usr.bin/shmif_pcapin
 ./usr/tests/usr.bin/sort
 ./usr/tests/usr.bin/tar
 ./usr/tests/usr.bin/tmux

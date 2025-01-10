@@ -1,4 +1,4 @@
-/*	$NetBSD: viocon.c,v 1.5.4.1 2023/05/13 10:56:10 martin Exp $	*/
+/*	$NetBSD: viocon.c,v 1.5.4.3 2024/10/02 18:20:48 martin Exp $	*/
 /*	$OpenBSD: viocon.c,v 1.8 2021/11/05 11:38:29 mpi Exp $	*/
 
 /*
@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: viocon.c,v 1.5.4.1 2023/05/13 10:56:10 martin Exp $");
+__KERNEL_RCSID(0, "$NetBSD: viocon.c,v 1.5.4.3 2024/10/02 18:20:48 martin Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -222,11 +222,12 @@ viocon_attach(struct device *parent, struct device *self, void *aux)
 		printf("\n%s: viocon_port_create failed\n", __func__);
 		goto err;
 	}
-	viocon_rx_fill(sc->sc_ports[0]);
 
 	if (virtio_child_attach_finish(vsc, sc->sc_vqs, nvqs,
 	    /*config_change*/NULL, /*req_flags*/0) != 0)
 		goto err;
+
+	viocon_rx_fill(sc->sc_ports[0]);
 
 	return;
 err:
@@ -377,7 +378,7 @@ viocon_rx_fill(struct viocon_port *vp)
 		virtio_enqueue_commit(vsc, vq, slot, 0);
 		ndone++;
 	}
-	KASSERT(r == 0 || r == EAGAIN);
+	KASSERTMSG(r == 0 || r == EAGAIN, "r=%d", r);
 	if (ndone > 0)
 		virtio_notify(vsc, vq);
 }
@@ -453,9 +454,9 @@ vioconstart(struct tty *tp)
 			SET(tp->t_state, TS_BUSY);
 			break;
 		}
-		KASSERT(ret == 0);
+		KASSERTMSG(ret == 0, "ret=%d", ret);
 		ret = virtio_enqueue_reserve(vsc, vq, slot, 1);
-		KASSERT(ret == 0);
+		KASSERTMSG(ret == 0, "ret=%d", ret);
 		buf = vp->vp_tx_buf + slot * BUFSIZE;
 		cnt = q_to_b(&tp->t_outq, buf, BUFSIZE);
 		bus_dmamap_sync(virtio_dmat(vsc), vp->vp_dmamap,

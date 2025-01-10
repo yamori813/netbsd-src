@@ -1,4 +1,4 @@
-#	$NetBSD: bsd.x11.mk,v 1.145.2.5 2023/10/26 15:23:02 martin Exp $
+#	$NetBSD: bsd.x11.mk,v 1.145.2.7 2024/11/02 10:56:09 martin Exp $
 
 .include <bsd.init.mk>
 
@@ -134,7 +134,7 @@ XORG_VERSION_CURRENT="(((${XORG_SERVER_MAJOR}) * 10000000) + ((${XORG_SERVER_MIN
 .else
 XORG_SERVER_MAJOR=	21
 XORG_SERVER_MINOR=	1
-XORG_SERVER_TEENY=	9
+XORG_SERVER_TEENY=	14
 XORG_VERSION_CURRENT="((10000000) + ((${XORG_SERVER_MAJOR}) * 100000) + ((${XORG_SERVER_MINOR}) * 1000) + ${XORG_SERVER_TEENY})"
 .endif
 
@@ -145,7 +145,7 @@ __XKBDEFRULES__=	'"xorg"'
 XLOCALE.DEFINES=	-DXLOCALEDIR=\"${X11LIBDIR}/locale\" \
 			-DXLOCALELIBDIR=\"${X11LIBDIR}/locale\"
 
-PRINT_PACKAGE_VERSION=	awk '/^PACKAGE_VERSION=/ {			\
+PRINT_PACKAGE_VERSION=	${TOOL_AWK} '/^PACKAGE_VERSION=/ {		\
 				match($$1, "([0-9]+\\.)+[0-9]+");	\
 				version = substr($$1, RSTART, RLENGTH);	\
 			} END { print version }'

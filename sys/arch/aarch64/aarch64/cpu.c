@@ -1,4 +1,4 @@
-/* $NetBSD: cpu.c,v 1.70.4.1 2022/12/23 08:09:48 martin Exp $ */
+/* $NetBSD: cpu.c,v 1.70.4.4 2024/10/13 10:43:11 martin Exp $ */
 
 /*
  * Copyright (c) 2017 Ryo Shimizu <ryo@nerv.org>
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(1, "$NetBSD: cpu.c,v 1.70.4.1 2022/12/23 08:09:48 martin Exp $");
+__KERNEL_RCSID(1, "$NetBSD: cpu.c,v 1.70.4.4 2024/10/13 10:43:11 martin Exp $");
 
 #include "locators.h"
 #include "opt_arm_debug.h"
@@ -42,6 +42,7 @@ __KERNEL_RCSID(1, "$NetBSD: cpu.c,v 1.70.4.1 2022/12/23 08:09:48 martin Exp $");
 #include <sys/kmem.h>
 #include <sys/reboot.h>
 #include <sys/rndsource.h>
+#include <sys/sdt.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
@@ -166,6 +167,8 @@ cpu_attach(device_t dv, cpuid_t id)
 	aarch64_printcacheinfo(dv, ci);
 	cpu_identify2(dv, ci);
 
+	cpu_setup_rng(dv, ci);
+
 	if (unit != 0) {
 	    return;
 	}
@@ -177,7 +180,6 @@ cpu_attach(device_t dv, cpuid_t id)
 	cpu_init_counter(ci);
 
 	/* These currently only check the BP. */
-	cpu_setup_rng(dv, ci);
 	cpu_setup_aes(dv, ci);
 	cpu_setup_chacha(dv, ci);
 }
@@ -213,6 +215,8 @@ const struct cpuidtab cpuids[] = {
 	{ CPU_ID_THUNDERX2RX, "ThunderX2", "Marvell", "v8.1-A" },
 	{ CPU_ID_APPLE_M1_ICESTORM & CPU_PARTMASK, "M1 Icestorm", "Apple", "Apple Silicon" },
 	{ CPU_ID_APPLE_M1_FIRESTORM & CPU_PARTMASK, "M1 Firestorm", "Apple", "Apple Silicon" },
+	{ CPU_ID_AMPERE1 & CPU_PARTMASK, "Ampere-1", "Ampere", "v8.6-A+" },
+	{ CPU_ID_AMPERE1A & CPU_PARTMASK, "Ampere-1A", "Ampere", "v8.6-A+" },
 };
 
 static void
@@ -329,8 +333,8 @@ cpu_identify2(device_t self, struct cpu_info *ci)
 {
 	struct aarch64_sysctl_cpu_id * const id = &ci->ci_id;
 
-	aprint_debug_dev(self, "midr=0x%" PRIx32 " mpidr=0x%" PRIx32 "\n",
-	    (uint32_t)id->ac_midr, (uint32_t)id->ac_mpidr);
+	aprint_debug_dev(self, "midr=0x%" PRIx64 " mpidr=0x%" PRIx64 "\n",
+	    id->ac_midr, id->ac_mpidr);
 	aprint_verbose_dev(self, "revID=0x%" PRIx64, id->ac_revidr);
 
 	/* ID_AA64DFR0_EL1 */
@@ -582,8 +586,9 @@ rndrrs_get(size_t nbytes, void *cookie)
 	const unsigned bpb = 4;
 	size_t nbits = nbytes*NBBY;
 	uint64_t x;
-	int error;
+	int error, bound;
 
+	bound = curlwp_bind();	/* bind to CPU for rndrrs_fail evcnt */
 	while (nbits) {
 		/*
 		 * x := random 64-bit sample
@@ -603,12 +608,16 @@ rndrrs_get(size_t nbytes, void *cookie)
 		    "mrs	%0, s3_3_c2_c4_1\n"
 		    "cset	%w1, eq"
 		    : "=r"(x), "=r"(error));
-		if (error)
+		if (error) {
+			DTRACE_PROBE(rndrrs_fail);
+			curcpu()->ci_rndrrs_fail.ev_count++;
 			break;
+		}
 		rnd_add_data_sync(&rndrrs_source, &x, sizeof(x),
 		    bpb*sizeof(x));
 		nbits -= MIN(nbits, bpb*sizeof(x));
 	}
+	curlwp_bindx(bound);
 
 	explicit_memset(&x, 0, sizeof x);
 }
@@ -629,7 +638,16 @@ cpu_setup_rng(device_t dv, struct cpu_info *ci)
 		return;
 	}
 
-	/* Attach it.  */
+	/* Attach event counter for RNDRRS failure.  */
+	evcnt_attach_dynamic(&ci->ci_rndrrs_fail, EVCNT_TYPE_MISC, NULL,
+	    ci->ci_cpuname, "rndrrs fail");
+
+	/*
+	 * On the primary CPU, attach random source -- this only
+	 * happens once globally.
+	 */
+	if (!CPU_IS_PRIMARY(ci))
+		return;
 	rndsource_setcb(&rndrrs_source, rndrrs_get, NULL);
 	rnd_attach_source(&rndrrs_source, "rndrrs", RND_TYPE_RNG,
 	    RND_FLAG_DEFAULT|RND_FLAG_HASCB);
