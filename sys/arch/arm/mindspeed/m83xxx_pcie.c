@@ -336,8 +336,6 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 	pba.pba_pc = &sc->sc_pc;
 	pba.pba_bus = 0;
 
-	delay(3000);
-
 	config_found(sc->sc_dev, &pba, pcibusprint,
 	    CFARGS(.devhandle = device_handle(sc->sc_dev)));
 }
