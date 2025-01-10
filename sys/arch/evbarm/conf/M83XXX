@@ -167,6 +167,10 @@ m83pcie0	at ahb? addr 0x10010000 size 0x10000 intr 14
 options		PCI_NETBSD_CONFIGURE
 
 pci*		at m83pcie?
+options        ATHHAL_AR5212,ATHHAL_RF2425     # AR5BHB63
+ath*           at pci? dev ? function ?        # Atheros IEEE 802.11
+athn*          at pci? dev ? function ?        # Atheros IEEE 802.11
+
 
 # USB bus support
 usb*		at ehci?

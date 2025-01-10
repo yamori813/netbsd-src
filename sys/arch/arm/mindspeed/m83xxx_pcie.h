@@ -67,6 +67,8 @@ struct m83pcie_softc {
 	void (* sc_reset)(void *);
 
 	bool sc_have_sw_reset;
+
+	int is_endpoint;
 };
 
 struct m83pcie_ih {

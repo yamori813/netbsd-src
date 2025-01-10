@@ -92,9 +92,7 @@ static pcitag_t m83pcie_make_tag(void *, int, int, int);
 static void m83pcie_decompose_tag(void *, pcitag_t, int *, int *, int *);
 static pcireg_t m83pcie_conf_read(void *, pcitag_t, int);
 static void m83pcie_conf_write(void *, pcitag_t, int, pcireg_t);
-#ifdef __HAVE_PCI_CONF_HOOK
 static int m83pcie_conf_hook(void *, int, int, int, pcireg_t);
-#endif
 static void m83pcie_conf_interrupt(void *, int, int, int, int, int *);
 
 static int m83pcie_intr_map(const struct pci_attach_args *, pci_intr_handle_t *);
@@ -233,6 +231,7 @@ m83pcie_phy_read(struct m83pcie_softc *sc, uint32_t addr)
 }
 #endif
 
+#if 0
 static int
 m83pcie_wait_for_link(struct m83pcie_softc *sc)
 {
@@ -273,7 +272,6 @@ m83pcie_wait_for_link(struct m83pcie_softc *sc)
 
 	return -1;
 }
-
 static void
 m83pcie_linkup(struct m83pcie_softc *sc)
 {
@@ -320,17 +318,18 @@ error:
 
 	return;
 }
+#endif
 
 static inline void
 m83pcie_direct_memory_mapped_cfg(struct m83pcie_softc * const sc)
 {
 	/* PCIe mem offset */
-	PCIE_WRITE(sc, PCIE_CH1_DMA_REMOTE_ADDR_LOW, AHB_PCIe0_BASE & 0xf0000000);
-	PCIE_WRITE(sc, PCIE_CH1_DMA_REMOTE_ADDR_HIGH, 0);
+	INDIRECT_WRITE(sc, PCIE_CH1_DMA_REMOTE_ADDR_LOW, AHB_PCIe0_BASE & 0xf0000000);
+	INDIRECT_WRITE(sc, PCIE_CH1_DMA_REMOTE_ADDR_HIGH, 0);
 
 	/* FIXME - When should we use 32bit/64bit? */
 	/* FIXME - What traffic class, attributes should be used? */
-	PCIE_WRITE(sc, PCIE_CH1_DMA_START, PCIE_CH_STR_START | PCIE_CH_STR_ATTR(0) | PCIE_CH_STR_TYPE(TYPE_MEM32) | PCIE_CH_STR_CLASS(0));
+	INDIRECT_WRITE(sc, PCIE_CH1_DMA_START, PCIE_CH_STR_START | PCIE_CH_STR_ATTR(0) | PCIE_CH_STR_TYPE(TYPE_MEM32) | PCIE_CH_STR_CLASS(0));
 }
 
 static int
@@ -361,8 +360,7 @@ m83pcie_completer_dma_init(struct m83pcie_softc * const sc)
 {
 	uint32_t tmp;
 
-//	if (!ctrl->is_endpoint) {
-	if (1) {
+	if (!sc->is_endpoint) {
 		/* FIXME - only one BAR is setup in configuration space */
 		/* Use same addresses in AHB and PCIe domains */
 		PCIE_WRITE(sc, PCIE_BAR0_ADDR_OFFSET, AHB_DDR_BASE);
@@ -395,8 +393,7 @@ m83pcie_configuration_space_init(struct m83pcie_softc * const sc)
 {
 	uint32_t tmp;
 
-//	if (!ctrl->is_endpoint) {
-	if (1) {
+	if (!sc->is_endpoint) {
 		/* Type 1 configuration header */
 
 		/* Enable memory IO and bus master */
@@ -413,7 +410,7 @@ m83pcie_configuration_space_init(struct m83pcie_softc * const sc)
 		PCIE_WRITE(sc, PCIE_PEX_IP_BAR0, AHB_DDR_BASE);
                 PCIE_WRITE(sc, PCIE_PEX_IP_BAR1, 0x0);
 
-		PCIE_WRITE(sc, PCIE_PEX_IP_BAR2, AHB_DDR_BASE);
+		PCIE_WRITE(sc, PCIE_PEX_IP_BAR2, AHB_ARAM_BASE);
                 PCIE_WRITE(sc, PCIE_PEX_IP_BAR3, 0x0);
 
                 PCIE_WRITE(sc, PCIE_PEX_IP_BAR4, 0x00000000);
@@ -448,6 +445,7 @@ void
 m83pcie_attach_common(struct m83pcie_softc * const sc)
 {
 	struct pcibus_attach_args pba;
+	uint32_t reg;
 
 	if (bus_space_map(sc->sc_iot, AHB_PCIe0CMD_BASE, 0x10000, 0,
 		&sc->sc_indirect_ioh)) {
@@ -461,12 +459,25 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 		return;
 	}
 
-	m83pcie_linkup(sc);
+//	m83pcie_linkup(sc);
+	m83pcie_setup(sc);
 
 	TAILQ_INIT(&sc->sc_intrs);
 	mutex_init(&sc->sc_lock, MUTEX_DEFAULT, IPL_VM);
 
 	m83pcie_init(&sc->sc_pc, sc);
+
+	reg = PCIE_READ(sc, PCIE_SUBSYS_CTRL);
+	if (reg & PCIE_CTL_ENDPOINT_MODE) {
+		sc->is_endpoint = 1;
+	} else {
+		sc->is_endpoint = 0;
+	}
+	reg |= PCIE_CTL_RW1C;
+	PCIE_WRITE(sc, PCIE_SUBSYS_CTRL, reg);
+
+	if (!sc->is_endpoint)
+		PCIE_WRITE(sc, PCIE_PEX_CFG3, 0x0000);
 
 	m83pcie_configuration_space_init(sc);
 	m83pcie_completer_dma_init(sc);
@@ -474,6 +485,19 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 
 	if (sc->sc_pci_netbsd_configure != NULL)
 		sc->sc_pci_netbsd_configure(sc);
+
+	if (sc->is_endpoint)
+		PCIE_WRITE(sc, PCIE_SUBSYS_CTRL, PCIE_READ(sc, PCIE_SUBSYS_CTRL) | PCIE_CTL_CFG_READY);
+
+	if (!sc->is_endpoint) {
+		do {
+			delay(10);
+		} while (PCIE_PEX_ERR_LTSSM_STATE(PCIE_READ(sc, PCIE_PEX_ERROR_STATUS))
+		    < 0x11);
+		do {
+			delay(10);
+		} while (!(PCIE_READ(sc, PCIE_INT_RAW_STATUS) & PCIE_IRQ_VC0_LINK_UP));
+	}
 
 	memset(&pba, 0, sizeof(pba));
 	pba.pba_flags = PCI_FLAGS_MEM_OKAY;
@@ -483,6 +507,8 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 	pba.pba_dmat = sc->sc_dmat;
 	pba.pba_pc = &sc->sc_pc;
 	pba.pba_bus = 0;
+
+	delay(3000);
 
 	config_found(sc->sc_dev, &pba, pcibusprint,
 	    CFARGS(.devhandle = device_handle(sc->sc_dev)));
@@ -509,6 +535,7 @@ m83pcie_intr(void *priv)
 	mutex_enter(&sc->sc_lock);
 	int rv = 0;
 	const u_int lastgen = sc->sc_intrgen;
+	while(PCIE_READ(sc, PCIE_UPST_INT_RAW_STATUS) & PCIE_READ(sc, PCIE_UPST_INT_MASK)) {
 	TAILQ_FOREACH(pcie_ih, &sc->sc_intrs, ih_entry) {
 		int (*callback)(void *) = pcie_ih->ih_handler;
 		void *arg = pcie_ih->ih_arg;
@@ -517,6 +544,7 @@ m83pcie_intr(void *priv)
 		mutex_enter(&sc->sc_lock);
 		if (lastgen != sc->sc_intrgen)
 			break;
+	}
 	}
 	mutex_exit(&sc->sc_lock);
 
@@ -594,9 +622,7 @@ m83pcie_init(pci_chipset_tag_t pc, void *priv)
 	pc->pc_decompose_tag = m83pcie_decompose_tag;
 	pc->pc_conf_read = m83pcie_conf_read;
 	pc->pc_conf_write = m83pcie_conf_write;
-#ifdef __HAVE_PCI_CONF_HOOK
 	pc->pc_conf_hook = m83pcie_conf_hook;
-#endif
 	pc->pc_conf_interrupt = m83pcie_conf_interrupt;
 
 	pc->pc_intr_v = priv;
@@ -659,8 +685,8 @@ m83pcie_conf_read(void *v, pcitag_t tag, int where)
 {
 	struct m83pcie_softc *sc = v;
 	int bus, devfn;
-	int offset = where & 0x03;
-	uint32_t byte_enables;
+	uint8_t offset = where & 0x03;
+	uint8_t byte_enables;
 	int size = 4;
 	int status;
 	int s;
@@ -703,8 +729,8 @@ m83pcie_conf_write(void *v, pcitag_t tag, int where, pcireg_t val)
 {
 	struct m83pcie_softc *sc = v;
 	int bus, devfn;
-	int offset = where & 0x03;
-	uint32_t byte_enables;
+	uint8_t offset = where & 0x03;
+	uint8_t byte_enables;
 	int size = 4;
 	int status;
 	int s;
@@ -724,7 +750,7 @@ m83pcie_conf_write(void *v, pcitag_t tag, int where, pcireg_t val)
 	INDIRECT_WRITE(sc, PCIE_CH0_DMA_START,
 	    PCIE_CH_STR_START | PCIE_CH_STR_LAST_ADDR_BE(0x0) | 
 	    PCIE_CH_STR_FIRST_ADDR_BE(byte_enables) |
-	    PCIE_CH_STR_ATTR(0) | PCIE_CH_STR_TYPE(TYPE_CFG0) |
+	    PCIE_CH_STR_ATTR(0) | PCIE_CH_STR_TYPE(TYPE_CFG0) | PCIE_CH_STR_DIR_WRITE |
 	    PCIE_CH_STR_CLASS(0) | PCIE_CH_STR_SIMPLE_MODE);
  
 	while ((status = INDIRECT_READ(sc, PCIE_CH0_DMA_STATUS)) & PCIE_CH_STS_SIMPLE_REQ_BUSY) ;
@@ -738,13 +764,11 @@ m83pcie_conf_write(void *v, pcitag_t tag, int where, pcireg_t val)
 	return;
 }
 
-#ifdef __HAVE_PCI_CONF_HOOK
 static int
 m83pcie_conf_hook(void *v, int b, int d, int f, pcireg_t id)
 {
-	return PCI_CONF_DEFAULT;
+	return (PCI_CONF_DEFAULT & ~PCI_CONF_ENABLE_BM);
 }
-#endif
 
 static void
 m83pcie_conf_interrupt(void *v, int bus, int dev, int ipin, int swiz,
