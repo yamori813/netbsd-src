@@ -36,8 +36,6 @@ struct m83pcie_softc {
 
 	bus_space_tag_t sc_iot;
 	bus_space_handle_t sc_ioh;
-//	bus_space_handle_t sc_root_ioh;
-//	bus_space_handle_t sc_gpr_ioh;
 	bus_space_handle_t sc_indirect_ioh;
 	bus_space_handle_t sc_phy_ioh;
 	bus_dma_tag_t sc_dmat;
@@ -53,20 +51,8 @@ struct m83pcie_softc {
 	kmutex_t sc_lock;
 	u_int sc_intrgen;
 
-	struct clk *sc_clk_pcie;
-	struct clk *sc_clk_pcie_bus;
-	struct clk *sc_clk_pcie_phy;
-	struct clk *sc_clk_pcie_ext;
-	struct clk *sc_clk_pcie_ext_src;
-	bool sc_ext_osc;
-
 	void *sc_cookie;
 	void (* sc_pci_netbsd_configure)(void *);
-	uint32_t (* sc_gpr_read)(void *, uint32_t);
-	void (* sc_gpr_write)(void *, uint32_t, uint32_t);
-	void (* sc_reset)(void *);
-
-	bool sc_have_sw_reset;
 
 	int is_endpoint;
 };
