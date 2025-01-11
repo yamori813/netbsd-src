@@ -506,7 +506,8 @@ m83pcie_conf_read(void *v, pcitag_t tag, int where)
 
 	PCIE_CONF_LOCK(s);
 
-	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_LOW, ((bus & 0xff) << 24) | ((devfn & 0xff) << 16) | (where & 0xffc));
+	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_LOW, (bus << 24) | (devfn << 16) |
+	    (where & 0xffc));
 	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_HIGH, 0);
 
 	byte_enables = ((1 << size) - 1) << offset;
@@ -549,7 +550,8 @@ m83pcie_conf_write(void *v, pcitag_t tag, int where, pcireg_t val)
 
 	PCIE_CONF_LOCK(s);
 
-	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_LOW, ((bus & 0xff) << 24) | ((devfn & 0xff) << 16) | (where & 0xffc));
+	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_LOW, (bus << 24) | (devfn << 16) |
+	    (where & 0xffc));
 	INDIRECT_WRITE(sc, PCIE_CH0_DMA_REMOTE_ADDR_HIGH, 0);
 
 	byte_enables = ((1 << size) - 1) << offset;
