@@ -311,6 +311,8 @@ m83pcie_attach_common(struct m83pcie_softc * const sc)
 	m83pcie_completer_dma_init(sc);
 	m83pcie_requester_dma_init(sc);
 
+	PCIE_WRITE(sc, PCIE_UPST_INT_ENABLE, US_IRQ_INTA | US_IRQ_INTB | US_IRQ_INTC | US_IRQ_INTD);
+
 	if (sc->sc_pci_netbsd_configure != NULL)
 		sc->sc_pci_netbsd_configure(sc);
 
