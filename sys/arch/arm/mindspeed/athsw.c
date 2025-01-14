@@ -417,7 +417,9 @@ athswattach(device_t parent, device_t self, void *aux)
 		/* RGMII connect to MAC6 */
 		t = AR8327_PAD_RGMII_EN |
 		    AR8327_PAD_RGMII_TXCLK_DELAY_EN |
-		    (2 << AR8327_PAD_RGMII_TXCLK_DELAY_SEL_S);
+		    AR8327_PAD_RGMII_RXCLK_DELAY_EN |
+		    (1 << AR8327_PAD_RGMII_TXCLK_DELAY_SEL_S) |
+		    (2 << AR8327_PAD_RGMII_RXCLK_DELAY_SEL_S);
 		arswitch_writereg(self, AR8327_REG_PAD6_MODE, t);
 
 		port = 6;
