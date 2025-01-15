@@ -165,7 +165,7 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_enaddr[2] = 0xa1;
 	sc->sc_enaddr[3] = 0x98;
 	sc->sc_enaddr[4] = 0x03;
-	sc->sc_enaddr[5] = 0x94 + device_unit(self);
+	sc->sc_enaddr[5] = 0xa4 + device_unit(self);
 
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
