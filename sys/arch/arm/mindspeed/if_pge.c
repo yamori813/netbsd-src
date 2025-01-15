@@ -625,6 +625,9 @@ pge_start(struct ifnet *ifp)
 		if (m == NULL)
 			break;
 
+		/* add hif header to mbuf data then bpf call before modify */
+		bpf_mtap(ifp, m, BPF_D_OUT);
+
 		m->m_data -= sizeof(hif_header_t);
 		m->m_len += sizeof(hif_header_t);
 		m->m_data[0] = 0;
@@ -709,7 +712,6 @@ pge_start(struct ifnet *ifp)
 		}
 		pge_write_4(sc, HIF_TX_CTRL, HIF_CTRL_DMA_EN |
 		    HIF_CTRL_BDP_CH_START_WSTB);
-		bpf_mtap(ifp, m, BPF_D_OUT);
 
 		if(txfree == 0)
 			device_printf(sc->sc_dev, "no txdesc\n");
