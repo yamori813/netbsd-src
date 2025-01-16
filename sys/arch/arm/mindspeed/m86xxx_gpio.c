@@ -528,6 +528,11 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	reg |= (GPIN(9) | GPIN(10));
 	GPIO_WRITE(gpio, GPIO_OE_REG, reg);
 
+	/* OFF and ON */
+	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
+	reg &= ~(GPIN(9) | GPIN(10));
+	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
+	delay(1000*2);
 	reg = GPIO_READ(gpio, GPIO_OUTPUT_REG);
 	reg |= (GPIN(9) | GPIN(10));
 	GPIO_WRITE(gpio, GPIO_OUTPUT_REG, reg);
