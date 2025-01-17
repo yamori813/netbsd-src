@@ -167,6 +167,10 @@ pge_attach(device_t parent, device_t self, void *aux)
 	sc->sc_enaddr[4] = 0x03;
 	sc->sc_enaddr[5] = 0xa4 + device_unit(self);
 
+	sc->sc_hifhdr[0] = device_unit(self);
+	for (i = 1; i < sizeof(sc->sc_hifhdr); ++i)
+		sc->sc_hifhdr[i] = 0;
+
 	sc->sc_rdp = kmem_alloc(sizeof(*sc->sc_rdp), KM_SLEEP);
 
 	for (i = 0; i < PGE_TX_RING_CNT; i++) {
@@ -635,7 +639,8 @@ pge_start(struct ifnet *ifp)
 		for (i = 1; i < sizeof(hif_header_t); ++i)
 			m->m_data[i] = 0;
 */
-		M_PREPEND(m, sizeof(hif_header_t), M_DONTWAIT);
+		M_PREPEND(m, sizeof(sc->sc_hifhdr), M_DONTWAIT);
+		m_copydata(m, 0, sizeof(sc->sc_hifhdr),sc->sc_hifhdr);
 /*
 		for (i = 0; i < 16; ++i) {
 			printf(" %02x", m->m_data[i]);

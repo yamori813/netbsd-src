@@ -105,6 +105,7 @@ struct pge_softc {
 	volatile u_int		sc_txnext;
 	volatile u_int		sc_rxhead;
 	void			*sc_ih;
+	uint8_t			sc_hifhdr[6];
 
 	bufDesc_t		*sc_rxdesc_ring;
 	bus_dmamap_t		sc_rxdesc_dmamap;
