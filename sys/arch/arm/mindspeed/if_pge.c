@@ -783,7 +783,6 @@ pge_tick(void *arg)
 	if(sc->sc_txdesc_ring[i].ctrl & BD_CTRL_DESC_EN)
 		++use;
 	}
-printf("MORIMORI %d\n", use);
 /*
 	if(use) {
 	reg = pge_read_4(sc, HIF_RX_CTRL);

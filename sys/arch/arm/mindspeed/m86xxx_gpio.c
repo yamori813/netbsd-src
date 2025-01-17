@@ -459,7 +459,6 @@ gpio_attach(device_t parent, device_t self, void *aux)
 		for (i = 0; i < 32; ++i) {
 			if (i + 32 * k == 27)
 				continue;
-			printf("MORIMORI GPIO %d\n", i + 32 * k);
 			val = (1 << i);
 			reg = GPIO_READ(gpio, sel);
 			reg &= ~val;
