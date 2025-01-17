@@ -628,11 +628,14 @@ pge_start(struct ifnet *ifp)
 		/* add hif header to mbuf data then bpf call before modify */
 		bpf_mtap(ifp, m, BPF_D_OUT);
 
+/*
 		m->m_data -= sizeof(hif_header_t);
 		m->m_len += sizeof(hif_header_t);
 		m->m_data[0] = 0;
 		for (i = 1; i < sizeof(hif_header_t); ++i)
 			m->m_data[i] = 0;
+*/
+		M_PREPEND(m, sizeof(hif_header_t), M_DONTWAIT);
 /*
 		for (i = 0; i < 16; ++i) {
 			printf(" %02x", m->m_data[i]);
