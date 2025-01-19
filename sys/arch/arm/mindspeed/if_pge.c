@@ -688,9 +688,9 @@ pge_start(struct ifnet *ifp)
 			if (!pad && (seg == dm->dm_nsegs - 1))
 				sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
 				    (BD_CTRL_LIFM |
-/*				    BD_CTRL_BRFETCH_DISABLE |
+				    BD_CTRL_BRFETCH_DISABLE |
 				    BD_CTRL_RTFETCH_DISABLE |
-				    BD_CTRL_PARSE_DISABLE |*/
+				    BD_CTRL_PARSE_DISABLE |
 				    BD_CTRL_PKT_INT_EN);
 			if (seg == 0)
 				sc->sc_txdesc_ring[sc->sc_txnext].status = 1;
@@ -709,8 +709,8 @@ pge_start(struct ifnet *ifp)
 			    PGE_MIN_FRAMELEN - (mlen - sizeof(hif_header_t));
 			sc->sc_txdesc_ring[sc->sc_txnext].ctrl |=
 			    (BD_CTRL_DESC_EN | BD_CTRL_LIFM |
-/*			    BD_CTRL_BRFETCH_DISABLE | BD_CTRL_RTFETCH_DISABLE |
-			    BD_CTRL_PARSE_DISABLE |*/
+			    BD_CTRL_BRFETCH_DISABLE | BD_CTRL_RTFETCH_DISABLE |
+			    BD_CTRL_PARSE_DISABLE |
 			    BD_CTRL_PKT_INT_EN);
 			txfree--;
 			bus_dmamap_sync(sc->sc_bdt, sc->sc_txdesc_dmamap,
