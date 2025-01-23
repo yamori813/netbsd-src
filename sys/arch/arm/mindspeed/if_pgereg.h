@@ -31,6 +31,7 @@
 
 #include <net/if.h>
 #include <net/if_ether.h>
+#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/bpf.h>
 

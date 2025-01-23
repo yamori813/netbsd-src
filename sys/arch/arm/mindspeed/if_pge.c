@@ -510,6 +510,7 @@ pge_init(struct ifnet *ifp)
 	pfe_gemac_init((void *)mac, RGMII, SPEED_1000M, DUPLEX_FULL);
 
 	MAC_ADDR enet_address = {0x0, 0x0};
+	memcpy(sc->sc_enaddr, CLLADDR(ifp->if_sadl), ETHER_ADDR_LEN);
 	gemac_enet_addr_byte_mac(sc->sc_enaddr, &enet_address);
 	gemac_set_laddr1((void *)mac, &enet_address);
 
