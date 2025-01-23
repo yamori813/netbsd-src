@@ -45,6 +45,7 @@ __KERNEL_RCSID(1, "$NetBSD$");
 
 #include <net/if.h>
 #include <net/if_ether.h>
+#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/bpf.h>
 
@@ -591,6 +592,7 @@ cge_init(struct ifnet *ifp)
 	paddr = sc->sc_rxdesc_dmamap->dm_segs[0].ds_addr;
 	cge_write_4(sc, GEM_IP + GEM_RX_QPTR, paddr);
 
+	memcpy(sc->sc_enaddr, CLLADDR(ifp->if_sadl), ETHER_ADDR_LEN);
 	mac = sc->sc_enaddr[0] | (sc->sc_enaddr[1] << 8) |
 	    (sc->sc_enaddr[2] << 16) | (sc->sc_enaddr[3] << 24);
 	cge_write_4(sc, GEM_IP + GEM_LADDR1_BOT, mac);
