@@ -654,6 +654,7 @@ amac_init(struct ifnet *ifp)
 
 	/* 7. Setup other UNIMAC registers */
 	amac_write_4(sc, UNIMAC_FRAME_LEN, uimax(ifp->if_mtu + 32, MCLBYTES));
+	memcpy(sc->sc_enaddr, CLLADDR(ifp->if_sadl), ETHER_ADDR_LEN);
 	mac = amac_macaddr_create(sc->sc_enaddr);
 	amac_write_4(sc, UNIMAC_MAC_0, (uint32_t)(mac >> 0));
 	amac_write_4(sc, UNIMAC_MAC_1, (uint32_t)(mac >> 32));
