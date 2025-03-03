@@ -1,0 +1,38 @@
+#	$NetBSD$
+#
+# standard NetBSD/evbarm for M86XXX options
+
+machine		evbarm arm
+include 	"arch/evbarm/conf/std.evbarm"
+
+# Pull in M86XXX config definitions.
+include		"arch/evbarm/conf/files.tcc893x"
+
+options 	ARM_GENERIC_TODR
+options		ARM_HAS_VBAR
+options 	ARM_INTR_IMPL="<arch/arm/telechips/tcc893x_intr.h>"
+options 	COM_TOLERANCE=40
+options 	CORTEX_PMC
+options 	EVBARM_BOARDTYPE="tcc893x"
+options 	FPU_VFP
+options 	PMAP_NEED_ALLOC_POOLPAGE
+options 	SOSEND_NO_LOAN
+options 	TPIDRPRW_IS_CURCPU
+options 	_ARM32_NEED_BUS_DMA_BOUNCE
+options 	__HAVE_CPU_COUNTER
+options 	__HAVE_CPU_UAREA_ALLOC_IDLELWP
+options 	__HAVE_FAST_SOFTINTS		# should be in types.h
+options 	__HAVE_GENERIC_START
+options 	__HAVE_MM_MD_CACHE_ALIASING
+options 	__HAVE_MM_MD_DIRECT_MAPPED_PHYS
+options 	__HAVE_PCI_CONF_HOOK
+options 	MD_CPU_HATCH=m86xxx_cpu_hatch
+
+makeoptions	BOARDMKFRAG="${THISARM}/conf/mk.tcc893x"
+makeoptions	BOARDTYPE="m86xxx"
+makeoptions	KERNEL_BASE_VIRT="0x80008000"
+makeoptions	LOADADDRESS="0x80008000"
+
+# Prevent the addition of a command line -DKERNEL_BASE_VOFFSET= as it
+# is done at runtime.
+makeoptions	KERNEL_VOFFSET_RUNTIME=1

@@ -1,0 +1,51 @@
+#	$NetBSD$
+#
+# Configuration info for Telechips TCC893X ARM Peripherals
+#
+
+include "arch/arm/pic/files.pic"
+
+file	arch/arm/arm32/arm32_boot.c
+file	arch/arm/arm32/arm32_kvminit.c
+file	arch/arm/arm32/arm32_reboot.c
+file	arch/arm/arm32/irq_dispatch.S
+
+define	bus_dma_generic
+file	arch/arm/arm32/armv7_generic_space.c
+#file	arch/arm/arm/arm_generic_dma.c          bus_dma_generic needs-flag
+file	arch/arm/arm/arm_generic_dma.c
+file	arch/arm/arm/bus_space_a4x.S
+
+#file	arch/arm/mindspeed/tcc893x_board.c
+
+defparam opt_tcc893x.h				MEMSIZE
+
+# tcc893x AXI/AHB bus interface and SoC domains
+device	axi { [addr=-1], [size=0], [intr=-1], [irqbase=-1]} : bus_space_generic
+attach	axi at mainbus
+file	arch/arm/telechips/tcc893x_axi.c		axi
+
+attach	com at axi with tcc893x_com
+file	arch/arm/telechips/tcc893x_com.c		tcc893x_com
+
+device	clk
+attach	clk at axi
+file	arch/arm/telechips/tcc893x_clk.c		clk		needs-flag
+
+# GPIO
+device  tcc893x_gpio: gpiobus
+attach  tcc893x_gpio at axi
+file    arch/arm/telechips/tcc893x_gpio.c	tcc893x_gpio		needs-flag
+
+# Ethernet
+device  pge: ether, ifnet, arp, mii, mii_phy
+attach  pge at axi
+file    arch/arm/telechips/if_pge.c		pge
+
+# USB3 Host Controller (XHCI)
+attach xhci at axi with xhci_axi
+file    arch/arm/telechips/tcc893x_xhci.c        xhci_axi
+
+# USB2 OTG
+attach	dwctwo at axi with tcc893x_otg
+file	arch/arm/telechips/tcc893x_otg.c		tcc893x_otg

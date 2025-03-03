@@ -1,0 +1,238 @@
+#
+#	$NetBSD: BCM5301X,v 1.39 2022/08/07 02:52:25 simonb Exp $
+#
+#	BCM5301X -- Broadcom BCM5301X Eval Board Kernel
+#
+
+include	"arch/evbarm/conf/std.tcc893x"
+
+# estimated number of users
+
+maxusers	32
+
+# Standard system options
+
+options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
+#options 	NTP		# NTP phase/frequency locked loop
+
+# CPU options
+
+#makeoptions	DEFCOPTS="-O0"
+#options 	UVMHIST
+#options 	UVMHIST_PRINT,A9WDT_PERIOD_DEFAULT=30
+options 	BCMETH_COUNTERS
+#options 	MULTIPROCESSOR
+options 	CPU_CORTEX
+options 	MEMSIZE=1024
+#options 	PMAPCOUNTERS
+options 	BUSDMA_COUNTERS
+makeoptions	KERNEL_BASE_PHYS="0x08008000"
+options		EARLYCONS=tcc893x,CONSADDR=0x76370000
+
+# Architecture options
+
+# File systems
+
+file-system	FFS		# UFS
+#file-system	LFS		# log-structured file system
+file-system	MFS		# memory file system
+file-system	NFS		# Network file system
+#file-system 	ADOSFS		# AmigaDOS-compatible file system
+#file-system 	EXT2FS		# second extended file system (linux)
+file-system	CD9660		# ISO 9660 + Rock Ridge file system
+#file-system	MSDOSFS		# MS-DOS file system
+file-system	FDESC		# /dev/fd
+file-system	KERNFS		# /kern
+file-system	NULLFS		# loopback file system
+file-system	PROCFS		# /proc
+#file-system	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
+file-system	UMAPFS		# NULLFS + uid and gid remapping
+#file-system	UNION		# union file system
+#file-system	TMPFS		# memory file system
+file-system	PTYFS		# /dev/pts/N support
+
+# File system options
+#options 	FFS_EI		# FFS Endian Independent support
+#options 	FFS_NO_SNAPSHOT	# No FFS snapshot support
+#options 	QUOTA		# legacy UFS quotas
+#options 	QUOTA2		# new, in-filesystem UFS quotas
+#options 	UFS_DIRHASH	# UFS Large Directory Hashing
+#options 	UFS_EXTATTR	# Extended attribute support for UFS1
+#options 	WAPBL		# File system journaling support
+#options 	DISKLABEL_EI	# disklabel Endian Independent support
+options 	NFSSERVER	# Network File System server
+
+# Networking options
+
+#options 	GATEWAY		# packet forwarding
+options 	INET		# IP + ICMP + TCP + UDP
+options 	INET6		# IPV6
+#options 	IPSEC		# IP security
+#options 	IPSEC_DEBUG	# debug for IP security
+#options 	MROUTING	# IP multicast routing
+#options 	PIM		# Protocol Independent Multicast
+#options 	NETATALK	# AppleTalk networking
+#options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
+#options 	PPP_DEFLATE	# Deflate compression support for PPP
+#options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
+#options 	TCP_DEBUG	# Record last TCP_NDEBUG packets with SO_DEBUG
+
+options 	NFS_BOOT_BOOTP
+options 	NFS_BOOT_DHCP
+#options		NFS_BOOT_BOOTSTATIC
+#options		NFS_BOOTSTATIC_MYIP="\"192.168.1.4\""
+#options		NFS_BOOTSTATIC_GWIP="\"192.168.1.1\""
+#options		NFS_BOOTSTATIC_MASK="\"255.255.255.0\""
+#options		NFS_BOOTSTATIC_SERVADDR="\"192.168.1.1\""
+#options		NFS_BOOTSTATIC_SERVER="\"192.168.1.1:/nfs/sdp2430\""
+
+options 	NFS_BOOT_RWSIZE=1024
+
+# Compatibility options
+include 	"conf/compat_netbsd30.config"
+options 	COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
+
+# Shared memory options
+
+options 	SYSVMSG		# System V-like message queues
+options 	SYSVSEM		# System V-like semaphores
+options 	SYSVSHM		# System V-like memory sharing
+
+# Device options
+
+#options 	MEMORY_DISK_HOOKS	# boottime setup of ramdisk
+#options 	MEMORY_DISK_ROOT_SIZE=8192	# Size in blocks
+#options 	MEMORY_DISK_DYNAMIC
+#options 	MINIROOTSIZE=1000	# Size in blocks
+#options 	MEMORY_DISK_IS_ROOT	# use memory disk as root
+
+# Wedge support
+options 	DKWEDGE_AUTODISCOVER	# Automatically add dk(4) instances
+options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
+
+# Miscellaneous kernel options
+options 	MODULAR		# support dynamically loaded kernel modules
+options 	MODULAR_DEFAULT_AUTOLOAD
+options 	KTRACE		# system call tracing, a la ktrace(1)
+options 	PCIVERBOSE	# Verbose PCI autoconfiguration messages
+#options 	PCI_CONFIG_DUMP	# Verbose PCI autoconfiguration messages
+options 	PCI_NETBSD_CONFIGURE # perform PCI configuration
+options 	RNDVERBOSE	# Verbose rnd messages
+#options 	SCSIVERBOSE	# Verbose SCSI errors
+#options 	MIIVERBOSE	# Verbose MII autoconfiguration messages
+#options 	DDB_KEYCODE=0x40
+#options 	USERCONF	# userconf(4) support
+#options	PIPE_SOCKETPAIR	# smaller, but slower pipe(2)
+
+# Development and Debugging options
+
+options 	DIAGNOSTIC	# internal consistency checks
+options 	DEBUG
+#options 	LOCKDEBUG	# Enable lock debugging
+#options 	UVMHIST		# kernhist for uvm/pmap subsystems
+#options 	VERBOSE_INIT_ARM # verbose bootstraping messages
+options 	DDB		# in-kernel debugger
+options 	DDB_ONPANIC=1
+options 	DDB_HISTORY_SIZE=100	# Enable history editing in DDB
+options 	DDB_COMMANDONENTER="show event"
+options 	DB_MAX_LINE=INT_MAX
+#options 	KGDB
+makeoptions	DEBUG="-g"	# compile full symbol table
+makeoptions	COPY_SYMTAB=1
+
+# USB Debugging options
+#options USB_DEBUG
+#options EHCI_DEBUG
+#options OHCI_DEBUG
+#options XHCI_DEBUG
+#options UHUB_DEBUG
+
+
+# Valid options for BOOT_ARGS:
+#  single		Boot to single user only
+#  kdb			Give control to kernel debugger
+#  ask			Ask for file name to reboot from
+#  memorydisk=<n>	Set memorydisk size to <n> KB
+#  quiet		Show aprint_naive output
+#  verbose		Show aprint_normal and aprint_verbose output
+options 	BOOT_ARGS="\"\""
+
+config		netbsd		root on ? type ?
+#config		netbsd		root on sd0 type ffs
+
+# The main bus device
+mainbus0	at root
+
+# The boot cpu
+#cpu0		at mainbus?
+cpu*		at mainbus?
+
+# The MPCore interrupt controller and global timer
+armperiph0	at mainbus?		# A9 On-Chip Peripherals
+armgic0		at armperiph?		# ARM Generic Interrupt Controller
+arml2cc0	at armperiph? flags 0	# ARM PL310 L2CC
+arma9tmr0	at armperiph?		# A9 Global Timer
+arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
+
+axi0		at mainbus?		# AXI
+#clk0		at axi? addr 0x904b0000
+com*		at axi? addr 0x76370000 intr 59
+#pge0		at axi? addr 0x9c000000 intr 36
+#xhci*		at axi? addr 0x9f000000 intr 54
+#dwctwo*		at axi? addr 0x92000000 intr 53
+
+#m86gpio0	at axi? addr 0x90470000	# not support intr 77 to 85
+#gpio*		at m86gpio?
+
+# USB bus support
+#usb*            at xhci?
+#usb*            at dwctwo?
+#uhub*		at usb?
+#uhub*		at uhub? port ?
+
+# USB Mass Storage
+#umass*  at uhub? port ? configuration ? interface ?
+#scsibus* at scsi?
+#sd*     at scsibus? target ? lun ?      # SCSI disk drives
+#cd*    at scsibus? target ? lun ?      # SCSI CD-ROM drives
+
+# USB Ethernet adapters
+#aue*	at uhub? port ?		# ADMtek AN986 Pegasus based adapters
+#axe*	at uhub? port ?		# ASIX AX88172 based adapters
+#cdce*	at uhub? port ?		# CDC, Ethernet Networking Control Model
+#cue*	at uhub? port ?		# CATC USB-EL1201A based adapters
+#kue*	at uhub? port ?		# Kawasaki LSI KL5KUSB101B based adapters
+#mue*	at uhub? port ?		# Microchip LAN75xx/LAN78xx based adapters
+#udav*	at uhub? port ?		# Davicom DM9601 based adapters
+#ure*	at uhub? port ?		# Realtek RTL8152/RTL8153 based adapters
+#url*	at uhub? port ?		# Realtek RTL8150L based adapters
+
+# Serial adapters
+#uftdi*	at uhub? port ?		# FTDI FT8U100AX serial adapter
+#ucom*	at uftdi? portno ?
+
+# Hardware clocking and power management
+
+# Pseudo-Devices
+
+# disk/mass storage pseudo-devices
+#pseudo-device	md			# memory disk device (ramdisk)
+#pseudo-device	vnd			# disk-like interface to files
+#pseudo-device	fss			# file system snapshot device
+#pseudo-device	putter			# for puffs and pud
+
+# network pseudo-devices
+pseudo-device	bpfilter		# Berkeley packet filter
+pseudo-device	loop			# network loopback
+#pseudo-device	kttcp			# network loopback
+#pseudo-device	vlan
+#pseudo-device	bridge
+#pseudo-device	vether			# Virtual Ethernet for bridge
+
+# miscellaneous pseudo-devices
+pseudo-device	pty			# pseudo-terminals
+#options	RND_COM
+#pseudo-device	clockctl		# user control of clock subsystem
+pseudo-device	ksyms			# /dev/ksyms
+pseudo-device	drvctl			# device control
+pseudo-device	lockstat		# lock profiling
