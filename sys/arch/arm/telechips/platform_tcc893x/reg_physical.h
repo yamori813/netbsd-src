@@ -250,7 +250,6 @@ extern "C" {
 #define HwUART6_BASE                            (0x763D0000)
 #define HwUART7_BASE                            (0x763E0000)
 #define HwUART_PORTCFG_BASE                     (0x763F0000)
-#if 0
 
 #define HwIDE_BASE                              (0x76400000)
 
@@ -1182,7 +1181,6 @@ GPSB Controller Register Define
 #define HwGPIOG                         ((NAND_PGPION)HwGPIOG_BASE)
 
 
-#endif
 #ifdef __cplusplus
 }
 #endif

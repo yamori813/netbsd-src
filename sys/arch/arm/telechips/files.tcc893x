@@ -4,6 +4,7 @@
 #
 
 include "arch/arm/pic/files.pic"
+include "arch/arm/cortex/files.cortex"
 
 file	arch/arm/arm32/arm32_boot.c
 file	arch/arm/arm32/arm32_kvminit.c
@@ -16,7 +17,7 @@ file	arch/arm/arm32/armv7_generic_space.c
 file	arch/arm/arm/arm_generic_dma.c
 file	arch/arm/arm/bus_space_a4x.S
 
-#file	arch/arm/mindspeed/tcc893x_board.c
+file	arch/arm/telechips/tcc893x_board.c
 
 defparam opt_tcc893x.h				MEMSIZE
 
@@ -28,9 +29,9 @@ file	arch/arm/telechips/tcc893x_axi.c		axi
 attach	com at axi with tcc893x_com
 file	arch/arm/telechips/tcc893x_com.c		tcc893x_com
 
-device	clk
-attach	clk at axi
-file	arch/arm/telechips/tcc893x_clk.c		clk		needs-flag
+device	ckc
+attach	ckc at axi
+file	arch/arm/telechips/tcc893x_ckc.c		ckc		needs-flag
 
 # GPIO
 device  tcc893x_gpio: gpiobus
@@ -38,9 +39,12 @@ attach  tcc893x_gpio at axi
 file    arch/arm/telechips/tcc893x_gpio.c	tcc893x_gpio		needs-flag
 
 # Ethernet
-device  pge: ether, ifnet, arp, mii, mii_phy
-attach  pge at axi
-file    arch/arm/telechips/if_pge.c		pge
+#device  pge: ether, ifnet, arp, mii, mii_phy
+#attach  pge at axi
+#file    arch/arm/telechips/if_pge.c		pge
+attach	awge at axi with tcc893x_gmac
+file	arch/arm/telechips/tcc893x_gmac.c	tcc893x_gmac
+
 
 # USB3 Host Controller (XHCI)
 attach xhci at axi with xhci_axi
@@ -49,3 +53,12 @@ file    arch/arm/telechips/tcc893x_xhci.c        xhci_axi
 # USB2 OTG
 attach	dwctwo at axi with tcc893x_otg
 file	arch/arm/telechips/tcc893x_otg.c		tcc893x_otg
+
+# UHCI USB1.1 Controller
+attach	ohci at axi with tcc893x_ohci
+file    arch/arm/telechips/tcc893x_ohci.c		tcc893x_ohci
+
+# EHCI USB2.0 Controller
+attach	ehci at axi with tcc893x_ehci
+file	arch/arm/telechips/tcc893x_ehci.c		tcc893x_ehci
+

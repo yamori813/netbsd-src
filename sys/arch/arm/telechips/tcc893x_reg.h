@@ -26,9 +26,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#undef MSIZE
+#undef MSIZE	/* duplicate name workaound */
 
 #include <arm/telechips/platform_tcc893x/reg_physical.h>
-//#define	UART_BASEADDR	0x76370000
-//#define	UART_BASEADDR	HwUART0_BASE
 
+#define A9_PERIPH_BASE			0xF8200000
+#define A9_SCU_BASE			0x0000
+#define A9_IC_INT_BASE			0x0100
+#define A9_TIMER_BASE			0x0600
+#define A9_IC_DIST_BASE			0x1000
+
+#define L2CACHE_BASE			0xFB000000
+#define TCC_ARMCORE_SIZE		0x20000

@@ -1,10 +1,9 @@
 #	$NetBSD: files.bcm53xx,v 1.2 2018/03/19 17:11:24 ryo Exp $
 #
-# M86XXX evaluation board configuration info
+# TCC893X evaluation board configuration info
 #
 
 file	arch/evbarm/telechips/tcc893x_machdep.c
 
 # CPU support and integrated peripherals
 include "arch/arm/telechips/files.tcc893x"
-include	"arch/arm/cortex/files.cortex"

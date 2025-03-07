@@ -58,8 +58,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #include <arm/cortex/scu_reg.h>
 #include <arm/telechips/tcc893x_reg.h>
-//#include <arm/mindspeed/m86xxx_reg.h>
 #include <arm/telechips/tcc_var.h>
+#include <arm/telechips/tcc893x_board.h>
 
 #if NCOM == 0
 #error missing COM device for console
@@ -151,7 +151,12 @@ static struct consdev earlycons = {
 static const struct pmap_devmap tcc893x_devmap[] = {
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE,	/* 0xf0000000 */
-		HwUART0_BASE,
+		HwGPU_BASE,
+		0x08000000
+	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x08000000,
+		A9_PERIPH_BASE,
 		0x00100000
 	),
 /*
@@ -163,11 +168,6 @@ static const struct pmap_devmap tcc893x_devmap[] = {
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE + 0x00200000,
 		AXI_IRAM_BASE,
-		0x00100000
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_VBASE + 0x00300000,
-		A9_PERIPH_BASE,
 		0x00100000
 	),
 	DEVMAP_ENTRY(
@@ -290,7 +290,7 @@ initarm(void *arg)
 	pmap_devmap_bootstrap((vaddr_t)ARM_BOOTSTRAP_LxPT, tcc893x_devmap);
 
 	VPRINTF("bootstrap\n");
-//	tcc893x_bootstrap(KERNEL_IO_VBASE + 0x00100000);
+	tcc893x_bootstrap(KERNEL_IO_VBASE);
 
 #ifdef MULTIPROCESSOR
 	uint32_t scu_cfg = *(uint32_t *)(KERNEL_IO_VBASE + 0x00300000 +
@@ -362,7 +362,7 @@ initarm(void *arg)
 
 	cpu_reset_address = tcc893x_system_reset;
 	/* we've a specific device_register routine */
-//	evbarm_device_register = tcc893x_device_register;
+	evbarm_device_register = tcc893x_device_register;
 	if (bigmem_p) {
 		/*
 		 * If we have more than 256MB
@@ -428,19 +428,26 @@ consinit(void)
 static void
 tcc893x_system_reset(void)
 {
-#if 0
 	uint32_t reg;
 
-	bus_space_handle_t bsh;
-	bus_space_map(&m83_bs_tag, APB_GPIO_BASE, 0x20000, 0, &bsh);
-	reg = bus_space_read_4(&m83_bs_tag, bsh, 0x00);
-	reg &= ~(1 << 27);   /* HW Reset GPIO_27 */
-	bus_space_write_4(&m83_bs_tag, bsh, 0x00, reg);
-	while (1);
-	/* not reach here
-	bus_space_unmap(&m83_bs_tag, bsh, 0x20000);
-	 */
-#endif
+	bus_space_handle_t bsh, iobsh;
+	bus_space_map(&armv7_generic_bs_tag, HwPMU_BASE, 0x20000, 0, &bsh);
+	bus_space_map(&armv7_generic_bs_tag, HwIOBUSCFG_BASE, 0x20000, 0, &iobsh);
+	
+	reg = bus_space_read_4(&armv7_generic_bs_tag, bsh, offsetof(PMU, PMU_CONFIG));
+	reg &= 0xcfffffff;
+	bus_space_write_4(&armv7_generic_bs_tag, bsh, offsetof(PMU, PMU_CONFIG), reg);
+
+	bus_space_write_4(&armv7_generic_bs_tag, iobsh, offsetof(IOBUSCFG, HCLKEN0),
+	     0xffffffff);
+	bus_space_write_4(&armv7_generic_bs_tag, iobsh, offsetof(IOBUSCFG, HCLKEN1),
+	     0xffffffff);
+
+	while (1)
+		bus_space_write_4(&armv7_generic_bs_tag, bsh, offsetof(PMU, PMU_WDTCTRL),
+		     Hw31 + 0x1);
+
+	/* not reach here */
 }
 
 
@@ -451,7 +458,8 @@ tcc893x_platform_early_putchar(char c)
 
 	volatile uint32_t *uartaddr;
 	if(cpu_earlydevice_va_p()) {
-		uartaddr = (volatile uint32_t *)KERNEL_IO_VBASE;
+		uartaddr = (volatile uint32_t *)(KERNEL_IO_VBASE + 
+		    HwUART0_BASE - HwGPU_BASE);
 
 		while ((uartaddr[5] & (1 << 6)) == 0)
 			;

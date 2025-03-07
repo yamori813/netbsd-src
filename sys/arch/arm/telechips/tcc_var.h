@@ -32,7 +32,6 @@
 extern struct bus_space armv7_generic_bs_tag;
 extern struct bus_space armv7_generic_a4x_bs_tag;
 extern struct arm32_bus_dma_tag arm_generic_dma_tag;
-extern struct arm32_bus_dma_tag tcc_bus_dma_tag;
 
 struct axi_attach_args {
 	const char	*aa_name;
