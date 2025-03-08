@@ -45,7 +45,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 //#include <arm/tcc893x_/tcc893x_reg.h>
 #include <arm/telechips/tcc_var.h>
 
-#define USB20_OPERATION_REGSIZE                  0x100000
+#define USB20_OPERATION_REGSIZE                  0x108
 
 struct tcc893x_ehci_softc {
 	ehci_softc_t sc_ehci;

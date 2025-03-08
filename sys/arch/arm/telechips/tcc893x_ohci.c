@@ -45,7 +45,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 //#include <arm/tcc893x_/tcc893x_reg.h>
 #include <arm/telechips/tcc_var.h>
 
-#define USB11_OPERATION_REGSIZE                  0x100000
+#define USB11_OPERATION_REGSIZE                  0x0fff
 
 struct tcc893x_ohci_softc {
 	ohci_softc_t sc_ohci;
