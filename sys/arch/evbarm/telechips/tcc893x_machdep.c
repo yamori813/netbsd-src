@@ -179,13 +179,6 @@ static const struct pmap_devmap tcc893x_devmap[] = {
 	DEVMAP_ENTRY_END
 };
 
-static const struct boot_physmem bp_first256 = {
-	.bp_start = 0x80000000 / NBPG,
-	.bp_pages = 0x10000000 / NBPG,
-	.bp_freelist = VM_FREELIST_ISADMA,
-	.bp_flags = 0,
-};
-
 #define JUMP_TO_KERNEL_START_1          0xe3a00020      /* mov  r0, #32 */
 #define JUMP_TO_KERNEL_START_2          0xe590f000      /* ldr  pc, [r0] */
 
@@ -328,18 +321,9 @@ initarm(void *arg)
 #error missing MEMSIZE
 #endif
 	memsize = MEMSIZE*1024*1024;
-	const bool bigmem_p = (memsize >> 20) > 256;
 
 #ifdef __HAVE_MM_MD_DIRECT_MAPPED_PHYS
 	const bool mapallmem_p = true;
-#ifndef PMAP_NEED_ALLOC_POOLPAGE
-	if (memsize > KERNEL_VM_BASE - KERNEL_BASE) {
-		printf("%s: dropping RAM size from %luMB to %uMB\n",
-		   __func__, (unsigned long) (ram_size >> 20),
-		   (KERNEL_VM_BASE - KERNEL_BASE) >> 20);
-		memsize = KERNEL_VM_BASE - KERNEL_BASE;
-	}
-#endif
 #else
 	const bool mapallmem_p = false;
 #endif
@@ -363,19 +347,8 @@ initarm(void *arg)
 	cpu_reset_address = tcc893x_system_reset;
 	/* we've a specific device_register routine */
 	evbarm_device_register = tcc893x_device_register;
-	if (bigmem_p) {
-		/*
-		 * If we have more than 256MB
-		 */
-		arm_poolpage_vmfreelist = bp_first256.bp_freelist;
-	}
 
-	/*
-	 * If we have more than 256MB of RAM, set aside the first 256MB for
-	 * non-default VM allocations.
-	 */
-	vaddr_t sp = initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE,
-	    (bigmem_p ? &bp_first256 : NULL), (bigmem_p ? 1 : 0));
+	vaddr_t sp = initarm_common(KERNEL_VM_BASE, KERNEL_VM_SIZE, NULL, 0);
 
 	/*
 	 * initarm_common flushes cache if required before AP start
