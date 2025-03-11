@@ -49,6 +49,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/dwc_gmac_var.h>
 #include <dev/ic/dwc_gmac_reg.h>
 
+#include <arm/telechips/tcc893x_reg.h>
 #include <arm/telechips/tcc_var.h>
 
 static int
@@ -101,7 +102,35 @@ tcc893x_gmac_attach(device_t parent, device_t self, void *aux)
 
 	aprint_normal_dev(self, "interrupting on %d\n", axia->aa_intr);
 
-	dwc_gmac_attach(sc, MII_PHY_ANY, GMAC_MII_CLK_150_250M_DIV102);
+	bus_space_handle_t bsh;
+	bus_space_map(&armv7_generic_bs_tag, HwHSIOBUSCFG_BASE, 0x100, 0, &bsh);
+        uint32_t reg = bus_space_read_4(&armv7_generic_bs_tag, bsh, offsetof(HSIOBUSCFG, ETHER_CFG1));
+	reg &= ~(1 << 31);
+        bus_space_write_4(&armv7_generic_bs_tag, bsh, offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
+        uint32_t div = bus_space_read_4(&armv7_generic_bs_tag, bsh, offsetof(HSIOBUSCFG, ETHER_CFG0));
+	div &= ~(0x3f << 20);
+	div |= (0x4 << 20);
+        bus_space_write_4(&armv7_generic_bs_tag, bsh, offsetof(HSIOBUSCFG, ETHER_CFG0), div);
+	reg |= (1 << 31);
+        bus_space_write_4(&armv7_generic_bs_tag, bsh, offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
+        bus_space_unmap(&armv7_generic_bs_tag, bsh, 0x100);
+
+	int miiclk;
+	int miiclk_rate = 250000000;
+	if (miiclk_rate > 250 * 1000 * 1000)
+		miiclk = GMAC_MII_CLK_250_300M_DIV124;
+	else if (miiclk_rate > 150 * 1000 * 1000)
+		miiclk = GMAC_MII_CLK_150_250M_DIV102;
+	else if (miiclk_rate > 100 * 1000 * 1000)
+		miiclk = GMAC_MII_CLK_100_150M_DIV62;
+	else if (miiclk_rate > 60 * 1000 * 1000)
+		miiclk = GMAC_MII_CLK_60_100M_DIV42;
+	else if (miiclk_rate > 35 * 1000 * 1000)
+		miiclk = GMAC_MII_CLK_35_60M_DIV26;
+	else
+		miiclk = GMAC_MII_CLK_25_35M_DIV16;
+//	dwc_gmac_attach(sc, MII_PHY_ANY, GMAC_MII_CLK_150_250M_DIV102);
+	dwc_gmac_attach(sc, MII_PHY_ANY, miiclk);
 }
 
 CFATTACH_DECL_NEW(tcc893x_gmac, sizeof(struct dwc_gmac_softc),

@@ -145,7 +145,8 @@ static const struct {
 	bus_addr_t addr;
 	bool required;
 } critical_devs[] = {
-	{ .name = "ckc", .addr = 0x74000000, .required = true }
+	{ .name = "ckc", .addr = 0x74000000, .required = true },
+	{ .name = "tcc893x_gpio0", .addr = 0x74200000, .required = true }
 };
 
 static void

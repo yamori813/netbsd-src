@@ -75,12 +75,30 @@ static uint32_t readhsio(int off)
 	return *(uint32_t *)(baseaddr + HwHSIOBUSCFG_BASE -  HwGPU_BASE + off);
 }
 
+/*
 static void writehsio(int off, uint32_t val);
 static void writehsio(int off, uint32_t val)
 {
 
 	*(uint32_t *)(baseaddr + HwHSIOBUSCFG_BASE -  HwGPU_BASE + off) = val;
 }
+*/
+
+static uint32_t readmembus(int off);
+static uint32_t readmembus(int off)
+{
+
+	return *(uint32_t *)(baseaddr + HwMBUSCFG_BASE -  HwGPU_BASE + off);
+}
+
+/*
+static void writegpio(int off, uint32_t val);
+static void writegpio(int off, uint32_t val)
+{
+
+	*(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off) = val;
+}
+*/
 
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
@@ -108,7 +126,7 @@ tcc893x_bootstrap(vaddr_t iobase)
 	baseaddr = iobase;
 
 	int i;
-	for (i= 0; i <= 0x28; i +=4) {
+	for (i= 0; i <= 0x54; i +=4) {
 		printf("CKC:%02x %08x\n", i, readckc(i));
 	}
 
@@ -132,13 +150,23 @@ tcc893x_bootstrap(vaddr_t iobase)
 		printf("Enable OTG clock\n");
 	}
 */
+	reg = readmembus(offsetof(MEMBUSCFG, SWRESET));
+	printf("MEMBUSCFG->SWRESET %x\n", reg);
 
+	reg = readhsio(offsetof(HSIOBUSCFG, PWDN));
+	printf("HSIOBUSCFG->PWDN %x\n", reg);
+
+	reg = readhsio(offsetof(HSIOBUSCFG, SWRESET));
+	printf("HSIOBUSCFG->SWRESET %x\n", reg);
+
+/*
 	reg = readhsio(offsetof(HSIOBUSCFG, ETHER_CFG1));
-	if ((reg & (1 << 31)) == 0) {
-		reg |= (1 << 31);
-		writehsio(offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
-		printf("Enable HSIO clock\n");
-	}
+	reg &= ~(1 << 31);
+	writehsio(offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
+	reg |= (1 << 31) | (1 << 18);
+	writehsio(offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
+	printf("Enable HSIO clock\n");
+*/
 
 	tcc893x_l2ccinit();
 
@@ -147,7 +175,7 @@ tcc893x_bootstrap(vaddr_t iobase)
 void
 tcc893x_device_register(device_t self, void *aux)
 {
-	const uint8_t macaddr[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	const uint8_t macaddr[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
 
 	prop_dictionary_t dict = device_properties(self);
 
@@ -176,7 +204,7 @@ tcc893x_device_register(device_t self, void *aux)
 		 */
                 prop_dictionary_set_uint32(dict, "frequency",
 //		    clock_info.clk_arm / 4);
-		    1000000000 / 4);
+		    1000000);
 		return;
 	}
 

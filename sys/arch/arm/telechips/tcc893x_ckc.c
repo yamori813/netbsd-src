@@ -64,6 +64,7 @@ CFATTACH_DECL_NEW(ckc, sizeof(struct ckc_softc),
 	bus_space_write_4(sc->sc_iot, sc->sc_hdl, (reg), (val))
 
 static unsigned int tca_ckc_getpll(struct ckc_softc *sc, unsigned int ch);
+unsigned int tca_ckc_getfbusctrl(struct ckc_softc *sc, unsigned int clkname);
 static unsigned int tca_ckc_getperi(struct ckc_softc *sc, unsigned int periname);
 static unsigned int tcc_ckc_getplldivder(struct ckc_softc *sc, unsigned int ch);
 unsigned int tca_ckc_setfbusctrl(struct ckc_softc *sc, unsigned int clkname, unsigned int isenable, unsigned int freq);
@@ -128,11 +129,15 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 	unsigned int rate = 48*1000*1000;
 	int idx = PERI_USB20H;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
+	printf("%d %d\n", idx, tca_ckc_getperi(sc, idx));
 
 //	clk_set_rate(gmac_clk, 125*1000*1000);
 	rate = 125*1000*1000;
 	idx = PERI_GMAC;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
+	printf("%d %d\n", idx, tca_ckc_getperi(sc, idx));
+	idx = FBUS_HSIO;
+	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 }
 
 static inline tPCLKTYPE tcc_check_pclk_type(unsigned int periname)
@@ -191,6 +196,93 @@ static unsigned int tcc_ckc_getplldivder(struct ckc_softc *sc, unsigned int ch)
 	return (unsigned int)fpll/(pdiv+1);
 }
 
+unsigned int tca_ckc_getfbusctrl(struct ckc_softc *sc, unsigned int clkname)
+{
+	volatile unsigned   CLKCTRL;
+	tCLKCTRL			nCLKCTRL;
+	unsigned int		src_freq = 0;
+
+	CLKCTRL = CKC_READ(sc, REG_CLKCTRL + clkname * 4);
+	nCLKCTRL.en = (CLKCTRL & (1<<CLKCTRL_EN_SHIFT)) ? 1 : 0;
+//	if (nCLKCTRL.en == 0)
+//		return 0;
+
+	nCLKCTRL.sel = (CLKCTRL & (CLKCTRL_SEL_MASK<<CLKCTRL_SEL_SHIFT))>>CLKCTRL_SEL_SHIFT;
+	switch (nCLKCTRL.sel) {
+		case CLKCTRL_SEL_PLL0:
+			src_freq =  tca_ckc_getpll(sc, PLL_0);
+			break;
+		case CLKCTRL_SEL_PLL1:
+			src_freq =  tca_ckc_getpll(sc, PLL_1);
+			break;
+		case CLKCTRL_SEL_PLL2:
+			src_freq =  tca_ckc_getpll(sc, PLL_2);
+			break;
+		case CLKCTRL_SEL_PLL3:
+			src_freq =  tca_ckc_getpll(sc, PLL_3);
+			break;
+		case CLKCTRL_SEL_XIN:
+			src_freq =  XIN_CLK_RATE;
+			break;
+		case CLKCTRL_SEL_PLL0DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_0);
+			break;
+		case CLKCTRL_SEL_PLL1DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_1);
+			break;
+		case CLKCTRL_SEL_XTIN:
+			src_freq =  XTIN_CLK_RATE;
+			break;
+#if (MAX_TCC_PLL > 4)
+		case CLKCTRL_SEL_PLL4:
+			src_freq =  tca_ckc_getpll(sc, PLL_4);
+			break;
+		case CLKCTRL_SEL_PLL5:
+			src_freq =  tca_ckc_getpll(sc, PLL_5);
+			break;
+#endif
+		case CLKCTRL_SEL_PLL2DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_2);
+			break;
+		case CLKCTRL_SEL_PLL3DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_3);
+			break;
+#if (MAX_TCC_PLL > 4)
+		case CLKCTRL_SEL_PLL4DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_4);
+			break;
+		case CLKCTRL_SEL_PLL5DIV:
+			src_freq =  tcc_ckc_getplldivder(sc, PLL_5);
+			break;
+#endif
+/*
+		case CLKCTRL_SEL_XINDIV:
+			src_freq =  XIN_CLK_RATE/2;
+			break;
+		case CLKCTRL_SEL_XTINDIV:
+			src_freq =  XTIN_CLK_RATE/2;
+			break;
+*/
+		default: return 0;
+	}
+
+	if(clkname == FBUS_CPU) {
+		int i, lcnt=0;
+		nCLKCTRL.config = (CLKCTRL & (CLKCTRL_CPU_MASK<<CLKCTRL_CONFIG_SHIFT))>>CLKCTRL_CONFIG_SHIFT;
+		for(i = 0; i < 16; i++) {
+			if((nCLKCTRL.config & 0x1))
+				lcnt++;
+			nCLKCTRL.config = nCLKCTRL.config>>1;
+		}
+		nCLKCTRL.freq = (src_freq * lcnt)/16;
+	}
+	else {
+		nCLKCTRL.config = (CLKCTRL & (CLKCTRL_CONFIG_MASK<<CLKCTRL_CONFIG_SHIFT))>>CLKCTRL_CONFIG_SHIFT;
+		nCLKCTRL.freq = src_freq / (nCLKCTRL.config+1);
+	}
+
+	return nCLKCTRL.freq;
+}
 static unsigned int tca_ckc_getperi(struct ckc_softc *sc, unsigned int periname)
 {
 	unsigned int	pPCLKCTRL;
@@ -293,7 +385,7 @@ static unsigned int tca_ckc_getperi(struct ckc_softc *sc, unsigned int periname)
 			return 0;
 	}
 	nPCLKCTRL.freq = 0;
-	nPCLKCTRL.div = (*(volatile unsigned *)pPCLKCTRL&(div_mask<<PCLKCTRL_DIV_SHIFT))>>PCLKCTRL_DIV_SHIFT;
+	nPCLKCTRL.div = (pPCLKCTRL&(div_mask<<PCLKCTRL_DIV_SHIFT))>>PCLKCTRL_DIV_SHIFT;
 	if (nPCLKCTRL.md == PCLKCTRL_MODE_DIVIDER)
 		nPCLKCTRL.freq = src_freq/(nPCLKCTRL.div+1);
 	else {
@@ -467,15 +559,13 @@ unsigned int tca_ckc_setfbusctrl(struct ckc_softc *sc, unsigned int clkname,
 		return 0;
 	}
 	else if (clkname == FBUS_MEM) {
-#if 0
 #if defined(CONFIG_SUSPEND_MEMCLK) || defined(CONFIG_CLOCK_TABLE)
 		if (freq < 3000000)
 			freq = 3000000;
 		freq /= 2;
 #else
 		// do not change memory clock. just return current memroy clock rate.
-		return tca_ckc_getfbusctrl(clkname);
-#endif
+		return tca_ckc_getfbusctrl(sc, clkname);
 #endif
 		return 0;
 	}

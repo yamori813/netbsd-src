@@ -355,6 +355,10 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
+	uint32_t reg;
+	reg = (1 << 4) | (1 << 8); // MDC, MDIO
+	GPIO_WRITE(gpio, offsetof(GPIO, GPCFN0), reg);
+	reg  = GPIO_READ(gpio, offsetof(GPIO, GPCFN0));
 #if 0
 	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
 	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
@@ -437,6 +441,99 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	}
 
 	aprint_normal("\n");
+
+// -DCONFIG_MACH_TCC8930ST -DCONFIG_CHIP_TCC8930 -DCONFIG_TCC_GMAC_RGMII_MODE 
+
+#define GPCFN0(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCFN0), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCFN0)) & ~(0xf << (x * 4))) | (y << (x * 4)))
+#define GPCFN1(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCFN1), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCFN1)) & ~(0xf << ((x - 8) * 4))) |\
+    (y << ((x - 8) * 4)))
+#define GPCFN3(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCFN3), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCFN3)) & ~(0xf << ((x - 24) * 4))) |\
+    (y << ((x - 24) * 4)))
+
+
+// pGPIO->GPCFN0.bREG.GPFN01 = 1;
+	GPCFN0(1, 1);
+	GPCFN0(2, 1);
+	GPCFN0(0, 1);
+	GPCFN0(5, 1);
+	GPCFN0(6, 1);
+	GPCFN1(12, 1);
+	GPCFN1(13, 1);
+	GPCFN0(7, 1);
+	GPCFN3(26, 1);
+	GPCFN0(3, 1);
+	GPCFN0(4, 1);
+	GPCFN1(10, 1);
+	GPCFN1(11, 1);
+	GPCFN1(8, 1);
+
+#define GPCCD0(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCCD0), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCCD0)) & ~(0x3 << (x * 2))) | (y << (x * 2)))
+#define GPCCD1(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCCD1), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCCD1)) & ~(0x3 << ((x - 16) * 2))) |\
+    (y << ((x - 16) * 2)))
+
+	GPCCD0(1, 3);
+	GPCCD0(2, 3);
+	GPCCD0(0, 2);
+	GPCCD0(5, 1);
+	GPCCD0(6, 1);
+	GPCCD0(12, 1);
+	GPCCD0(13, 1);
+	GPCCD0(7, 1);
+	GPCCD1(26, 3);
+	GPCCD0(3, 3);
+	GPCCD0(4, 3);
+	GPCCD0(10, 3);
+	GPCCD0(11, 3);
+	GPCCD0(8, 3);
+	
+#define GPCSR(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCSR), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCSR)) & ~(0x1 << x)) | (y << x))
+
+	GPCSR(1, 0);
+	GPCSR(2, 0);
+	GPCSR(0, 0);
+	GPCSR(5, 0);
+	GPCSR(6, 0);
+	GPCSR(12, 0);
+	GPCSR(13, 0);
+	GPCSR(7, 0);
+	GPCSR(26, 0);
+	GPCSR(3, 0);
+	GPCSR(4, 0);
+	GPCSR(10, 0);
+	GPCSR(11, 0);
+	GPCSR(8, 0);
+
+#define GPCPE(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCPE), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCPE)) & ~(0x1 << x)) | (y << x))
+
+	GPCPE(0, 1);
+
+#define GPCPS(x, y)	GPIO_WRITE(gpio, offsetof(GPIO, GPCPS), \
+    (GPIO_READ(gpio, offsetof(GPIO, GPCPS)) & ~(0x1 << x)) | (y << x))
+
+	GPCPS(0, 0);
+
+	DELAY(100);
+
+	GPCFN1(9, 0);	// PHY_ON
+	GPCFN3(27, 0);	// PHY_RST
+	GPIO_WRITE(gpio, offsetof(GPIO, GPCEN),
+	    GPIO_READ(gpio, offsetof(GPIO, GPCEN)) | (1 << 9) | (1 << 27));
+	GPIO_WRITE(gpio, offsetof(GPIO, GPCDAT),
+	    GPIO_READ(gpio, offsetof(GPIO, GPCDAT)) | (1 << 27));
+
+	GPIO_WRITE(gpio, offsetof(GPIO, GPCDAT),
+	    GPIO_READ(gpio, offsetof(GPIO, GPCDAT)) & ~(1 << 9));
+	DELAY(100);
+	GPIO_WRITE(gpio, offsetof(GPIO, GPCDAT),
+	    GPIO_READ(gpio, offsetof(GPIO, GPCDAT)) | (1 << 9));
+
 #if NGPIO > 0
 	config_interrupts(self, gpio_defer);
 #endif
