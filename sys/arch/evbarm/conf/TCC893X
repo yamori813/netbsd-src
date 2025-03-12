@@ -23,8 +23,7 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 options 	BCMETH_COUNTERS
 #options 	MULTIPROCESSOR
 options 	CPU_CORTEX
-#options 	MEMSIZE=1024
-options 	MEMSIZE=512
+options 	MEMSIZE=1024
 #options 	PMAPCOUNTERS
 options 	BUSDMA_COUNTERS
 makeoptions	KERNEL_BASE_PHYS="0x80008000"
