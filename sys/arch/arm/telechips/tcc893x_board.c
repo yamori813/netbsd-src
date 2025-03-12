@@ -125,6 +125,8 @@ tcc893x_bootstrap(vaddr_t iobase)
 
 	baseaddr = iobase;
 
+	curcpu()->ci_data.cpu_cc_freq = 800 * 1000 * 1000;
+
 	int i;
 	for (i= 0; i <= 0x54; i +=4) {
 		printf("CKC:%02x %08x\n", i, readckc(i));
