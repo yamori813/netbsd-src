@@ -52,6 +52,11 @@ static void tcc893x_ehci_attach(device_t, device_t, void *);
 
 static void tcc893x_ehci_init(struct ehci_softc *hsc);
 
+static void start_ehci(bus_space_tag_t iot);
+static void start_ehci(bus_space_tag_t iot)
+{
+}
+
 /* ARGSUSED */
 static int
 tcc893x_ehci_match(device_t parent __unused, struct cfdata *match __unused,
@@ -99,6 +104,8 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 
 	intr_establish(sa->aa_intr, IPL_USB,
 	    IST_LEVEL_LOW, ehci_intr, sc);
+
+	start_ehci(sc->iot);
 
 	int err = ehci_init(sc);
 	if (err != USBD_NORMAL_COMPLETION) {
