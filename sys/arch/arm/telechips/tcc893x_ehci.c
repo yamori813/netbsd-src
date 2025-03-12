@@ -49,10 +49,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 static int tcc893x_ehci_match(device_t, struct cfdata *, void *);
 static void tcc893x_ehci_attach(device_t, device_t, void *);
-static int tcc893x_ehci_init(struct ehci_softc *);
 
-CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct ehci_softc),
-    tcc893x_ehci_match, tcc893x_ehci_attach, NULL, NULL, NULL, ehci_childdet);
+static void tcc893x_ehci_init(struct ehci_softc *hsc);
 
 /* ARGSUSED */
 static int
@@ -71,8 +69,6 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 {
 	struct ehci_softc *sc;
 	struct axi_attach_args *sa;
-	int error;
-	usbd_status r;
 
 	sa = aux;
 	sc = device_private(self);
@@ -81,11 +77,12 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	sc->sc_dev = self;
 	sc->sc_bus.ub_hcpriv = sc;
 	sc->iot = sa->aa_iot;
+	sc->sc_vendor_init = tcc893x_ehci_init;
+	sc->sc_flags = EHCIF_ETTF;
+	sc->sc_bus.ub_revision = USBREV_2_0;
 
-	sa->aa_size = USB20_OPERATION_REGSIZE;
-
-	aprint_normal(": USB2.0 Host Controller\n");
-	aprint_naive("\n");
+	aprint_naive(": USB2.0 Interface\n");
+	aprint_normal(": USB2.0 Interface\n");
 
 	/* Map USB operation registers */
 	if (bus_space_map(sc->iot, sa->aa_addr, sa->aa_size, 0,
@@ -93,11 +90,8 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 		aprint_error(": can't map operation registers\n");
 		goto attach_failure;
 	}
-	sc->sc_bus.ub_dmatag = sa->aa_dmat;
 
-	error = tcc893x_ehci_init(sc);
-	if (error)
-		goto attach_failure_unmap;
+	sc->sc_bus.ub_dmatag = sa->aa_dmat;
 
 	/* Disable interrupts, so we don't get any spurious ones. */
 	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
@@ -106,14 +100,10 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	intr_establish(sa->aa_intr, IPL_USB,
 	    IST_LEVEL_LOW, ehci_intr, sc);
 
-	sc->sc_bus.ub_revision = USBREV_2_0;
-	sc->sc_flags = EHCIF_ETTF;
-
-	r = ehci_init(sc);
-
-	if (r != USBD_NORMAL_COMPLETION) {
+	int err = ehci_init(sc);
+	if (err != USBD_NORMAL_COMPLETION) {
 		aprint_error("%s: init failed, error=%d\n",
-		    device_xname(self), r);
+		    device_xname(self), err);
 		goto attach_failure_unmap;
 	}
 
@@ -128,9 +118,9 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	return;
 }
 
-static int
-tcc893x_ehci_init(struct ehci_softc *sc)
+static void tcc893x_ehci_init(struct ehci_softc *sc)
 {
-
-	return 0;
 }
+
+CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct ehci_softc),
+    tcc893x_ehci_match, tcc893x_ehci_attach, NULL, NULL, NULL, ehci_childdet);
