@@ -42,8 +42,15 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/usb/ehcireg.h>
 #include <dev/usb/ehcivar.h>
 
-//#include <arm/tcc893x_/tcc893x_reg.h>
+#include <arm/telechips/tcc893x_reg.h>
 #include <arm/telechips/tcc_var.h>
+
+#ifdef EHCI_DEBUG
+#define DPRINTF(x)      if (ehcidebug) printf x
+extern int ehcidebug;
+#else
+#define DPRINTF(x)
+#endif
 
 #define USB20_OPERATION_REGSIZE                  0x108
 
@@ -52,9 +59,43 @@ static void tcc893x_ehci_attach(device_t, device_t, void *);
 
 static void tcc893x_ehci_init(struct ehci_softc *hsc);
 
-static void start_ehci(bus_space_tag_t iot);
-static void start_ehci(bus_space_tag_t iot)
+static void tcc893x_start_ehci(bus_space_tag_t iot);
+static void tcc893x_start_ehci(bus_space_tag_t iot)
 {
+}
+
+static void tcc893x_usb20hphy_cfg(bus_space_tag_t iot);
+static void tcc893x_usb20hphy_cfg(bus_space_tag_t iot)
+{
+	bus_space_handle_t bsh;
+	uint32_t reg;
+
+	/* HSIO Control Register */
+
+	bus_space_map(iot, HwHSIOBUSCFG_BASE, 0x100, 0, &bsh);
+
+	reg = bus_space_read_4(iot, bsh, offsetof(HSIOBUSCFG, HSIO_CFG));
+	reg &= ~(3 << 6);
+	reg |= (0x3 << 6);
+	bus_space_write_4(iot, bsh, offsetof(HSIOBUSCFG, HSIO_CFG), reg);
+
+	reg = Hw29 | Hw28 | Hw25 | Hw24 | Hw21 | Hw20 | Hw18 | Hw11 | Hw9;
+	reg |= Hw6 | Hw5 | Hw4 | Hw3 | Hw2;
+	bus_space_write_4(iot, bsh, offsetof(HSIOBUSCFG, USB20H_PCFG0), reg);
+
+	reg = Hw29 | Hw28 | Hw19 | Hw18 | Hw16 | Hw6 | Hw5 | Hw0;
+	bus_space_write_4(iot, bsh, offsetof(HSIOBUSCFG, USB20H_PCFG1), reg);
+
+	reg = Hw15 | Hw5;
+	bus_space_write_4(iot, bsh, offsetof(HSIOBUSCFG, USB20H_PCFG2), reg);
+
+	DELAY(10);
+	reg = bus_space_read_4(iot, bsh, offsetof(HSIOBUSCFG, USB20H_PCFG1));
+	reg |= Hw31;
+	bus_space_write_4(iot, bsh, offsetof(HSIOBUSCFG, USB20H_PCFG1), reg);
+
+	DELAY(20);
+	bus_space_unmap(iot, bsh, 0x100);
 }
 
 /* ARGSUSED */
@@ -74,6 +115,7 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 {
 	struct ehci_softc *sc;
 	struct axi_attach_args *sa;
+	const char * const devname = device_xname(self);
 
 	sa = aux;
 	sc = device_private(self);
@@ -92,7 +134,7 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	/* Map USB operation registers */
 	if (bus_space_map(sc->iot, sa->aa_addr, sa->aa_size, 0,
 	    &sc->ioh)) {
-		aprint_error(": can't map operation registers\n");
+		aprint_error("%s: can't map operation registers\n", devname);
 		goto attach_failure;
 	}
 
@@ -100,12 +142,15 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 
 	/* Disable interrupts, so we don't get any spurious ones. */
 	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
+	DPRINTF(("%s: offs=%d\n", devname, sc->sc_offs));
 	EOWRITE2(sc, EHCI_USBINTR, 0);
 
 	intr_establish(sa->aa_intr, IPL_USB,
 	    IST_LEVEL_LOW, ehci_intr, sc);
 
-	start_ehci(sc->iot);
+	tcc893x_usb20hphy_cfg(sc->iot);
+
+	tcc893x_start_ehci(sc->iot);
 
 	int err = ehci_init(sc);
 	if (err != USBD_NORMAL_COMPLETION) {
