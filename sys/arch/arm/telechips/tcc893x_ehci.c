@@ -1,7 +1,7 @@
 /*	$NetBSD$	*/
 
 /*-
- * Copyright (c) 2009 SHIMIZU Ryo <ryo@nerv.org>
+ * Copyright (c) 2025 Hiroki Mori
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -103,9 +103,9 @@ static int
 tcc893x_ehci_match(device_t parent __unused, struct cfdata *match __unused,
     void *aux)
 {
-	struct axi_attach_args *sa = aux;
+	struct axi_attach_args *aa = aux;
 
-	sa->aa_size = USB20_OPERATION_REGSIZE;
+	aa->aa_size = USB20_OPERATION_REGSIZE;
 	return 1;
 }
 
@@ -114,16 +114,16 @@ static void
 tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 {
 	struct ehci_softc *sc;
-	struct axi_attach_args *sa;
+	struct axi_attach_args *aa;
 	const char * const devname = device_xname(self);
 
-	sa = aux;
+	aa = aux;
 	sc = device_private(self);
-	sc->iot = sa->aa_iot;
+	sc->iot = aa->aa_iot;
 
 	sc->sc_dev = self;
 	sc->sc_bus.ub_hcpriv = sc;
-	sc->iot = sa->aa_iot;
+	sc->iot = aa->aa_iot;
 	sc->sc_vendor_init = tcc893x_ehci_init;
 	sc->sc_flags = EHCIF_ETTF;
 	sc->sc_bus.ub_revision = USBREV_2_0;
@@ -132,20 +132,20 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	aprint_normal(": USB2.0 Interface\n");
 
 	/* Map USB operation registers */
-	if (bus_space_map(sc->iot, sa->aa_addr, sa->aa_size, 0,
+	if (bus_space_map(sc->iot, aa->aa_addr, aa->aa_size, 0,
 	    &sc->ioh)) {
 		aprint_error("%s: can't map operation registers\n", devname);
 		goto attach_failure;
 	}
 
-	sc->sc_bus.ub_dmatag = sa->aa_dmat;
+	sc->sc_bus.ub_dmatag = aa->aa_dmat;
 
 	/* Disable interrupts, so we don't get any spurious ones. */
 	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
 	DPRINTF(("%s: offs=%d\n", devname, sc->sc_offs));
 	EOWRITE2(sc, EHCI_USBINTR, 0);
 
-	intr_establish(sa->aa_intr, IPL_USB,
+	intr_establish(aa->aa_intr, IPL_USB,
 	    IST_LEVEL_LOW, ehci_intr, sc);
 
 	tcc893x_usb20hphy_cfg(sc->iot);
@@ -165,7 +165,7 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	return;
 
  attach_failure_unmap:
-	bus_space_unmap(sc->iot, sc->ioh, sa->aa_size);
+	bus_space_unmap(sc->iot, sc->ioh, aa->aa_size);
  attach_failure:
 	return;
 }
