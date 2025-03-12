@@ -149,7 +149,7 @@ ehci_ahb_attach(device_t parent, device_t self, void *aux)
 	sc->sc_flags = EHCIF_ETTF;
 	sc->sc_bus.ub_revision = USBREV_2_0;
 
-	aprint_naive(": USB Interfacer\n");
+	aprint_naive(": USB Interface\n");
 	aprint_normal(": USB Interface\n");
 
 	/* Map I/O registers */
