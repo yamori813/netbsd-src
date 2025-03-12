@@ -47,19 +47,11 @@ __KERNEL_RCSID(0, "$NetBSD$");
 
 #define USB20_OPERATION_REGSIZE                  0x108
 
-struct tcc893x_ehci_softc {
-	ehci_softc_t sc_ehci;
-
-	bus_addr_t sc_addr;
-	bus_space_tag_t sc_iot;
-	bus_space_handle_t sc_ioh;
-};
-
 static int tcc893x_ehci_match(device_t, struct cfdata *, void *);
 static void tcc893x_ehci_attach(device_t, device_t, void *);
-static int tcc893x_ehci_init(struct tcc893x_ehci_softc *);
+static int tcc893x_ehci_init(struct ehci_softc *);
 
-CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct tcc893x_ehci_softc),
+CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct ehci_softc),
     tcc893x_ehci_match, tcc893x_ehci_attach, NULL, NULL, NULL, ehci_childdet);
 
 /* ARGSUSED */
@@ -77,48 +69,47 @@ tcc893x_ehci_match(device_t parent __unused, struct cfdata *match __unused,
 static void
 tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 {
-	struct tcc893x_ehci_softc *sc;
+	struct ehci_softc *sc;
 	struct axi_attach_args *sa;
 	int error;
 	usbd_status r;
 
 	sa = aux;
 	sc = device_private(self);
-	sc->sc_iot = sa->aa_iot;
+	sc->iot = sa->aa_iot;
 
-	sc->sc_ehci.sc_dev = self;
-//	sc->sc_ehci.sc_bus.hci_private = sc;
-	sc->sc_ehci.sc_bus.ub_hcpriv = sc;
-	sc->sc_ehci.iot = sa->aa_iot;
+	sc->sc_dev = self;
+	sc->sc_bus.ub_hcpriv = sc;
+	sc->iot = sa->aa_iot;
+
+	sa->aa_size = USB20_OPERATION_REGSIZE;
 
 	aprint_normal(": USB2.0 Host Controller\n");
 	aprint_naive("\n");
 
 	/* Map USB operation registers */
-	if (bus_space_map(sc->sc_ehci.iot, sa->aa_addr, sa->aa_size, 0,
-	    &sc->sc_ehci.ioh)) {
+	if (bus_space_map(sc->iot, sa->aa_addr, sa->aa_size, 0,
+	    &sc->ioh)) {
 		aprint_error(": can't map operation registers\n");
 		goto attach_failure;
 	}
-//	sc->sc_ehci.sc_bus.ub_dmat = sa->sa_dmat;
-	sc->sc_ehci.sc_bus.ub_dmatag = sa->aa_dmat;
+	sc->sc_bus.ub_dmatag = sa->aa_dmat;
 
 	error = tcc893x_ehci_init(sc);
 	if (error)
 		goto attach_failure_unmap;
 
 	/* Disable interrupts, so we don't get any spurious ones. */
-	sc->sc_ehci.sc_offs = EREAD1(&sc->sc_ehci, EHCI_CAPLENGTH);
-	EOWRITE2(&sc->sc_ehci, EHCI_USBINTR, 0);
+	sc->sc_offs = EREAD1(sc, EHCI_CAPLENGTH);
+	EOWRITE2(sc, EHCI_USBINTR, 0);
 
 	intr_establish(sa->aa_intr, IPL_USB,
-	    IST_LEVEL_LOW, ehci_intr, &sc->sc_ehci);
+	    IST_LEVEL_LOW, ehci_intr, sc);
 
-//	sc->sc_ehci.sc_bus.usbrev = USBREV_2_0;
-	sc->sc_ehci.sc_bus.ub_revision = USBREV_2_0;
-//	strlcpy(sc->sc_ehci.sc_vendor, "Star", sizeof(sc->sc_ehci.sc_vendor));
+	sc->sc_bus.ub_revision = USBREV_2_0;
+	sc->sc_flags = EHCIF_ETTF;
 
-	r = ehci_init(&sc->sc_ehci);
+	r = ehci_init(sc);
 
 	if (r != USBD_NORMAL_COMPLETION) {
 		aprint_error("%s: init failed, error=%d\n",
@@ -127,18 +118,18 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	}
 
 	/* Attach usb device. */
-	sc->sc_ehci.sc_child = config_found(self, &sc->sc_ehci.sc_bus,
-	    usbctlprint, CFARGS_NONE);
+	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint,
+	    CFARGS_NONE);
 	return;
 
  attach_failure_unmap:
-	bus_space_unmap(sc->sc_ehci.iot, sc->sc_ehci.ioh, sa->aa_size);
+	bus_space_unmap(sc->iot, sc->ioh, sa->aa_size);
  attach_failure:
 	return;
 }
 
 static int
-tcc893x_ehci_init(struct tcc893x_ehci_softc *sc)
+tcc893x_ehci_init(struct ehci_softc *sc)
 {
 
 	return 0;
