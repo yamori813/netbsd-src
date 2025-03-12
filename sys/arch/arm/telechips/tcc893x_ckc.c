@@ -138,6 +138,8 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 	printf("%d %d\n", idx, tca_ckc_getperi(sc, idx));
 	idx = FBUS_HSIO;
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
+	idx = FBUS_CPU;
+	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 }
 
 static inline tPCLKTYPE tcc_check_pclk_type(unsigned int periname)

@@ -179,7 +179,7 @@ ckc0		at axi? addr 0x74000000
 com*		at axi? addr 0x76370000 intr 98
 awge0		at axi? addr 0x71700000 intr 83		# DesignWare Gigabit Ethernet
 #xhci*		at axi? addr 0x9f000000 intr 54
-dwctwo*		at axi? addr 0x76a00000 intr 80
+#dwctwo*		at axi? addr 0x76a00000 intr 80
 ehci0		at axi? addr 0x71200000 intr 81
 #ohci0		at axi? addr 0x71300000 intr 81
 
@@ -191,7 +191,7 @@ rgephy*		at mii? phy ?		# Realtek 8169S/8110S/8211 PHYs
 
 # USB bus support
 #usb*            at xhci?
-usb*            at dwctwo?
+#usb*            at dwctwo?
 usb*            at ehci?
 uhub*		at usb?
 uhub*		at uhub? port ?
