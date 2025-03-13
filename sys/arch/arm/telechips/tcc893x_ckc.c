@@ -167,7 +167,7 @@ static inline tPCLKTYPE tcc_check_pclk_type(unsigned int periname)
 
 static unsigned int tcc_ckc_getplldivder(struct ckc_softc *sc, unsigned int ch)
 {
-	volatile unsigned	*CLKDIVC;
+	volatile unsigned	CLKDIVC;
 	unsigned int		offset=0, fpll=0, pdiv=0;
 
 	if (ch >= MAX_TCC_PLL)
@@ -178,20 +178,22 @@ static unsigned int tcc_ckc_getplldivder(struct ckc_softc *sc, unsigned int ch)
 		case 1:
 		case 2:
 		case 3:
-			CLKDIVC = (volatile unsigned *)REG_CLKDIVC;
+//			CLKDIVC = (volatile unsigned *)REG_CLKDIVC;
+			CLKDIVC = CKC_READ(sc, REG_CLKDIVC);
 			offset = (3-ch)*8;
 			break;
 		case 4:
 		case 5:
-			CLKDIVC = (volatile unsigned *)REG_CLKDIVC+4;
+//			CLKDIVC = (volatile unsigned *)REG_CLKDIVC+4;
+			CLKDIVC = CKC_READ(sc, REG_CLKDIVC + 4);
 			offset = (3-(ch-4))*8;
 			break;
 		default:
 			return 0;
 	}
-	if ((((*(volatile unsigned *)CLKDIVC) >> offset)&0x80) == 0)	/* check plldivc enable bit */
+	if (((CLKDIVC >> offset) & 0x80) == 0)	/* check plldivc enable bit */
 		return 0;
-	pdiv = ((*(volatile unsigned *)CLKDIVC) >> offset)&0x3F;
+	pdiv = (CLKDIVC >> offset) & 0x3F;
 	if (!pdiv)  /* should not be zero */
 		return 0;
 	fpll = tca_ckc_getpll(sc, ch);
