@@ -366,6 +366,7 @@ m86xxx_device_register(device_t self, void *aux)
 		 */
 		struct mainbus_attach_args * const mb = aux;
 		mb->mb_iot = &m83_bs_tag;
+                prop_dictionary_set_uint32(dict, "cbar_size", 0x11000);
 		return;
 	}
 
@@ -385,7 +386,7 @@ m86xxx_device_register(device_t self, void *aux)
 
 	/* Comcerto 2000 PL310 offset */
 	if (device_is_a(self, "arml2cc")) {
-                prop_dictionary_set_uint32(dict, "offset", 0x1000);
+                prop_dictionary_set_uint32(dict, "offset", 0x10000);
 		return;
 	}
 

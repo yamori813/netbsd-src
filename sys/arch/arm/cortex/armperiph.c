@@ -176,9 +176,14 @@ armperiph_attach(device_t parent, device_t self, void *aux)
 	const struct mpcore_config * const cfg = armperiph_find_config();
 	prop_dictionary_t prop = device_properties(self);
 	uint32_t cbar_override;
+	uint32_t cbar_size, size_override;
 
 	if (prop_dictionary_get_uint32(prop, "cbar", &cbar_override))
 		cbar = (bus_addr_t)cbar_override;
+
+	cbar_size = cfg->cfg_cbar_size;
+	if (prop_dictionary_get_uint32(prop, "cbar_size", &size_override))
+		cbar_size = size_override;
 
 	/*
 	 * The normal mainbus bus space will not work for us so the port's
@@ -187,7 +192,7 @@ armperiph_attach(device_t parent, device_t self, void *aux)
 	sc->sc_dev = self;
 	sc->sc_memt = mb->mb_iot;
 
-	int error = bus_space_map(sc->sc_memt, cbar, cfg->cfg_cbar_size, 0,
+	int error = bus_space_map(sc->sc_memt, cbar, cbar_size, 0,
 	    &sc->sc_memh);
 	if (error) {
 		aprint_normal(": error mapping registers at %#lx: %d\n",
