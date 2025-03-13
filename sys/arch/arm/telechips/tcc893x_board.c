@@ -103,7 +103,6 @@ static void writegpio(int off, uint32_t val)
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
 {
-#if 0
 	bus_space_tag_t tcc893x_armcore_bst = &armv7_generic_bs_tag;
 	bus_space_handle_t tcc893x_armcore_bsh;
 
@@ -111,11 +110,14 @@ static void tcc893x_l2ccinit(void)
 	    TCC_ARMCORE_SIZE, 0, &tcc893x_armcore_bsh);
 	if (error)
 		panic("L2CC map error");
+
+	uint32_t id = bus_space_read_4(tcc893x_armcore_bst, tcc893x_armcore_bsh, 0);
+	printf("CACHE_ID: %x\n", id);
+
 	arml2cc_init(tcc893x_armcore_bst, tcc893x_armcore_bsh, 0);
 
 	bus_space_unmap(tcc893x_armcore_bst, tcc893x_armcore_bsh,
 	    TCC_ARMCORE_SIZE);
-#endif
 }
 
 void
