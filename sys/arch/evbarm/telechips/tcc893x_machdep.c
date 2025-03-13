@@ -156,11 +156,6 @@ static const struct pmap_devmap tcc893x_devmap[] = {
 	),
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE + 0x08000000,
-		A9_PERIPH_BASE,
-		0x00010000
-	),
-	DEVMAP_ENTRY(
-		KERNEL_IO_VBASE + 0x08010000,
 		L2CACHE_BASE,
 		0x00010000
 	),

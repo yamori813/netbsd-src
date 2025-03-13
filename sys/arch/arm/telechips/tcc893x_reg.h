@@ -30,7 +30,7 @@
 
 #include <arm/telechips/platform_tcc893x/reg_physical.h>
 
-#define A9_PERIPH_BASE			0xF8200000
+#define A9_PERIPH_BASE			0x77200000
 #define A9_SCU_BASE			0x0000
 #define A9_IC_INT_BASE			0x0100
 #define A9_TIMER_BASE			0x0600
