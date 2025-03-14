@@ -170,8 +170,23 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	return;
 }
 
+#define USBMODE		0xa8
+#define USBMODE_CM_HC	3
+#define USBMODE_SDIS	0x10
+
 static void tcc893x_ehci_init(struct ehci_softc *sc)
 {
+	uint32_t reg;
+
+	reg = EOREAD4(sc, EHCI_PORTSC(1));
+	reg &= ~(EHCI_PS_CSC | EHCI_PS_PEC | EHCI_PS_OCC);
+	reg |= EHCI_PS_PP | EHCI_PS_PE;
+	EOWRITE4(sc, EHCI_PORTSC(1), reg);
+
+	reg = USBMODE_CM_HC;
+	/* Set "Streaming disable mode"  to avoid Tx under run */
+	reg |= USBMODE_SDIS;
+	EWRITE4(sc, USBMODE, reg);
 }
 
 CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct ehci_softc),
