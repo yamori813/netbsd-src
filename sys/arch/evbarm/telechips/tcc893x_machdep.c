@@ -69,7 +69,7 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/comvar.h>
 
 #define	KERNEL_VM_BASE		(KERNEL_BASE + 0x40000000)
-#define KERNEL_VM_SIZE		0x20000000
+#define KERNEL_VM_SIZE		0x1e000000
 //#define KERNEL_IO_VBASE		VM_KERNEL_IO_BASE
 #define KERNEL_IO_VBASE		0xf0000000
 

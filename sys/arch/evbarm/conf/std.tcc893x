@@ -15,10 +15,10 @@ options 	COM_TOLERANCE=40
 options 	CORTEX_PMC
 options 	EVBARM_BOARDTYPE="tcc893x"
 options 	FPU_VFP
-options 	PMAP_NEED_ALLOC_POOLPAGE
+#options 	PMAP_NEED_ALLOC_POOLPAGE
 options 	SOSEND_NO_LOAN
 options 	TPIDRPRW_IS_CURCPU
-options 	_ARM32_NEED_BUS_DMA_BOUNCE
+#options 	_ARM32_NEED_BUS_DMA_BOUNCE
 options 	__HAVE_CPU_COUNTER
 options 	__HAVE_CPU_UAREA_ALLOC_IDLELWP
 options 	__HAVE_FAST_SOFTINTS		# should be in types.h
@@ -30,7 +30,7 @@ options 	MD_CPU_HATCH=m86xxx_cpu_hatch
 
 makeoptions	BOARDMKFRAG="${THISARM}/conf/mk.tcc893x"
 makeoptions	BOARDTYPE="tcc893x"
-makeoptions	KERNEL_BASE_VIRT="0x80008000"
+#makeoptions	KERNEL_BASE_VIRT="0x80008000"
 makeoptions	LOADADDRESS="0x80008000"
 
 # Prevent the addition of a command line -DKERNEL_BASE_VOFFSET= as it
