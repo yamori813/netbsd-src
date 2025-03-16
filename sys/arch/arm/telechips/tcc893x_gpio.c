@@ -534,6 +534,10 @@ gpio_attach(device_t parent, device_t self, void *aux)
 	GPIO_WRITE(gpio, offsetof(GPIO, GPCDAT),
 	    GPIO_READ(gpio, offsetof(GPIO, GPCDAT)) | (1 << 9));
 
+	printf("USB20H VBUS %d %d\n", (GPIO_READ(gpio, offsetof(GPIO, GPEEN)) >> 21) & 1,
+	    (GPIO_READ(gpio, offsetof(GPIO, GPEDAT)) >>  21) & 1);
+
+
 #if NGPIO > 0
 	config_interrupts(self, gpio_defer);
 #endif

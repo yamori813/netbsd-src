@@ -135,10 +135,17 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 	rate = 125*1000*1000;
 	idx = PERI_GMAC;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
+
+	rate = 12*1000*1000;
+	idx = PERI_OUT1;
+	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
+
 	printf("%d %d\n", idx, tca_ckc_getperi(sc, idx));
 	idx = FBUS_HSIO;
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 	idx = FBUS_CPU;
+	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
+	idx = FBUS_IO;
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 }
 

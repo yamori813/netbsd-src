@@ -125,7 +125,7 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 	sc->sc_bus.ub_hcpriv = sc;
 	sc->iot = aa->aa_iot;
 	sc->sc_vendor_init = tcc893x_ehci_init;
-	sc->sc_flags = EHCIF_ETTF;
+//	sc->sc_flags = EHCIF_ETTF;
 	sc->sc_bus.ub_revision = USBREV_2_0;
 
 	aprint_naive(": USB2.0 Interface\n");
@@ -176,6 +176,7 @@ tcc893x_ehci_attach(device_t parent __unused, device_t self, void *aux)
 
 static void tcc893x_ehci_init(struct ehci_softc *sc)
 {
+#if 0
 	uint32_t reg;
 
 	reg = EOREAD4(sc, EHCI_PORTSC(1));
@@ -187,6 +188,7 @@ static void tcc893x_ehci_init(struct ehci_softc *sc)
 	/* Set "Streaming disable mode"  to avoid Tx under run */
 	reg |= USBMODE_SDIS;
 	EWRITE4(sc, USBMODE, reg);
+#endif
 }
 
 CFATTACH_DECL2_NEW(tcc893x_ehci, sizeof(struct ehci_softc),
