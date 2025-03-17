@@ -193,7 +193,7 @@ tcc893x_bootstrap(vaddr_t iobase)
 	reg = readgpio(offsetof(GPIO, GPEDAT));
 	printf("GPIO E DAT %x\n", reg);
 
-	/* USB2_CN Power ON */
+	/* USB2_CN Power ON (NCP382 EN1) */
 	reg = readgpio(offsetof(GPIO, GPCDAT));
 	reg &= ~(1 << 24);
 	writegpio(offsetof(GPIO, GPCDAT), reg);
