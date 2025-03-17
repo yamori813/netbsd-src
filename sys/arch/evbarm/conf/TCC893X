@@ -196,9 +196,9 @@ uhub*		at usb?
 uhub*		at uhub? port ?
 
 # USB Mass Storage
-#umass*  at uhub? port ? configuration ? interface ?
-#scsibus* at scsi?
-#sd*     at scsibus? target ? lun ?      # SCSI disk drives
+umass*  at uhub? port ? configuration ? interface ?
+scsibus* at scsi?
+sd*     at scsibus? target ? lun ?      # SCSI disk drives
 #cd*    at scsibus? target ? lun ?      # SCSI CD-ROM drives
 
 # USB Ethernet adapters

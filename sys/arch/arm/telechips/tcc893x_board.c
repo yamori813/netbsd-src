@@ -91,14 +91,19 @@ static uint32_t readmembus(int off)
 	return *(uint32_t *)(baseaddr + HwMBUSCFG_BASE -  HwGPU_BASE + off);
 }
 
-/*
+static uint32_t readgpio(int off);
+static uint32_t readgpio(int off)
+{
+
+	return *(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off);
+}
+
 static void writegpio(int off, uint32_t val);
 static void writegpio(int off, uint32_t val)
 {
 
 	*(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off) = val;
 }
-*/
 
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
@@ -163,6 +168,35 @@ tcc893x_bootstrap(vaddr_t iobase)
 	reg = readhsio(offsetof(HSIOBUSCFG, SWRESET));
 	printf("HSIOBUSCFG->SWRESET %x\n", reg);
 
+	reg = readgpio(offsetof(GPIO, GPAEN));
+	printf("GPIO A EN %x\n", reg);
+	reg = readgpio(offsetof(GPIO, GPADAT));
+	printf("GPIO A DAT %x\n", reg);
+
+	reg = readgpio(offsetof(GPIO, GPBEN));
+	printf("GPIO B EN %x\n", reg);
+	reg = readgpio(offsetof(GPIO, GPBDAT));
+	printf("GPIO B DAT %x\n", reg);
+
+	reg = readgpio(offsetof(GPIO, GPCEN));
+	printf("GPIO C EN %x\n", reg);
+	reg = readgpio(offsetof(GPIO, GPCDAT));
+	printf("GPIO C DAT %x\n", reg);
+
+	reg = readgpio(offsetof(GPIO, GPDEN));
+	printf("GPIO D EN %x\n", reg);
+	reg = readgpio(offsetof(GPIO, GPDDAT));
+	printf("GPIO D DAT %x\n", reg);
+
+	reg = readgpio(offsetof(GPIO, GPEEN));
+	printf("GPIO E EN %x\n", reg);
+	reg = readgpio(offsetof(GPIO, GPEDAT));
+	printf("GPIO E DAT %x\n", reg);
+
+	/* USB2_CN Power ON */
+	reg = readgpio(offsetof(GPIO, GPCDAT));
+	reg &= ~(1 << 24);
+	writegpio(offsetof(GPIO, GPCDAT), reg);
 /*
 	reg = readhsio(offsetof(HSIOBUSCFG, ETHER_CFG1));
 	reg &= ~(1 << 31);
