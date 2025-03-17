@@ -67,6 +67,8 @@ __KERNEL_RCSID(0, "$NetBSD$");
 #define GSEL_MASK(n)		(3 << ((n % 16) << 1))
 #define GSEL(n, i)		(i << ((n % 16) << 1))
 
+#define	MAXPINS			224	/* A - G */
+
 #if NOT_USE
 static void gpio_pic_block_irqs(struct pic_softc *, size_t, uint32_t);
 static void gpio_pic_unblock_irqs(struct pic_softc *, size_t, uint32_t);
@@ -97,7 +99,7 @@ struct gpio_softc {
 	uint32_t gpio_inuse_mask;
 #if NGPIO > 0
 	struct gpio_chipset_tag gpio_chipset;
-	gpio_pin_t gpio_pins[64];
+	gpio_pin_t gpio_pins[MAXPINS];
 #endif
 };
 
@@ -355,10 +357,6 @@ gpio_defer(device_t self)
 	gba.gba_pins = gpio->gpio_pins;
 	gba.gba_npins = __arraycount(gpio->gpio_pins);
 
-	uint32_t reg;
-	reg = (1 << 4) | (1 << 8); // MDC, MDIO
-	GPIO_WRITE(gpio, offsetof(GPIO, GPCFN0), reg);
-	reg  = GPIO_READ(gpio, offsetof(GPIO, GPCFN0));
 #if 0
 	valuein = GPIO_READ(gpio, GPIO_INPUT_REG);
 	valueout = GPIO_READ(gpio, GPIO_OUTPUT_REG);
