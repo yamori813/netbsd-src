@@ -59,14 +59,12 @@ static uint32_t readckc(int off)
 	return *(uint32_t *)(baseaddr + HwCKC_BASE -  HwGPU_BASE + off);
 }
 
-/*
 static void writeckc(int off, uint32_t val);
 static void writeckc(int off, uint32_t val)
 {
 
 	*(uint32_t *)(baseaddr + HwCKC_BASE -  HwGPU_BASE + off) = val;
 }
-*/
 
 static uint32_t readhsio(int off);
 static uint32_t readhsio(int off)
@@ -139,6 +137,12 @@ tcc893x_bootstrap(vaddr_t iobase)
 		printf("CKC:%02x %08x\n", i, readckc(i));
 	}
 
+	reg = readckc(offsetof(CKC, CLKCTRL2));
+	if ((reg & (1 << 21)) != 0) {
+		reg &= ~(1 << 21);
+		writeckc(offsetof(CKC, CLKCTRL2), reg);
+		printf("Disable DISPALY clock\n");
+	}
 /*
 	reg = readckc(offsetof(CKC, PCLKCTRL12));
 	if ((reg & (1 << 29)) == 0) {
