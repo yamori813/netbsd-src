@@ -265,6 +265,8 @@ initarm(void *arg)
 {
 	cn_tab = &earlycons;
 
+	boothowto = AB_VERBOSE;
+
 	/*
 	 * Heads up ... Setup the CPU / MMU / TLB functions
 	 */
