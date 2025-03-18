@@ -26,6 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _ARM_TELECHIPS_TCC893X_CKC_H_
+#define _ARM_TELECHIPS_TCC893X_CKC_H_
+
 #define XIN_CLK_RATE		240000		// 24MHz
 #define XTIN_CLK_RATE		327		// 32.768kHz
 #define HDMI_CLK_RATE		270000
@@ -327,3 +330,5 @@ enum {
 	FBUS_CM3,		// CLKCTRL10
 #endif
 };
+
+#endif	/* _ARM_TELECHIPS_TCC893X_CKC_H_ */

@@ -26,6 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _ARM_TELECHIPS_TCC893X_REG_H_
+#define _ARM_TELECHIPS_TCC893X_REG_H_
+
 #undef MSIZE	/* duplicate name workaound */
 
 #include <arm/telechips/platform_tcc893x/reg_physical.h>
@@ -38,3 +41,5 @@
 
 #define L2CACHE_BASE			0x6C000000
 #define TCC_ARMCORE_SIZE		0x10000
+
+#endif	/* _ARM_TELECHIPS_TCC893X_REG_H_ */

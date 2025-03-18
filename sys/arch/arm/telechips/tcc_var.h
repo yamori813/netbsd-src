@@ -26,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M86XXX_VAR_H_
-#define _ARM_MINDSPEED_M86XXX_VAR_H_
+#ifndef _ARM_TELECHIPS_TCC_VAR_H_
+#define _ARM_TELECHIPS_TCC_VAR_H_
 
 extern struct bus_space armv7_generic_bs_tag;
 extern struct bus_space armv7_generic_a4x_bs_tag;
@@ -43,4 +43,4 @@ struct axi_attach_args {
 	int		aa_intrbase;
 };
 
-#endif	/* _ARM_MINDSPEED_M86XXX_VAR_H_ */
+#endif	/* _ARM_TELECHIPS_TCC_VAR_H__ */

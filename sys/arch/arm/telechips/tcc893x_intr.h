@@ -28,8 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARM_MINDSPEED_M86XXX_INTR_H_
-#define _ARM_MINDSPEED_M86XXX_INTR_H_
+#ifndef _ARM_TELECHIPS_TCC893X_INTR_H_
+#define _ARM_TELECHIPS_TCC893X_INTR_H_
 
 #ifdef _KERNEL_OPT
 #include "opt_tcc893x.h"
@@ -39,9 +39,9 @@
 #define	PIC_MAXMAXSOURCES		280
 
 /*
- * The M86XXX uses a generic interrupt controller so pull that stuff.
+ * The TCC893X uses a generic interrupt controller so pull that stuff.
  */
 #include <arm/cortex/gic_intr.h>
 #include <arm/cortex/a9tmr_intr.h>	/* A9 Timer PPIs */
 
-#endif /* _ARM_MINDSPEED_M86XXX_INTR_H_ */
+#endif /* _ARM_TELECHIPS_TCC893X_INTR_H_ */
