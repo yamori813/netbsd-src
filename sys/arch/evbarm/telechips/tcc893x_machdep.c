@@ -85,6 +85,17 @@ u_int uboot_args[4] __attribute__((__section__(".data")));
 
 static void tcc893x_system_reset(void);
 
+#define TCC_SCU_BASE_ADDR 0x77200000
+#if defined(CONFIG_CHIP_TCC8935S) || defined(CONFIG_CHIP_TCC8933S) || defined(CONFIG_CHIP_TCC8937S)
+#define SEC_CPU_START_BASE 0xF5400000
+#define SEC_CPU_START_ADDR 0x104
+#define SEC_CPU_START_CFG  0x100
+#else
+#define SEC_CPU_START_BASE 0xF0000000
+#define SEC_CPU_START_ADDR 0xCDF8
+#define SEC_CPU_START_CFG  0xCDFC
+#endif
+
 #ifndef CONADDR
 #define CONADDR		HwUART0_BASE
 #endif
@@ -150,31 +161,33 @@ static struct consdev earlycons = {
 
 static const struct pmap_devmap tcc893x_devmap[] = {
 	DEVMAP_ENTRY(
-		KERNEL_IO_VBASE,	/* 0xf0000000 */
+		KERNEL_IO_VBASE,			/* 0xf0000000 */
 		HwGPU_BASE,
 		0x08000000
 	),
 	DEVMAP_ENTRY(
 		KERNEL_IO_VBASE + 0x08000000,
 		L2CACHE_BASE,
-		0x00010000
+		0x00100000
+	),
+	DEVMAP_ENTRY(
+		KERNEL_IO_VBASE + 0x08100000,
+		SEC_CPU_START_BASE,
+		0x00100000
 	),
 	DEVMAP_ENTRY_END
 };
-
-#define JUMP_TO_KERNEL_START_1          0xe3a00020      /* mov  r0, #32 */
-#define JUMP_TO_KERNEL_START_2          0xe590f000      /* ldr  pc, [r0] */
 
 void
 tcc893x_mpstart(void)
 {
 #ifdef MULTIPROCESSOR
-bus_space_tag_t tcc893x_armcore_bst = &m83_bs_tag;
+bus_space_tag_t tcc893x_armcore_bst = &armv7_generic_bs_tag;
 bus_space_handle_t tcc893x_armcore_bsh;
 int error;
 
-	error = bus_space_map(tcc893x_armcore_bst, A9_PERIPH_BASE,
-	    M86_ARMCORE_SIZE, 0, &tcc893x_armcore_bsh);
+	error = bus_space_map(tcc893x_armcore_bst, TCC_SCU_BASE_ADDR,
+	    TCC_ARMCORE_SIZE, 0, &tcc893x_armcore_bsh);
 	if (error)
 		panic("%s: failed to map M86xxx %s registers: %d",
 		    __func__, "armcore", error);
@@ -191,35 +204,33 @@ int error;
 	bus_space_write_4(tcc893x_armcore_bst, tcc893x_armcore_bsh,
 	    A9_SCU_BASE + SCU_CTL, scu_ctl);
 
-	bus_space_unmap(tcc893x_armcore_bst, tcc893x_armcore_bsh, M86_ARMCORE_SIZE);
+	bus_space_unmap(tcc893x_armcore_bst, tcc893x_armcore_bsh, TCC_ARMCORE_SIZE);
 
 	armv7_dcache_wbinv_all();
 
 	const paddr_t mpstart = KERN_VTOPHYS((vaddr_t)cpu_mpstart);
-	bus_space_tag_t tcc893x_startup_bst = &m83_bs_tag;
+	bus_space_tag_t tcc893x_startup_bst = &armv7_generic_bs_tag;
 	bus_space_handle_t tcc893x_startup_entry_bsh;
 
-	error = bus_space_map(tcc893x_startup_bst, AXI_DDR_BASE,
-	    0x100, 0, &tcc893x_startup_entry_bsh);
+	error = bus_space_map(tcc893x_startup_bst, SEC_CPU_START_BASE,
+	    0x1000, 0, &tcc893x_startup_entry_bsh);
 
 	/*
 	 * Before we turn on the MMU, let's the other process out of the
 	 * SKU ROM but setting the magic LUT address to our own mp_start
 	 * routine.
 	 */
-	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 0x20, mpstart);
-	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 0,
-	    JUMP_TO_KERNEL_START_1);
-	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 4,
-	    JUMP_TO_KERNEL_START_2);
-
-	bus_space_unmap(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 0x100);
+	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh,
+	    SEC_CPU_START_ADDR, mpstart);
 
 //	dsb(sy);
 	dsb(ishst);
 	sev();
 
-	tcc893x_cpu1_reset();
+	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh,
+	    SEC_CPU_START_CFG, 0x10);
+
+	bus_space_unmap(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 0x1000);
 
 	/* Bitmask of CPUs (non-BP) to start */
 	for (u_int cpuindex = 1; cpuindex < arm_cpu_max; cpuindex++) {
@@ -269,9 +280,7 @@ initarm(void *arg)
 	tcc893x_bootstrap(KERNEL_IO_VBASE);
 
 #ifdef MULTIPROCESSOR
-	uint32_t scu_cfg = *(uint32_t *)(KERNEL_IO_VBASE + 0x00300000 +
-	    SCU_CFG);
-	arm_cpu_max = 1 + (scu_cfg & SCU_CFG_CPUMAX);
+	arm_cpu_max = 2;
 	membar_producer();
 #endif
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);

@@ -8,7 +8,6 @@ void	tcc893x_device_register(device_t, void *);
 
 #ifdef MULTIPROCESSOR
 void	tcc893x_cpu_hatch(struct cpu_info *);
-void	tcc893x_cpu1_reset(void);
 #endif
 
 #endif	/* _ARM_TELECHIPS_TCC893X_BOADR_H_ */

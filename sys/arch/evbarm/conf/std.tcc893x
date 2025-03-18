@@ -26,7 +26,7 @@ options 	__HAVE_GENERIC_START
 options 	__HAVE_MM_MD_CACHE_ALIASING
 options 	__HAVE_MM_MD_DIRECT_MAPPED_PHYS
 options 	__HAVE_PCI_CONF_HOOK
-options 	MD_CPU_HATCH=m86xxx_cpu_hatch
+options 	MD_CPU_HATCH=tcc893x_cpu_hatch
 
 makeoptions	BOARDMKFRAG="${THISARM}/conf/mk.tcc893x"
 makeoptions	BOARDTYPE="tcc893x"

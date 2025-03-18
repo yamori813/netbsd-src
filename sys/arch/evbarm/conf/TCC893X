@@ -20,7 +20,7 @@ options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
 #makeoptions	DEFCOPTS="-O0"
 #options 	UVMHIST
 #options 	UVMHIST_PRINT,A9WDT_PERIOD_DEFAULT=30
-#options 	MULTIPROCESSOR
+options 	MULTIPROCESSOR
 options 	CPU_CORTEX
 options 	MEMSIZE=1024
 #options 	PMAPCOUNTERS

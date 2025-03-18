@@ -264,30 +264,9 @@ tcc893x_device_register(device_t self, void *aux)
 
 #ifdef MULTIPROCESSOR
 void
-m86xxx_cpu_hatch(struct cpu_info *ci)
+tcc893x_cpu_hatch(struct cpu_info *ci)
 {
 	a9tmr_init_cpu_clock(ci);
-}
-
-void
-m86xxx_cpu1_reset(void)
-{
-	uint32_t reg;
-
-	reg = readckc(A9DP_CPU_RESET);
-	writeckc(A9DP_CPU_RESET, reg & ~CPU1_RST);
-
-	reg = readckc(A9DP_PWR_CNTRL);
-	writeckc(A9DP_PWR_CNTRL, reg & ~CLAMP_CORE1);
-
-	reg = readckc(A9DP_CPU_CLK_CNTRL);
-	writeckc(A9DP_CPU_CLK_CNTRL, reg | CPU1_CLK_ENABLE);
-
-	reg = readckc(A9DP_CPU_RESET);
-	writeckc(A9DP_CPU_RESET, reg & ~NEON1_RST);
-
-	reg = readckc(A9DP_CPU_CLK_CNTRL);
-	writeckc(A9DP_CPU_CLK_CNTRL, reg | NEON1_CLK_ENABLE);
 }
 #endif
 
