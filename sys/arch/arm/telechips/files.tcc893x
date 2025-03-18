@@ -36,19 +36,15 @@ file	arch/arm/telechips/tcc893x_ckc.c		ckc		needs-flag
 # GPIO
 device  tcc893x_gpio: gpiobus
 attach  tcc893x_gpio at axi
-file    arch/arm/telechips/tcc893x_gpio.c	tcc893x_gpio		needs-flag
+file    arch/arm/telechips/tcc893x_gpio.c		tcc893x_gpio	needs-flag
 
 # Ethernet
-#device  pge: ether, ifnet, arp, mii, mii_phy
-#attach  pge at axi
-#file    arch/arm/telechips/if_pge.c		pge
 attach	awge at axi with tcc893x_gmac
-file	arch/arm/telechips/tcc893x_gmac.c	tcc893x_gmac
-
+file	arch/arm/telechips/tcc893x_gmac.c		tcc893x_gmac
 
 # USB3 Host Controller (XHCI)
 attach xhci at axi with xhci_axi
-file    arch/arm/telechips/tcc893x_xhci.c        xhci_axi
+file    arch/arm/telechips/tcc893x_xhci.c        	xhci_axi
 
 # USB2 OTG
 attach	dwctwo at axi with tcc893x_otg
