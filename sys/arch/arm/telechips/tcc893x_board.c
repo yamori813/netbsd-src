@@ -96,13 +96,6 @@ static uint32_t readgpio(int off)
 	return *(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off);
 }
 
-static void writegpio(int off, uint32_t val);
-static void writegpio(int off, uint32_t val)
-{
-
-	*(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off) = val;
-}
-
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
 {
@@ -197,10 +190,6 @@ tcc893x_bootstrap(vaddr_t iobase)
 	reg = readgpio(offsetof(GPIO, GPEDAT));
 	printf("GPIO E DAT %x\n", reg);
 
-	/* USB2_CN Power ON (NCP382 EN1) */
-	reg = readgpio(offsetof(GPIO, GPCDAT));
-	reg &= ~(1 << 24);
-	writegpio(offsetof(GPIO, GPCDAT), reg);
 /*
 	reg = readhsio(offsetof(HSIOBUSCFG, ETHER_CFG1));
 	reg &= ~(1 << 31);
