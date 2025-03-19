@@ -227,8 +227,13 @@ int error;
 	dsb(ishst);
 	sev();
 
+#if defined(CONFIG_CHIP_TCC8935S) || defined(CONFIG_CHIP_TCC8933S) || defined(CONFIG_CHIP_TCC8937S)
+	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh,
+	    SEC_CPU_START_CFG, 0x1);
+#else
 	bus_space_write_4(tcc893x_startup_bst, tcc893x_startup_entry_bsh,
 	    SEC_CPU_START_CFG, 0x10);
+#endif
 
 	bus_space_unmap(tcc893x_startup_bst, tcc893x_startup_entry_bsh, 0x1000);
 
