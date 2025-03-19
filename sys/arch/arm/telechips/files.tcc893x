@@ -38,6 +38,11 @@ device  tcc893x_gpio: gpiobus
 attach  tcc893x_gpio at axi
 file    arch/arm/telechips/tcc893x_gpio.c		tcc893x_gpio	needs-flag
 
+# Timer/Counter
+device  tcc893x_timer
+attach  tcc893x_timer at axi
+file    arch/arm/telechips/tcc893x_timer.c		tcc893x_timer	needs-flag
+
 # Ethernet
 attach	awge at axi with tcc893x_gmac
 file	arch/arm/telechips/tcc893x_gmac.c		tcc893x_gmac

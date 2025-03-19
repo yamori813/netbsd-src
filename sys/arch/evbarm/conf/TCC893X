@@ -185,6 +185,8 @@ ehci0		at axi? addr 0x71200000 intr 81
 tcc893x_gpio0	at axi? addr 0x74200000	# not support intr
 gpio*		at tcc893x_gpio?
 
+tcc893x_timer0	at axi? addr 0x74300000
+
 # MII/PHY support
 rgephy*		at mii? phy ?		# Realtek 8169S/8110S/8211 PHYs
 
