@@ -145,6 +145,7 @@ makeoptions	COPY_SYMTAB=1
 #options OHCI_DEBUG
 #options XHCI_DEBUG
 #options UHUB_DEBUG
+options DWC2_DEBUG
 
 
 # Valid options for BOOT_ARGS:
@@ -178,7 +179,7 @@ ckc0		at axi? addr 0x74000000
 com*		at axi? addr 0x76370000 intr 98
 awge0		at axi? addr 0x71700000 intr 83		# DesignWare Gigabit Ethernet
 #xhci*		at axi? addr 0x9f000000 intr 54
-#dwctwo*		at axi? addr 0x76a00000 intr 80
+dwctwo*		at axi? addr 0x76a00000 intr 80
 ehci0		at axi? addr 0x71200000 intr 81
 #ohci0		at axi? addr 0x71300000 intr 81
 
@@ -186,13 +187,14 @@ tcc893x_gpio0	at axi? addr 0x74200000	# not support intr
 gpio*		at tcc893x_gpio?
 
 tcc893x_timer0	at axi? addr 0x74300000
+tcc893x_pmu0	at axi? addr 0x74400000
 
 # MII/PHY support
 rgephy*		at mii? phy ?		# Realtek 8169S/8110S/8211 PHYs
 
 # USB bus support
 #usb*            at xhci?
-#usb*            at dwctwo?
+usb*            at dwctwo?
 usb*            at ehci?
 uhub*		at usb?
 uhub*		at uhub? port ?
