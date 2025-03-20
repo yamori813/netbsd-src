@@ -52,18 +52,12 @@ __KERNEL_RCSID(1, "$NetBSD$");
 
 static vaddr_t baseaddr;
 
+#ifdef REGDUMP
 static uint32_t readckc(int off);
 static uint32_t readckc(int off)
 {
 
 	return *(uint32_t *)(baseaddr + HwCKC_BASE -  HwGPU_BASE + off);
-}
-
-static void writeckc(int off, uint32_t val);
-static void writeckc(int off, uint32_t val)
-{
-
-	*(uint32_t *)(baseaddr + HwCKC_BASE -  HwGPU_BASE + off) = val;
 }
 
 static uint32_t readhsio(int off);
@@ -72,15 +66,6 @@ static uint32_t readhsio(int off)
 
 	return *(uint32_t *)(baseaddr + HwHSIOBUSCFG_BASE -  HwGPU_BASE + off);
 }
-
-/*
-static void writehsio(int off, uint32_t val);
-static void writehsio(int off, uint32_t val)
-{
-
-	*(uint32_t *)(baseaddr + HwHSIOBUSCFG_BASE -  HwGPU_BASE + off) = val;
-}
-*/
 
 static uint32_t readmembus(int off);
 static uint32_t readmembus(int off)
@@ -95,6 +80,7 @@ static uint32_t readgpio(int off)
 
 	return *(uint32_t *)(baseaddr + HwGPIO_BASE -  HwGPU_BASE + off);
 }
+#endif
 
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
@@ -107,8 +93,10 @@ static void tcc893x_l2ccinit(void)
 	if (error)
 		panic("L2CC map error");
 
+#ifdef REGDUMP
 	uint32_t id = bus_space_read_4(tcc893x_armcore_bst, tcc893x_armcore_bsh, 0);
 	printf("CACHE_ID: %x\n", id);
+#endif
 
 	arml2cc_init(tcc893x_armcore_bst, tcc893x_armcore_bsh, 0);
 
@@ -119,44 +107,18 @@ static void tcc893x_l2ccinit(void)
 void
 tcc893x_bootstrap(vaddr_t iobase)
 {
-	uint32_t reg;
 
 	baseaddr = iobase;
 
 	curcpu()->ci_data.cpu_cc_freq = 850000000;
 
+#ifdef REGDUMP
 	int i;
 	for (i= 0; i <= 0x54; i +=4) {
 		printf("CKC:%02x %08x\n", i, readckc(i));
 	}
 
-	reg = readckc(offsetof(CKC, CLKCTRL2));
-	if ((reg & (1 << 21)) != 0) {
-		reg &= ~(1 << 21);
-		writeckc(offsetof(CKC, CLKCTRL2), reg);
-		printf("Disable DISPALY clock\n");
-	}
-/*
-	reg = readckc(offsetof(CKC, PCLKCTRL12));
-	if ((reg & (1 << 29)) == 0) {
-		reg |= (1 << 29);
-		writeckc(offsetof(CKC, PCLKCTRL12), reg);
-		printf("Enable GMAC clock\n");
-	}
-	reg = readckc(offsetof(CKC, PCLKCTRL16));
-	if ((reg & (1 << 29)) == 0) {
-		reg |= (1 << 29);
-		writeckc(offsetof(CKC, PCLKCTRL16), reg);
-		printf("Enable USB 2.0 Host clock\n");
-	}
-	reg = readckc(offsetof(CKC, PCLKCTRL13));
-	if ((reg & (1 << 29)) == 0) {
-		reg |= (1 << 29);
-		writeckc(offsetof(CKC, PCLKCTRL13), reg);
-		printf("Enable OTG clock\n");
-	}
-*/
-	reg = readmembus(offsetof(MEMBUSCFG, SWRESET));
+	uint32_t reg = readmembus(offsetof(MEMBUSCFG, SWRESET));
 	printf("MEMBUSCFG->SWRESET %x\n", reg);
 
 	reg = readhsio(offsetof(HSIOBUSCFG, PWDN));
@@ -189,15 +151,7 @@ tcc893x_bootstrap(vaddr_t iobase)
 	printf("GPIO E EN %x\n", reg);
 	reg = readgpio(offsetof(GPIO, GPEDAT));
 	printf("GPIO E DAT %x\n", reg);
-
-/*
-	reg = readhsio(offsetof(HSIOBUSCFG, ETHER_CFG1));
-	reg &= ~(1 << 31);
-	writehsio(offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
-	reg |= (1 << 31) | (1 << 18);
-	writehsio(offsetof(HSIOBUSCFG, ETHER_CFG1), reg);
-	printf("Enable HSIO clock\n");
-*/
+#endif
 
 	tcc893x_l2ccinit();
 
