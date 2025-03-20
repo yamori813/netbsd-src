@@ -85,6 +85,7 @@ static uint32_t readgpio(int off)
 static void tcc893x_l2ccinit(void);
 static void tcc893x_l2ccinit(void)
 {
+#if NARML2CC > 0
 	bus_space_tag_t tcc893x_armcore_bst = &armv7_generic_bs_tag;
 	bus_space_handle_t tcc893x_armcore_bsh;
 
@@ -102,6 +103,7 @@ static void tcc893x_l2ccinit(void)
 
 	bus_space_unmap(tcc893x_armcore_bst, tcc893x_armcore_bsh,
 	    TCC_ARMCORE_SIZE);
+#endif
 }
 
 void
