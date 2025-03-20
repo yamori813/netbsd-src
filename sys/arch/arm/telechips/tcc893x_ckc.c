@@ -114,6 +114,7 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 
 	aprint_normal("\n");
 
+#ifdef REGDUMP
 	int i;
         for (i = 0 ;i < MAX_TCC_PLL ; ++i) {
                 if (i == CPU_SRC_CH) {
@@ -123,13 +124,13 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
                         printf("PLL %d %d\n", i, stClockSource[i]);
 		}
 	}
+#endif
 
 
 //	clk_set_rate(g_pOHCIClk, 48*1000*1000);
 	unsigned int rate = 48*1000*1000;
 	int idx = PERI_USB20H;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
-	printf("%d %d\n", idx, tca_ckc_getperi(sc, idx));
 
 //	clk_set_rate(gmac_clk, 125*1000*1000);
 	rate = 125*1000*1000;
@@ -140,10 +141,13 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 	idx = PERI_OUT1;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
 
+/*
 	rate = 48*1000*1000;
 	idx = PERI_USBOTG;
 	tca_ckc_setperi(sc, idx, CKC_ENABLE, rate / 100);
+*/
 
+#ifdef REGDUMP
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 	idx = FBUS_HSIO;
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
@@ -151,6 +155,7 @@ tcc893x_ckc_attach(device_t parent, device_t self, void *aux)
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
 	idx = FBUS_IO;
 	printf("%d %d\n", idx, tca_ckc_getfbusctrl(sc, idx) * 100);
+#endif
 }
 
 static inline tPCLKTYPE tcc_check_pclk_type(unsigned int periname)
@@ -916,7 +921,7 @@ unsigned int tca_ckc_setperi(struct ckc_softc *sc, unsigned int periname,unsigne
 
 //	tcc_pclkctrl_write(PCLKCTRL, nPCLKCTRL.md, nPCLKCTRL.en, nPCLKCTRL.sel, nPCLKCTRL.div, type);
 	if (type == PCLKCTRL_TYPE_XXX) {
-		printf("XXX %d %d %d %d\n", periname, nPCLKCTRL.en, nPCLKCTRL.sel, nPCLKCTRL.div);
+//		printf("XXX %d %d %d %d\n", periname, nPCLKCTRL.en, nPCLKCTRL.sel, nPCLKCTRL.div);
 		CKC_WRITE(sc, REG_PCLKCTRL + periname * 4,
 		    (nPCLKCTRL.en << PCLKCTRL_EN_SHIFT) |
 		    (nPCLKCTRL.sel << PCLKCTRL_SEL_SHIFT) | nPCLKCTRL.div);
