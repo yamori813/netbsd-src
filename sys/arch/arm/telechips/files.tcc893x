@@ -48,6 +48,11 @@ device  tcc893x_pmu
 attach  tcc893x_pmu at axi
 file    arch/arm/telechips/tcc893x_pmu.c		tcc893x_pmu	needs-flag
 
+# VPIC
+device  tcc893x_pic
+attach  tcc893x_pic at axi
+file    arch/arm/telechips/tcc893x_pic.c		tcc893x_pic	needs-flag
+
 # Ethernet
 attach	awge at axi with tcc893x_gmac
 file	arch/arm/telechips/tcc893x_gmac.c		tcc893x_gmac

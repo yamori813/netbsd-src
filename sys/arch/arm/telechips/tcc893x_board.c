@@ -191,7 +191,7 @@ tcc893x_device_register(device_t self, void *aux)
 		 */
                 prop_dictionary_set_uint32(dict, "frequency",
 //		    clock_info.clk_arm / 4);
-		    180000000);
+		    300000000);
 		return;
 	}
 

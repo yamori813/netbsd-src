@@ -108,4 +108,3 @@ tcc893x_timer_attach(device_t parent, device_t self, void *aux)
 	tc->tc_priv = sc;
 	tc_init(tc);
 }
-
