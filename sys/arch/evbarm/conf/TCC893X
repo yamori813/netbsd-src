@@ -176,7 +176,7 @@ arma9wdt0	at armperiph? flags 1	# A9 Watchdog Timer
 
 axi0		at mainbus?		# AXI
 ckc0		at axi? addr 0x74000000
-com*		at axi? addr 0x76370000 intr 98
+com*		at axi? addr 0x76370000 intr 79		# This irq is cascade
 awge0		at axi? addr 0x71700000 intr 83		# DesignWare Gigabit Ethernet
 #xhci*		at axi? addr 0x9f000000 intr 54
 #dwctwo*		at axi? addr 0x76a00000 intr 80
@@ -188,6 +188,7 @@ gpio*		at tcc893x_gpio?
 
 tcc893x_timer0	at axi? addr 0x74300000
 tcc893x_pmu0	at axi? addr 0x74400000
+tcc893x_pic0	at axi? addr 0x74100000
 
 # MII/PHY support
 rgephy*		at mii? phy ?		# Realtek 8169S/8110S/8211 PHYs
