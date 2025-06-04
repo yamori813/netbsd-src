@@ -1,5 +1,5 @@
 #! /usr/bin/env sh
-#	$NetBSD: build.sh,v 1.365.2.4 2024/12/31 01:23:17 snj Exp $
+#	$NetBSD: build.sh,v 1.365.2.7 2025/05/10 18:04:13 bouyer Exp $
 #
 # Copyright (c) 2001-2022 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -1514,7 +1514,11 @@ parseoptions()
 	MAKEFLAGS="-de -m ${TOP}/share/mk ${MAKEFLAGS}"
 	MAKEFLAGS="${MAKEFLAGS} MKOBJDIRS=${MKOBJDIRS-yes}"
 	export MAKEFLAGS MACHINE MACHINE_ARCH
-	setmakeenv USETOOLS "yes"
+	if [ -z "${USETOOLS}" ]; then
+		setmakeenv USETOOLS yes
+	else
+		setmakeenv USETOOLS "${USETOOLS}"
+	fi
 	setmakeenv MAKEWRAPPERMACHINE "${makewrappermachine:-${MACHINE}}"
 	setmakeenv MAKE_OBJDIR_CHECK_WRITABLE no
 }
@@ -1572,6 +1576,13 @@ sanitycheck()
 	done
 }
 
+# find a command in PATH and print the full filename
+print_path_of()
+{
+	set -- $( type "$1" )
+	printf "${3}\n"
+}
+
 # print_tooldir_make --
 # Try to find and print a path to an existing
 # ${TOOLDIR}/bin/${toolprefix}program
@@ -1582,6 +1593,11 @@ print_tooldir_program()
 	local possible_program
 	local tooldir_program
 	local program=${1}
+
+	if [ "${USETOOLS-yes}" != "yes" ]; then
+		print_path_of "${program}"
+		return
+	fi
 
 	if [ -n "${TOOLDIR}" ]; then
 		echo "${TOOLDIR}/bin/${toolprefix}${program}"
@@ -2023,7 +2039,7 @@ createmakewrapper()
 	eval cat <<EOF ${makewrapout}
 #! ${HOST_SH}
 # Set proper variables to allow easy "make" building of a NetBSD subtree.
-# Generated from:  \$NetBSD: build.sh,v 1.365.2.4 2024/12/31 01:23:17 snj Exp $
+# Generated from:  \$NetBSD: build.sh,v 1.365.2.7 2025/05/10 18:04:13 bouyer Exp $
 # with these arguments: ${_args}
 #
 
@@ -2370,9 +2386,11 @@ setup_mkrepro()
 	NETBSD_REVISIONID=
 	local d
 	local t
+	local rid
 	local tag
 	local vcs
 	for d in ${dirs}; do
+		local base=$( basename "$d" )
 		if [ -d "${d}CVS" ]; then
 			local cvslatest=$(print_tooldir_program cvslatest)
 			if [ ! -x "${cvslatest}" ]; then
@@ -2386,20 +2404,15 @@ setup_mkrepro()
 			fi
 
 			t=$("${cvslatest}" ${cvslatestflags} "${d}")
-			if [ -f "${d}CVS/Tag" ]; then
-				tag=$( sed 's/^T//' < "${d}CVS/Tag" )
-			else
-				tag=HEAD
-			fi
-			NETBSD_REVISIONID="${tag}-"$(${nbdate} -u -r ${t} '+%Y%m%d%H%M%S')
+			rid="$(${nbdate} -u -r ${t} '+%Y%m%d%H%M%S')"
 			vcs=cvs
 		elif [ -d "${d}.git" -o -f "${d}.git" ]; then
 			t=$(cd "${d}" && git log -1 --format=%ct)
-			NETBSD_REVISIONID=$(cd "${d}" && git log -1 --format=%H)
+			rid="$(cd "${d}" && git log -1 --format=%H)"
 			vcs=git
 		elif [ -d "${d}.hg" ]; then
 			t=$(hg --repo "$d" log -r . --template '{date.unixtime}\n')
-			NETBSD_REVISIONID=$(hg --repo "$d" identify --template '{id}\n')
+			rid="$(hg --repo "$d" identify --template '{id}\n')"
 			vcs=hg
 		elif [ -f "${d}.hg_archival.txt" ]; then
 			local stat=$(print_tooldir_program stat)
@@ -2408,11 +2421,12 @@ setup_mkrepro()
 			fi
 
 			t=$("${stat}" -t '%s' -f '%m' "${d}.hg_archival.txt")
-			NETBSD_REVISIONID=$(awk '/^node:/ { print $2 }' < "${d}.hg_archival.txt")
+			rid="$(awk '/^node:/ { print $2 }' < "${d}.hg_archival.txt")"
 			vcs=hg
 		else
 			bomb "Cannot determine VCS for '$d'"
 		fi
+		NETBSD_REVISIONID="${NETBSD_REVISIONID}${NETBSD_REVISIONID:+-}${base}:${rid}"
 
 		if [ -z "$t" ]; then
 			bomb "Failed to get timestamp for vcs=$vcs in '$d'"

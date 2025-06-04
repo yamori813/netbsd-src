@@ -1,4 +1,4 @@
-/*	$NetBSD: identcpu.c,v 1.123.4.1 2024/07/20 14:19:31 martin Exp $	*/
+/*	$NetBSD: identcpu.c,v 1.123.4.4 2025/05/15 18:06:57 martin Exp $	*/
 
 /*-
  * Copyright (c) 1999, 2000, 2001, 2006, 2007, 2008 The NetBSD Foundation, Inc.
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: identcpu.c,v 1.123.4.1 2024/07/20 14:19:31 martin Exp $");
+__KERNEL_RCSID(0, "$NetBSD: identcpu.c,v 1.123.4.4 2025/05/15 18:06:57 martin Exp $");
 
 #include "opt_xen.h"
 
@@ -144,13 +144,27 @@ cpu_probe_intel_cache(struct cpu_info *ci)
 static void
 cpu_probe_intel_errata(struct cpu_info *ci)
 {
-	u_int family, model, stepping;
+	u_int family, model;
 
 	family = CPUID_TO_FAMILY(ci->ci_signature);
 	model = CPUID_TO_MODEL(ci->ci_signature);
-	stepping = CPUID_TO_STEPPING(ci->ci_signature);
 
-	if (family == 0x6 && model == 0x5C && stepping == 0x9) { /* Apollo Lake */
+	/*
+	 * For details, refer to the Intel Pentium and Celeron Processor
+	 * N- and J- Series Specification Update (Document number: 334820-010),
+	 * August 2022, Revision 010. See page 28, Section 5.30: "APL30 A Store
+	 * Instruction May Not Wake Up MWAIT."
+	 * https://cdrdv2-public.intel.com/334820/334820-APL_Spec_Update_rev010.pdf
+	 * https://web.archive.org/web/20250114072355/https://cdrdv2-public.intel.com/334820/334820-APL_Spec_Update_rev010.pdf
+	 *
+	 * Disable MWAIT/MONITOR on Apollo Lake CPUs to address the
+	 * APL30 erratum.  When using the MONITOR/MWAIT instruction
+	 * pair, stores to the armed address range may fail to trigger
+	 * MWAIT to resume execution.  When these instructions are used
+	 * to hatch secondary CPUs, this erratum causes SMP boot
+	 * failures.
+	 */
+	if (family == 0x6 && model == 0x5C) {
 		wrmsr(MSR_MISC_ENABLE,
 		    rdmsr(MSR_MISC_ENABLE) & ~IA32_MISC_MWAIT_EN);
 
@@ -791,21 +805,44 @@ cpu_probe_fpu(struct cpu_info *ci)
 
 	x86_fpu_save = FPU_SAVE_XSAVE;
 
-	x86_cpuid2(0xd, 1, descs);
+	x86_cpuid2(0x0d, 1, descs);
 	if (descs[0] & CPUID_PES1_XSAVEOPT)
 		x86_fpu_save = FPU_SAVE_XSAVEOPT;
 
-	/* Get features and maximum size of the save area */
-	x86_cpuid(0xd, descs);
-	if (descs[2] > sizeof(struct fxsave))
-		x86_fpu_save_size = descs[2];
-
+	/*
+	 * Get the hardware-supported features with CPUID.
+	 */
+	x86_cpuid2(0x0d, 0, descs);
 	x86_xsave_features = (uint64_t)descs[3] << 32 | descs[0];
+
+	/*
+	 * Turn on XSAVE in CR4 so we can write to XCR0, and write to
+	 * XCR0 enable only those features that NetBSD software
+	 * supports.
+	 *
+	 * CR4_OSXSAVE support and and XCR0 access are both allowed
+	 * because we tested ci->ci_feat_val[1] & CPUID2_XSAVE above.
+	 *
+	 * (This is redundant with cpu_init when it runs on the primary
+	 * CPU, but it's harmless.)
+	 */
+	lcr4(rcr4() | CR4_OSXSAVE);
+	wrxcr(0, x86_xsave_features & XCR0_FPU);
+
+	/*
+	 * Get the size of the save area with those features enabled
+	 * with the second CPUID.
+	 *
+	 * (Let's hope the features don't change!)
+	 */
+	x86_cpuid2(0x0d, 0, descs);
+	if (descs[1] > x86_fpu_save_size)
+		x86_fpu_save_size = descs[1];
 
 	/* Get component offsets and sizes for the save area */
 	for (i = XSAVE_YMM_Hi128; i < __arraycount(x86_xsave_offsets); i++) {
 		if (x86_xsave_features & __BIT(i)) {
-			x86_cpuid2(0xd, i, descs);
+			x86_cpuid2(0x0d, i, descs);
 			x86_xsave_offsets[i] = descs[1];
 			x86_xsave_sizes[i] = descs[0];
 		}
@@ -1072,6 +1109,7 @@ static const struct vm_name_guest vm_bios_vendors[] = {
 	{ "BHYVE", VM_GUEST_VM },			/* bhyve */
 	{ "Seabios", VM_GUEST_VM },			/* KVM */
 	{ "innotek GmbH", VM_GUEST_VIRTUALBOX },	/* Oracle VirtualBox */
+	{ "Generic PVH", VM_GUEST_GENPVH},		/* Generic PVH */
 };
 
 static const struct vm_name_guest vm_system_products[] = {
@@ -1093,6 +1131,7 @@ identify_hypervisor(void)
 	switch (vm_guest) {
 	case VM_GUEST_XENPV:
 	case VM_GUEST_XENPVH:
+	case VM_GUEST_GENPVH:
 		/* guest type already known, no bios info */
 		return;
 	default:

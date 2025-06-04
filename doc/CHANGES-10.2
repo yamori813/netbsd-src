@@ -1,4 +1,4 @@
-# $NetBSD: CHANGES-10.2,v 1.1.2.4 2025/01/07 16:14:28 martin Exp $
+# $NetBSD: CHANGES-10.2,v 1.1.2.28 2025/06/01 12:34:58 martin Exp $
 
 A complete list of changes from the NetBSD 10.1 release on 2024-12-16
 until the 10.2 release:
@@ -61,4 +61,636 @@ sys/ufs/lfs/lfs_vfsops.c			1.383
 
 	ffs: PR 58837: missing locking around fs_fmod/time.
 	[hannken, ticket #1037]
+
+usr.bin/calendar/calendars/calendar.christian	1.13,1.14
+usr.bin/calendar/calendars/calendar.holiday	1.35
+usr.bin/calendar/calendars/calendar.judaic	1.12
+usr.bin/calendar/calendars/calendar.usholiday	1.12
+
+	calendars: Update for 2025.
+	[nia, ticket #1038]
+
+sys/kern/sys_process_lwpstatus.c		1.5
+sys/kern/sys_ptrace_common.c			1.96
+sys/sys/ptrace.h				1.77
+
+	i386: PR 58983: fix INSTALL_FLOPPY kernel on i386.
+	[hgutch, ticket #1039]
+
+share/man/man5/services.5			1.11
+usr.sbin/services_mkdb/services_mkdb.8		1.13
+
+	services(5): PR 58998:  consistently refer to the cdb database.
+	[uwe, ticket #1040]
+
+share/man/man4/bwi.4				1.15
+sys/arch/evbppc/conf/WII			1.7
+sys/dev/ic/bwi.c				1.39-1.41
+sys/dev/ic/bwireg.h				1.5
+sys/dev/ic/bwivar.h				1.11
+sys/dev/sdmmc/files.sdmmc			1.6
+sys/dev/sdmmc/if_bwi_sdio.c			1.1
+sys/dev/sdmmc/sdmmc_cis.c			1.10
+sys/dev/sdmmc/sdmmcvar.h			1.38
+sys/dev/sdmmc/sdmmcdevs				1.9
+sys/dev/sdmmc/sdmmcdevs.h			1.9 (regen)
+
+	evbppc: add Nintendo Wii WLAN support.
+	[jmcneill, ticket #1041]
+
+sys/arch/arm/nxp/imx6_iomux.c			1.4
+
+	evbarm: add support for the RIoTboard i.MX6S IOMUX controller.
+	[skrll, ticket #1042]
+
+sys/arch/x86/x86/identcpu.c			1.132,1.133
+
+	x86: PR 58982: fix MP boot issues on newer Apollo Lake CPUs.
+	[andvar, ticket #1043]
+
+sys/dev/i2c/i2c.c				1.91
+
+	iic(4): make "i2cscan -r ..." work on the Raspberry PI.
+	[brad, ticket #1044]
+
+external/mpl/dhcp/dist/common/options.c		1.8
+
+	dhcpd(8): safety fix.
+	[christos, ticket #1045]
+
+distrib/common/bootimage/Makefile.bootimage	1.43
+distrib/vax/liveimage/emuimage/Makefile		1.5
+
+	vax: make live image bootable.
+	[tsutsui, ticket #1046]
+
+etc/skel/dot.cshrc				1.10
+
+	PR 59008: set $ENV in the default skel/dot.cshrc as dot.profile
+	for su(1) etc.
+	[tsutsui, ticket #1047]
+
+sys/arch/macppc/stand/ofwboot/boot.c		1.32
+sys/arch/macppc/stand/ofwboot/version		1.16
+
+	macppy: tweak bootpath strings in ofwboot for OpenBIOS used on
+	qemu-system-ppc.
+	[tsutsui, ticket #1048]
+
+sys/altq/altq_rmclass.h				1.14
+
+	altq: cbq: fix a CBQ regression on 32bit platforms.
+	[ozaki-r, ticket #1049]
+
+sys/arch/xen/xenbus/xenbus_probe.c		1.61,1.62
+
+	xen: fix attachment of cdrom xbd devices being skipped on kernels
+	without PVHVM. Revert to pre-10 behaviour on pure PV kernels.
+	[sborrill, ticket #1050]
+
+sys/dev/dksubr.c				1.115
+
+	dk_discard: fix stack data leakage.
+	[jakllsch, ticket #1051]
+
+sys/arch/evbppc/conf/WII			1.8
+sys/arch/evbppc/conf/files.wii			1.5
+sys/arch/evbppc/include/wii.h			1.10
+sys/arch/evbppc/wii/dev/di.c			1.1
+sys/arch/evbppc/wii/machdep.c			1.9
+sys/kern/subr_disk_mbr.c			1.59
+
+	evbppc: add support for Wii DVD drive.
+	[jmcneill, ticket #1052]
+
+sys/dev/pci/if_gem_pci.c			1.53
+
+	gem(4): fix reading of Vital Product Data from ROM.
+	[joe, ticket #1053]
+
+sys/dev/pci/if_gem_pci.c			1.54,1.55
+
+	gem(4): fix shared interrupt pin configuration and debug output.
+	[joe, ticket #1054]
+
+sys/dev/pci/if_vioif.c				1.114
+
+	vioif(4): PR 59086: fix memory size mismatch when freeing
+	memory in an error path.
+	[joe, ticket #1055]
+
+sys/arch/powerpc/pic/intr.c			1.35-1.37
+sys/arch/powerpc/pic/picvar.h			1.14
+
+	powerpc: fix interrupt handling with cascaded PICs.
+	[jmcneill, ticket #1056]
+
+distrib/utils/embedded/conf/evbppc.conf		1.4
+sys/arch/evbppc/conf/WII			1.9
+sys/arch/evbppc/wii/dev/bwai.c			1.4
+sys/arch/evbppc/wii/pic_pi.c			1.2
+sys/arch/powerpc/oea/cpu_subr.c			1.111
+
+	evbppc: Wii: 
+	- simplify processor interface pic code.
+	- Audio playback improvements.
+	- improve CPU identification messages.
+	- remove some kernel options to save memory.
+	- disable ntpd by default.
+	[jmcneill, ticket #1057]
+
+sys/dev/ic/bwi.c				1.42
+
+	bwi(4): update rate control statistics on txeof to enable AMRR.
+	[jmcneill, ticket #1058]
+
+sys/arch/evbppc/wii/dev/sdhc_hollywood.c	1.4
+
+	evbppc: wii: SDHC performance fix.
+	[jmcneill, ticket #1059]
+
+distrib/sun2/liveimage/emuimage/Makefile	1.5
+
+	sun2: fix "live-image" build target.
+	[tsutsui, ticket #1060]
+
+lib/libm/Makefile				1.241
+
+	hppa: libm: add missing fma(3) and variants.
+	[tsutsui, ticket #1061]
+
+sys/dev/ic/bwi.c				1.43
+
+	bwi(4): remove a delay() loop in the PIO RX path.
+	[jmcneill, ticket #1062]
+
+sys/dev/sdmmc/sdhc.c				1.120,1.121
+sys/dev/sdmmc/sdhcvar.h				1.36
+
+	sdhc(4) performance fix.
+	[jmcneill, ticket #1063]
+
+sys/arch/evbppc/wii/pic_pi.c			1.3
+
+	evbppc: wii: fix missed interrupt bug.
+	[jmcneill, ticket #1064]
+
+sys/arch/alpha/jensenio/jensenio.c		1.24
+
+	alpha: fix a bug preventing ISA bus devices to attach.
+	[thorpej, ticket #1065]
+
+share/installboot/evbarm/boards.plist		1.13
+
+	installboot(8): fix Olimex A20-OLinuXino-MICRO.
+	[gutteridge, ticket #1066]
+
+xsrc/external/mit/xorg-server/dist/ChangeLog         up to 1.1.1.28
+xsrc/external/mit/xorg-server/dist/configure         up to 1.21
+xsrc/external/mit/xorg-server/dist/configure.ac      up to 1.23
+xsrc/external/mit/xorg-server/dist/meson.build       up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/Xext/sync.c       up to 1.14
+xsrc/external/mit/xorg-server/dist/Xi/xibarriers.c   up to 1.5
+xsrc/external/mit/xorg-server/dist/Xi/xichangehierarchy.c up to 1.8
+xsrc/external/mit/xorg-server/dist/composite/compalloc.c up to 1.1.1.9
+xsrc/external/mit/xorg-server/dist/config/10-quirks.conf up to 1.1.1.2
+xsrc/external/mit/xorg-server/dist/dix/devices.c     up to 1.16
+xsrc/external/mit/xorg-server/dist/dix/dispatch.c    up to 1.9
+xsrc/external/mit/xorg-server/dist/dix/enterleave.c  up to 1.10
+xsrc/external/mit/xorg-server/dist/dix/eventconvert.c up to 1.1.1.8
+xsrc/external/mit/xorg-server/dist/dix/main.c        up to 1.1.1.9
+xsrc/external/mit/xorg-server/dist/glamor/glamor_program.c up to 1.1.1.4
+xsrc/external/mit/xorg-server/dist/hw/xfree86/common/xf86Configure.c up to 1.13
+xsrc/external/mit/xorg-server/dist/hw/xfree86/common/xf86sbusBus.c up to 1.8
+xsrc/external/mit/xorg-server/dist/hw/xfree86/dri2/dri2.c up to 1.6
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/modesetting/driver.c up to 1.8
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/modesetting/drmmode_display.c up to 1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/modesetting/drmmode_display.h up to 1.1.1.5
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/modesetting/present.c up to 1.9
+xsrc/external/mit/xorg-server/dist/hw/xfree86/fbdevhw/fbdevhw.c up to 1.6
+xsrc/external/mit/xorg-server/dist/include/dix-config.h.in up to 1.10
+xsrc/external/mit/xorg-server/dist/include/do-not-use-config.h.in up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/include/meson.build up to 1.1.1.7
+xsrc/external/mit/xorg-server/dist/os/WaitFor.c      up to 1.6
+xsrc/external/mit/xorg-server/dist/os/access.c       up to 1.8
+xsrc/external/mit/xorg-server/dist/os/connection.c   up to 1.9
+xsrc/external/mit/xorg-server/dist/render/picture.c  up to 1.1.1.10
+xsrc/external/mit/xorg-server/dist/test/sync/sync.c  up to 1.1.1.2
+xsrc/external/mit/xorg-server/dist/xkb/XKBMAlloc.c   up to 1.1.1.7
+xsrc/external/mit/xorg-server/dist/xkb/XKBMisc.c     up to 1.1.1.8
+xsrc/external/mit/xorg-server/dist/xkb/xkb.c         up to 1.11
+xsrc/external/mit/xorg-server/dist/xkb/xkbUtils.c    up to 1.1.1.9
+xsrc/external/mit/xorg-server/dist/xkb/xkbtext.c     up to 1.1.1.7
+xsrc/external/mit/xorg-server/include/dix-config.h   up to 1.54
+xsrc/external/mit/xorg-server/include/version-config.h up to 1.24
+xsrc/external/mit/xorg-server/include/xorg-config.h  up to 1.34
+xsrc/external/mit/xorg-server/include/xorg-server.h  up to 1.34
+share/mk/bsd.x11.mk					(apply patch)
+
+	Update xorg-server to 21.1.16, fixing various CVEs
+	CVE-2025-26594, ZDI-CAN-25544                
+	CVE-2025-26595, ZDI-CAN-25545                  
+	CVE-2025-26596, ZDI-CAN-25543                    
+	CVE-2025-26597, ZDI-CAN-25683                      
+	CVE-2025-26598, ZDI-CAN-25740                        
+	CVE-2025-26599, ZDI-CAN-25851                        
+	CVE-2025-26600, ZDI-CAN-25871                          
+	CVE-2025-26601, ZDI-CAN-25870                            
+	[mrg, ticket #1067]
+
+external/bsd/ipf/dist/man/ippool.5		1.4
+
+	ippool(5): PR 59106: fix address pool example syntax.
+	[gutteridge, ticket #1068]
+
+sys/arch/vax/vsa/lcg.c				1.13
+
+	vax: PR 59109: avoid trying to attach a lcg(4) framebuffer
+	on machines that do not have one.
+	[hans, ticket #1069]
+
+sys/arch/vax/vsa/dz_vsbus.c			1.48
+
+	vax: fix dz(4) console detection when it's not on line 0.
+	[hans, ticket #1070]
+
+sys/arch/vax/vax/vm_machdep.c			1.119
+
+	vax: fix recursive panic when ddb(4) tries to trace the stack
+	back across cpu_lwp_bootstrap().
+	[hans, ticket #1071]
+
+sys/arch/vax/vax/db_disasm.c			1.25
+
+	vax: fix ddb(4) disassembly of functions.
+	[hans, ticket #1072]
+
+sys/arch/evbppc/wii/pic_pi.c			1.4
+
+	wii: revert pic_pi.c r1.2 and r1.3.
+	[jmcneill, ticket #1073]
+
+sys/arch/amd64/amd64/genassym.cf		1.98
+sys/arch/amd64/amd64/locore.S			1.226,1.227
+sys/arch/amd64/amd64/machdep.c			1.370
+sys/arch/x86/acpi/acpi_machdep.c		1.37,1.38
+sys/arch/x86/include/cpu.h			1.137,1.138
+sys/arch/x86/x86/consinit.c			1.40
+sys/arch/x86/x86/identcpu.c			1.131
+sys/arch/x86/x86/x86_autoconf.c			1.88,1.89
+sys/arch/x86/x86/x86_machdep.c			1.155,1.156
+sys/arch/xen/xen/hypervisor.c			1.97,1.98
+
+	amd64: add PVH boot capability for non-Xen guests.
+	[imil, ticket #1074]
+
+tests/net/if_vlan/t_vlan.sh			1.26,1.27
+
+	tests, vlan: add a test case for link state sync.
+	[ozaki-r, ticket #1075]
+
+sys/arch/amd64/conf/XEN3_DOMU			1.101,1.102
+
+	amd64/XEN3_DOMU: Enable KDTRACE_HOOKS.
+	[sborrill, ticket #1076]
+
+distrib/notes/macppc/hardware			1.50
+
+	macppc: update hardware notes, the awacs(4) driver is enabled in
+	the GENERIC kernel.
+	[gutteridge, ticket #1077]
+
+share/installboot/evbarm/boards.plist		1.11
+
+	installboot(8): evbarm: add
+	 - FriendlyElec NanoPi R2S
+	 - PineCube IP Camera
+	 - TI AM335x BeagleBone Green
+	[gutteridge, ticket #1078]
+
+sys/dev/hyperv/vmbus.c				1.19
+
+	vmbus(4): Fix missing conversion to condvar(9).
+	[nonaka, ticket #1079]
+
+sys/dev/mscp/mscp.c				1.39
+sys/dev/mscp/mscp_disk.c			1.91
+sys/dev/mscp/mscp_tape.c			1.44
+sys/dev/mscp/mscpvar.h				1.19
+
+	mscp(4): defer handling of "online" events to thread context.
+	[hans, ticket #1080]
+
+sys/arch/vax/vsa/lcg.c				1.12
+
+	vax/lcg(4): PR 59109: fix device_t/softc split straggler.
+	[hans, ticket #1081]
+
+sys/arch/vax/vsa/dz_vsbus.c			1.50
+
+	vax/dz(4): defer configuring children lkkbd and lkms
+	to make keyboard type detection work.
+	[hans, ticket #1082]
+
+sys/arch/vax/vsa/dz_vsbus.c			1.51
+
+	vax/dz(4): fix NULL pointer dereference in dzgetc().
+	[hans, ticket #1083]
+
+sys/dev/dec/dzkbd.c				1.33
+
+	dzkbd: perform keyboard initialization again for console keyboards
+	and make keyboard type detection work on framebuffer console.
+	[hans, ticket #1084]
+
+sys/arch/vax/include/db_machdep.h		1.21
+sys/arch/vax/vax/db_disasm.c			1.26
+sys/arch/vax/vax/db_machdep.c			1.61
+sys/arch/vax/vax/trap.c				1.140
+
+	vax/ddb(4): clean up machine dependent code and improve usability.
+	[hans, ticket #1085]
+
+sys/arch/vax/vax/machdep.c			1.201
+
+	vax: avoid panic when booting into ddb on machines with
+	console on dz(4).
+	[hans, ticket #1086]
+
+sys/arch/vax/vsa/spx.c				1.13
+
+	vax/spx(4): fix a few X11-related bugs.
+	[hans, ticket #1087]
+
+usr.sbin/installboot/arch/hp300.c		1.20
+
+	hp300: fix installboot(8) for ISO9660 images
+	[tsutsui, ticket #1088]
+
+sys/netinet6/nd6.c				1.283
+
+	IPv6: optimize ND processing slightly.
+	[ozaki-r, ticket #1089]
+
+games/rogue/monster.c				1.18
+games/rogue/object.c				1.15
+games/rogue/play.c				1.11
+games/rogue/rogue.h				1.25
+games/rogue/save.c				1.15
+
+	rogue(6): fix two segmentation faults.
+	[hgutch, ticket #1090]
+
+sys/dev/usb/if_axen.c				1.95,1.96
+
+	axen(4): add support for AX88179A.
+	[hgutch, ticket #1091]
+
+sys/kern/subr_log.c				1.64-1.66
+
+	logread: stop reading log without log_lock being held.
+	[rin, ticket #1092]
+
+external/public-domain/tz/dist/zoneinfo2tdf.pl  delete
+external/public-domain/tz/dist/CONTRIBUTING     up to 1.1.1.9
+external/public-domain/tz/dist/Makefile         up to 1.3
+external/public-domain/tz/dist/NEWS             up to 1.4
+external/public-domain/tz/dist/TZDATA_VERSION   up to 1.42
+external/public-domain/tz/dist/africa           up to 1.2
+external/public-domain/tz/dist/antarctica       up to 1.3
+external/public-domain/tz/dist/asia             up to 1.15
+external/public-domain/tz/dist/australasia      up to 1.11
+external/public-domain/tz/dist/backward         up to 1.12
+external/public-domain/tz/dist/backzone         up to 1.2
+external/public-domain/tz/dist/checknow.awk     up to 1.3
+external/public-domain/tz/dist/checktab.awk     up to 1.3
+external/public-domain/tz/dist/etcetera         up to 1.3
+external/public-domain/tz/dist/europe           up to 1.3
+external/public-domain/tz/dist/factory          up to 1.3
+external/public-domain/tz/dist/leap-seconds.list up to 1.9
+external/public-domain/tz/dist/leapseconds      up to 1.9
+external/public-domain/tz/dist/northamerica     up to 1.4
+external/public-domain/tz/dist/southamerica     up to 1.4
+external/public-domain/tz/dist/theory.html      up to 1.3
+external/public-domain/tz/dist/version          up to 1.15
+external/public-domain/tz/dist/ziguard.awk      up to 1.1.1.11
+external/public-domain/tz/dist/zone.tab         up to 1.4
+external/public-domain/tz/dist/zone1970.tab     up to 1.4
+external/public-domain/tz/dist/zonenow.tab      up to 1.4
+distrib/sets/lists/base/mi			(apply patch)
+doc/3RDPARTY					(apply patch)
+
+	Updated tzdata to 2025b (using 2025btgz)
+	[kre, ticket #1094]
+
+sys/sys/endian.h				1.36,1.37
+
+	endian.h: PR 57478: fix returned types for byte-order-conversion
+	macros.
+	[rin, ticket #1095]
+
+external/cddl/osnet/dist/tools/ctf/common/utils.c 1.2 (via patch)
+external/cddl/osnet/dist/tools/ctf/dump/dump.c	1.3 (via patch)
+external/cddl/osnet/usr.bin/ctfdump/Makefile	1.10 (via patch)
+tools/Makefile					1.228-1.230 (via patch)
+tools/Makefile.ctftools				1.1 (via patch)
+tools/ctfconvert/Makefile			1.12 (via patch)
+tools/ctfdump/Makefile				1.1 (via patch)
+tools/ctfmerge/Makefile				1.13 (via patch)
+tools/what/Makefile				1.1 (via patch)
+usr.bin/what/what.c				1.16 (via patch)
+
+	build: add ctfdump(1) and what(1) to tools.
+	[rin, ticket #1096]
+
+external/ibm-public/postfix/sbin/postconf/Makefile 1.10
+
+	build: PR 59302: fix build on source paths that include
+	"tls" or "global".
+	[tls, ticket #1097]
+
+build.sh					1.389-1.391 via patch
+
+	build.sh: fix "show-revisionid" operation to include both src
+	and xsrc data if the -x argument is present.
+	[martin, ticket #1102]
+
+sys/dev/ata/ata_raid_via.c			1.11
+
+	ataraid(4): PR 59130: fix setup for VIA V-RAID controllers with
+	two drives per channel.
+	[andvar, ticket #1099]
+
+sys/dev/ata/ata_raid_subr.c			1.5
+sys/dev/ata/ld_ataraid.c			1.51
+
+	ataraid(4), ld(4)PR 43986: ensure RAID disk status is set before
+	resolving vnode.
+	[andvar, ticket #1100]
+
+share/man/man4/viaide.4				1.11,1.12
+sys/dev/pci/ahcisata_pci.c			1.72
+sys/dev/pci/pciide_apollo_reg.h			1.21
+sys/dev/pci/pcidevs				1.1518-1.1522
+sys/dev/pci/viaide.c				1.90-1.98
+sys/dev/pci/pcidevs.h				(regen)
+sys/dev/pci/pcidevs_date.h			(regen)
+
+	viaide(4): PR 45917, PR 37517, PR 59010:
+	- VT6415/VT6330 single-channel IDE support
+	- VT8251 RAID/IDE mode support
+	- CX700/VX800 IDE/RAID mode improved support
+	Multiple other improvements:
+	- VT8237S IDE controller identification by ISA bus
+	- VT8261 basic support
+	- VT6421 set RAID capability flag when available to enable ataraid(4)
+	  support
+	- VX900/VX11 RAID mode support
+	- documentation improvements
+	- naming improvements
+	[andvar, ticket #1101]
+
+sys/arch/hppa/hppa/locore.S			1.7
+
+	hppa: adjust to new qemu/seabios boot api.
+	[skrll, ticket #1103]
+
+sys/arch/hppa/hppa/support.S			1.8
+
+	hppa: PR59305: kernel longjmp(9) fails to make setjmp(9) return 1
+	[skrll, ticket #1104]
+
+sys/arch/x86/isa/rtc.c				1.3
+
+	x86: PR 57821: only use the FADT Century byte if it targets a
+	valid 146818 NVRAM location.
+	[sborrill, ticket #1105]
+
+crypto/external/bsd/openssh/dist/auth.c		1.38
+
+	sshd(8): PR 59108: reset the blocklist counter after successful
+	authentication
+	[christos, ticket #1106]
+
+sys/arch/mipsco/include/bus.h			1.27
+sys/arch/mipsco/mipsco/bus_dma.c		1.32
+
+	mispco: fix fallout from switch to common mips bus_dma code:
+	remove private members in the backend state and instead
+	recalculate them when needed.
+	[tsutsui, ticket #1107]
+
+sys/kern/kern_exec.c				1.528
+sys/uvm/uvm_extern.h				1.234
+sys/uvm/uvm_map.c				1.427
+
+	posix_spawn(2): PR 59037, PR 59175: allocate a new (empty)
+	vmspace at process creation time.
+	[riastradh, ticket #1109]
+
+sys/dev/pci/igc/if_igc.c			1.18
+
+	igc(4): fix detach logic
+	[rin, ticket #1110]
+
+lib/libukfs/ukfs.3				1.19
+
+	ukfs(3): PR 59409: fix typo in documentation.
+	[andvar, ticket #1112]
+
+lib/libc/compat/arch/sparc64/gen/compat_setjmp.S 1.2
+
+	sparc64: PR 59370: fix compat_13 longjmp(3).
+	[martin, ticket #1108]
+
+distrib/ia64/cdroms/installcd/Makefile		1.5
+
+	ia64: PR 59398: use the correct GENERIC kernel when building the
+	iso image.
+	[martin, ticket #1111]
+
+build.sh					1.392 via patch
+
+	Expert hack: if you know what you are doing, allow to avoid
+	the tool build for some commands that might or might not need
+	it, like:
+
+		build.sh -VUSETOOLS=never -P mkrepro-timestamp show-revisionid
+
+	This will not need any tools when run on a new-enough NetBSD host or
+	if using some other VCS than CVS.
+	[martin, ticket #1113]
+
+build.sh					1.393, 1.394 via patch
+build.sh					1.394
+
+	Unify the output of "show-revisionid" between the various VCSes
+	and checkout/archive variants.
+	[martin, ticket #1114]
+
+sys/dev/pci/vio9p.c				1.12
+
+	vio9p(4): PR 59165: export tag via sysctl.
+	[ozaki-r, ticket #1115]
+
+sys/net/if_bridge.c				1.199
+sys/net/if_bridgevar.h				1.40
+
+	bridge(4): PR 59340: resolve a race condition in bridge_stop().
+	[ozaki-r, ticket #1116]
+
+bin/rmdir/rmdir.1				1.18
+bin/rmdir/rmdir.c				1.28
+
+	rmdir(1): add -v option.
+	[kim, ticket #1117]
+
+sys/arch/x86/x86/identcpu.c			1.135
+
+	x86: PR 57661: limit extended CPU state save to supported features.
+	[riastradh, ticket #1118]
+
+sys/arch/x86/x86/fpu.c				1.81,1.90 (partial, via patch)
+
+	x86: PR 57258, PR 58650: fix fpu_kern_enter/leave for machines
+	with big fpu state.
+	[riastradh, ticket #1119]
+
+sys/arch/x86/pci/pci_machdep.c			1.99 (patch)
+
+	x86 pci(4): fix MSI/MSI-X configuration on some machines.
+	[manu, ticket #1120]
+
+sys/arch/ia64/include/intr.h			1.9
+sys/arch/sparc64/include/psl.h			1.66
+sys/sys/spl.h					1.11
+sys/uvm/uvm_pdpolicy_clock.c			1.41,1.42
+
+	PR 59412: introduce splsoftbio() and use it to protect
+	ucpu->pdqhead from concurent access in uvm_pdpolicy_clock.c.
+	[bouyer, ticket #1121]
+
+sys/kern/subr_pool.c				1.295
+
+	PR 59411: do not call pool drain hooks from pool_allocator_alloc(),
+	to avoid a deadlock between the pool's lock and kernel_lock.
+	[bouyer, ticket #1122]
+
+sys/arch/hp300/dev/tvrx.c			1.5
+
+	hp300: fix logic error in tvrx(4) console attach code.
+	[tsutsui, ticket #1123]
+
+share/man/man4/rge.4				1.5
+sys/dev/pci/if_rge.c				1.34
+sys/dev/pci/if_rgereg.h				1.9
+
+	rge(4): PR 59044: add support for RTL8126.
+	[jmcneill, ticket #1124]
+
+share/man/man4/igc.4				1.3
+sys/dev/pci/igc/if_igc.c			1.19,1.20
+
+	igc(4): add support for TSO.
+	[rin, ticket #1125]
 
