@@ -1,0 +1,356 @@
+#	$NetBSD$
+#
+#	M83XXX -- Mindspeed Comcerto 1000
+#
+
+include	"arch/evbarm/conf/std.m83xxx"
+
+#options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
+
+# estimated number of users
+
+maxusers	32
+
+# Standard system options
+
+options 	RTC_OFFSET=0	# hardware clock is this many mins. west of GMT
+#options 	NTP		# NTP phase/frequency locked loop
+
+# CPU options
+
+# For StrongARM systems
+options 	CPU_ARM1136	# Support the SA110 core
+#options 	CPU_ARM11
+#options 	CPU_ARM11MPCORE
+options 	ARM11_COMPAT_MMU
+
+# Architecture options
+#options        IMX31_IPGCLK_FREQ=66000000	# Fixme. bogus value
+
+# File systems
+
+file-system	FFS		# UFS
+#file-system	LFS		# log-structured file system
+file-system	MFS		# memory file system
+file-system	NFS		# Network file system
+#file-system 	ADOSFS		# AmigaDOS-compatible file system
+#file-system 	EXT2FS		# second extended file system (linux)
+file-system	CD9660		# ISO 9660 + Rock Ridge file system
+#file-system	MSDOSFS		# MS-DOS file system
+file-system	FDESC		# /dev/fd
+file-system	KERNFS		# /kern
+file-system	NULLFS		# loopback file system
+file-system	PROCFS		# /proc
+#file-system	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
+file-system	TMPFS		# memory file system
+#file-system	UMAPFS		# NULLFS + uid and gid remapping
+#file-system	UNION		# union file system
+file-system	PTYFS		# /dev/pts/N support
+
+# File system options
+#options 	FFS_EI		# FFS Endian Independent support
+#options 	FFS_NO_SNAPSHOT	# No FFS snapshot support
+#options 	QUOTA		# legacy UFS quotas
+#options 	QUOTA2		# new, in-filesystem UFS quotas
+#options 	UFS_DIRHASH	# UFS Large Directory Hashing
+#options 	UFS_EXTATTR	# Extended attribute support for UFS1
+#options 	WAPBL		# File system journaling support
+#options 	DISKLABEL_EI	# disklabel Endian Independent support
+options 	NFSSERVER	# Network File System server
+
+# Networking options
+
+#options 	GATEWAY		# packet forwarding
+options 	INET		# IP + ICMP + TCP + UDP
+options 	INET6		# IPV6
+#options 	IPSEC		# IP security
+#options 	IPSEC_DEBUG	# debug for IP security
+#options 	MROUTING	# IP multicast routing
+#options 	PIM		# Protocol Independent Multicast
+#options 	NETATALK	# AppleTalk networking
+#options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
+#options 	PPP_DEFLATE	# Deflate compression support for PPP
+#options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
+#options 	TCP_DEBUG	# Record last TCP_NDEBUG packets with SO_DEBUG
+
+options 	NFS_BOOT_BOOTP
+options 	NFS_BOOT_DHCP
+#options 	NFS_BOOT_BOOTPARAM
+
+# Compatibility options
+
+include 	"conf/compat_netbsd14.config"
+options 	COMPAT_NETBSD32	# allow running arm (e.g. non-earm) binaries
+
+# Shared memory options
+
+options 	SYSVMSG		# System V-like message queues
+options 	SYSVSEM		# System V-like semaphores
+options 	SYSVSHM		# System V-like memory sharing
+
+# Device options
+
+#options 	MEMORY_DISK_HOOKS	# boottime setup of ramdisk
+#options 	MEMORY_DISK_ROOT_SIZE=3400	# Size in blocks
+#options 	MEMORY_DISK_IS_ROOT	# use memory disk as root
+
+# Console options.
+#options 	CONSPEED=38400		# Console speed
+
+# Miscellaneous kernel options
+options 	KTRACE		# system call tracing, a la ktrace(1)
+options 	IRQSTATS	# manage IRQ statistics
+#options 	SCSIVERBOSE	# Verbose SCSI errors
+options 	MIIVERBOSE	# Verbose MII autoconfuration messages
+#options 	PCI_CONFIG_DUMP	# verbosely dump PCI config space
+#options 	DDB_KEYCODE=0x40
+options 	USERCONF	# userconf(4) support
+#options	PIPE_SOCKETPAIR	# smaller, but slower pipe(2)
+#options 	SYSCTL_INCLUDE_DESCR	# Include sysctl descriptions in kernel
+
+# Development and Debugging options
+
+#options 	DIAGNOSTIC	# internal consistency checks
+#options	DEBUG
+#options	USBHIST_PRINT
+#options	USB_DEBUG
+#options	EHCI_DEBUG
+#options 	LOCKDEBUG
+#options 	UVMHIST		# kernhist for uvm/pmap subsystems
+#options 	VERBOSE_INIT_ARM # verbose bootstraping messages
+options 	DDB		# in-kernel debugger
+options 	DDB_HISTORY_SIZE=100	# Enable history editing in DDB
+#options		EARLYCONS=m83xxx,CONSADDR=0x10090000
+#makeoptions	DEBUG="-g"	# compile full symbol table
+makeoptions	COPY_SYMTAB=1
+
+#config		netbsd		root on ? type ?
+config		netbsd		root on wd0 type ffs
+
+# The main bus device
+mainbus0	at root
+
+# The boot cpu
+cpu0		at mainbus?
+#l2cc0		at mainbus?
+
+# Specify the memory size in bytes.
+options 	MEMSIZE=0x8000000
+
+# NOR Flash
+#options        NOR_VERBOSE
+options		ARM_CFI_ADDRESS=0x20000000
+options		ARM_CFI_BUS_TAG=m83_bs_tag
+cfi0		at mainbus?
+nor0		at cfi0
+flash0		at nor0 offset 0x00000000 size 0x00040000 readonly 1 # u-boot
+flash1		at nor0 offset 0x00040000 size 0x00020000 readonly 1 # env
+
+# Devices
+
+ahb0		at mainbus?
+apb0		at ahb0 addr 0x10000000
+intc0		at apb? addr 0x100a0000 irqbase 0
+m83pmc0		at apb? addr 0x100b0000
+com*		at apb? addr 0x10090000 intr 41
+timer0		at apb? addr 0x10050000 intr 31
+timer1		at apb? addr 0x10050000 intr 30
+m83gpio0	at apb? addr 0x10070000 intr 33
+gpio*		at m83gpio?
+
+cge0		at apb? addr 0x100d0000 intr 6
+cge1		at apb? addr 0x10190000 intr 7
+
+ehci0		at ahb0 addr 0x0f000000 size 0x800000 intr 5
+
+m83pcie0	at ahb? addr 0x10010000 size 0x10000 intr 14
+options		PCI_NETBSD_CONFIGURE
+
+pci*		at m83pcie?
+
+ahcisata*	at pci? dev ? function ?	# AHCI SATA
+atabus*		at ahcisata? channel ?
+wd*		at atabus? drive ?
+
+# USB bus support
+usb*		at ehci?
+
+# USB Hubs
+uhub*		at usb?
+uhub*		at uhub? port ?
+
+# USB HID device
+uhidev* at uhub? port ? configuration ? interface ?
+
+# USB Mice
+ums*	at uhidev? reportid ?
+wsmouse* at ums? mux 0
+
+# USB eGalax touch-panel
+#uep*	at uhub? port ?
+#wsmouse* at uep? mux 0
+
+# USB Keyboards
+ukbd*	at uhidev? reportid ?
+wskbd*	at ukbd? console ? mux 1
+
+# USB TEMPer and TEMPerHUM
+#uthum*	at uhidev? reportid ?
+
+# USB serial adapter
+#ucycom* at uhidev? reportid ?
+
+# USB Generic HID devices
+#uhid*	at uhidev? reportid ?
+
+# USB LCDs and USB-VGA adaptors
+#udl*	at uhub? port ?		# DisplayLink DL-1x0/1x5
+#wsdisplay* at udl?
+
+# USB Printer
+#ulpt*	at uhub? port ? configuration ? interface ?
+
+# USB Modem
+#umodem* at uhub? port ? configuration ?
+#ucom*	at umodem?
+
+# Option N.V. Wireless WAN modems
+#uhso*	at uhub? port ? configuration ?
+
+# USB Mass Storage
+umass*	at uhub? port ? configuration ? interface ?
+scsibus* at scsi?
+sd*	at scsibus? target ? lun ?	# SCSI disk drives
+#cd*	at scsibus? target ? lun ?	# SCSI CD-ROM drives
+
+# USB audio
+uaudio* at uhub? port ? configuration ?
+audio*  at audiobus?
+
+# USB MIDI
+#umidi* at uhub? port ? configuration ?
+
+# USB IrDA
+# USB-IrDA bridge spec
+#uirda* at uhub? port ? configuration ? interface ?
+#irframe* at uirda?
+
+#stuirda* at uhub? port ? configuration ? interface ?
+#irframe* at stuirda?
+
+# SigmaTel STIr4200 USB/IrDA Bridge
+#ustir* at uhub? port ?
+#irframe* at ustir?
+
+# USB Ethernet adapters
+#aue*	at uhub? port ?		# ADMtek AN986 Pegasus based adapters
+#axe*	at uhub? port ?		# ASIX AX88172 based adapters
+#cdce*	at uhub? port ?		# CDC, Ethernet Networking Control Model
+#cue*	at uhub? port ?		# CATC USB-EL1201A based adapters
+#kue*	at uhub? port ?		# Kawasaki LSI KL5KUSB101B based adapters
+#mue*	at uhub? port ?		# Microchip LAN75xx/LAN78xx based adapters
+#udav*	at uhub? port ?		# Davicom DM9601 based adapters
+#ure*	at uhub? port ?		# Realtek RTL8152/RTL8153 based adapters
+#url*	at uhub? port ?		# Realtek RTL8150L based adapters
+
+# USB 802.11 adapters
+#atu*	at uhub? port ?		# Atmel AT76C50XX based adapters
+#ural*	at uhub? port ?		# Ralink Technology RT2500USB 802.11a/b/g
+#rum*	at uhub? port ?		# Ralink Technology RT2501/RT2601 802.11a/b/g
+#zyd*	at uhub? port ?		# Zydas ZD1211
+
+# Prolific PL2301/PL2302 host-to-host adapter
+#upl*	at uhub? port ?
+
+# Serial adapters
+#ubsa*	at uhub? port ?		# Belkin serial adapter
+#ucom*	at ubsa? portno ?
+
+#uchcom* at uhub? port ? 	# WinChipHead CH341/CH340 serial adapter
+#ucom*	at uchcom? portno ?
+
+#uftdi*	at uhub? port ?		# FTDI FT8U100AX serial adapter
+#ucom*	at uftdi? portno ?
+
+#uipaq*	at uhub? port ?		# iPAQ PDAs
+#ucom*	at uipaq? portno ?
+
+#umct*	at uhub? port ?		# MCT USB-RS232 serial adapter
+#ucom*	at umct? portno ?
+
+#uplcom* at uhub? port ? 	# I/O DATA USB-RSAQ2 serial adapter
+#ucom*	at uplcom? portno ?
+
+#uslsa*	at uhub? port ?		# Silicon Labs USB-RS232 serial adapter
+#ucom*	at uslsa? portno ?
+
+#uvscom* at uhub? port ? 	# SUNTAC Slipper U VS-10U serial adapter
+#ucom*	at uvscom? portno ?
+
+# RIM BlackBerry
+#uberry* at uhub? port ?
+
+# USB Handspring Visor
+#uvisor* at uhub? port ?
+#ucom*	at uvisor?
+
+# Kyocera AIR-EDGE PHONE
+#ukyopon* at uhub? port ?
+#ucom*	at ukyopon? portno ?
+
+# USB scanners that use SCSI emulation, e.g., HP5300
+#usscanner* at uhub? port ?
+
+# Topfield TF5000PVR range of DVB recorders
+#utoppy* at uhub? port ?
+
+# D-Link DSB-R100 USB radio
+#udsbr*	at uhub? port ?
+#radio*	at udsbr?
+
+# USB Generic driver
+ugen*	at uhub? port ?
+
+# USB 3G datacards
+#umodeswitch* at uhub? port ?
+#u3g*	at uhub? port ?
+#ucom*	at u3g?
+
+# USB generic serial port (e.g., data over cellular)
+#ugensa* at uhub? port ?
+#ucom*	at ugensa?
+
+# Pseudo-Devices
+
+# disk/mass storage pseudo-devices
+#pseudo-device	md			# memory disk device (ramdisk)
+#pseudo-device	vnd			# disk-like interface to files
+#pseudo-device	fss			# file system snapshot device
+#pseudo-device	putter			# for puffs and pud
+
+# network pseudo-devices
+pseudo-device	bpfilter		# Berkeley packet filter
+#pseudo-device	carp			# Common Address Redundancy Protocol
+pseudo-device	npf			# NPF packet filter
+pseudo-device	loop			# network loopback
+pseudo-device	ppp			# Point-to-Point Protocol
+pseudo-device	pppoe			# PPP over Ethernet (RFC 2516)
+#pseudo-device	sl			# Serial Line IP
+#pseudo-device	irframetty		# IrDA frame line discipline
+pseudo-device	tap			# virtual Ethernet
+pseudo-device	tun			# network tunneling over tty
+#pseudo-device	gre			# generic L3 over IP tunnel
+pseudo-device	gif			# IPv[46] over IPv[46] tunnel (RFC 1933)
+#pseudo-device	faith			# IPv[46] TCP relay translation i/f
+pseudo-device	stf			# 6to4 IPv6 over IPv4 encapsulation
+pseudo-device	vlan			# IEEE 802.1q encapsulation
+#pseudo-device	bridge			# simple inter-network bridging
+#pseudo-device	vether			# Virtual Ethernet for bridge
+#pseudo-device	agr			# IEEE 802.3ad link aggregation
+
+# miscellaneous pseudo-devices
+pseudo-device	pty			# pseudo-terminals
+pseudo-device	ksyms			# /dev/ksyms
+pseudo-device	clockctl		# NTP clockctl
+
+athsw*    at mii? phy ?
