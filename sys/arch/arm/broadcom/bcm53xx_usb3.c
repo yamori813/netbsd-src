@@ -60,7 +60,7 @@ struct bcmxusb_softc {
 
 	device_t usbsc_xhci_dev;
 	void *usbsc_xhci_sc;
-	void *usbsc_ih;
+	void *usbsc_ih[5];
 };
 
 struct bcmxusb_attach_args {
@@ -120,7 +120,7 @@ xhci_bcmxusb_attach(device_t parent, device_t self, void *aux)
 	}
 	/* Attach usb device. */
 	sc->sc_child = config_found(self, &sc->sc_bus, usbctlprint, CFARGS_NONE);
-	sc->sc_child2 = config_found(self, &sc->sc_bus2, usbctlprint, CFARGS_NONE);
+//	sc->sc_child2 = config_found(self, &sc->sc_bus2, usbctlprint, CFARGS_NONE);
 
 	xhci_start(sc);
 }
@@ -188,12 +188,15 @@ bcmxusb_ccb_attach(device_t parent, device_t self, void *aux)
 	if (usbsc->usbsc_xhci_dev != NULL)
 		usbsc->usbsc_xhci_sc = device_private(usbsc->usbsc_xhci_dev);
 
-	usbsc->usbsc_ih = intr_establish(loc->loc_intrs[0], IPL_USB, IST_LEVEL,
-	    bcmxusb_intr, usbsc);
-	if (usbsc->usbsc_ih == NULL) {
-		aprint_error_dev(self, "failed to establish interrupt %d\n",
-		     loc->loc_intrs[0]);
-		return;
+	for (size_t i = 0; i < 5; i++) {
+		usbsc->usbsc_ih[i] = intr_establish(loc->loc_intrs[0] + i, IPL_USB,
+		    IST_LEVEL, bcmxusb_intr, usbsc);
+		if (usbsc->usbsc_ih == NULL) {
+			aprint_error_dev(self, "failed to establish interrupt %d\n",
+			     loc->loc_intrs[0]);
+			return;
+		}
 	}
-	aprint_normal_dev(self, "interrupting on irq %d\n", loc->loc_intrs[0]);
+	aprint_normal_dev(self, "interrupting on irq %d-%d\n", loc->loc_intrs[0],
+	    loc->loc_intrs[0] + 4);
 }
