@@ -254,18 +254,16 @@ flash*		at nand?
 # On-board USB
 bcmusb*		at bcmccb0
 ohci*		at bcmusb0
-usb*		at ohci?
 ehci*		at bcmusb0
-usb*		at ehci?
+bcmxusb*	at bcmccb0
+xhci*		at bcmxusb0
+usb*		at usbus?
+
 uhub*		at usb?
 uhub*		at uhub? port ?
 umass*		at uhub? port ? configuration ? interface ?
 scsibus*	at scsi?
 sd*		at scsibus? target ? lun ?
-
-bcmxusb*	at bcmccb0
-xhci*		at bcmxusb0
-usb*		at xhci?
 
 # USB LCDs and USB-VGA adaptors
 udl*		at uhub? port ?		# DisplayLink DL-1x0/1x5
