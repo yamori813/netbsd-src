@@ -141,18 +141,6 @@ bcmpax2_idm_unreset(bus_space_tag_t bst, bus_space_handle_t bsh,
 	return bcmccb_idm_unreset(bst, bsh, idm);
 }
 
-static bool
-bcmxhci_idm_unreset(bus_space_tag_t bst, bus_space_handle_t bsh,
-    const struct idm_info *idm)
-{
-	uint32_t v = bus_space_read_4(bst, bsh, CRU_BASE + CRU_STRAPS_CONTROL);
-
-	if ((v & STRAP_USB3_SEL) == 0)
-		return false;
-
-	return bcmccb_idm_unreset(bst, bsh, idm);
-}
-
 static const struct idm_info bcm53xx_idm_info[] = {
 	{ 0, "bcmi2c", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ 0, "bcmmdio", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
@@ -169,8 +157,7 @@ static const struct idm_info bcm53xx_idm_info[] = {
 	{ IDM_AMAC2_BASE, "bcmeth", 2, bcmeth_unreset },
 	{ IDM_AMAC3_BASE, "bcmeth", 3, bcmeth_unreset },
 #endif
-//	{ IDM_USB3_BASE, "xhci", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
-	{ IDM_USB3_BASE, "bcmxusb", BCMCCBCF_PORT_DEFAULT, bcmxhci_idm_unreset },
+	{ IDM_USB3_BASE, "bcmxusb", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ IDM_SDIO_BASE, "sdhc", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 	{ IDM_USB2_BASE, "bcmusb", BCMCCBCF_PORT_DEFAULT, bcmccb_idm_unreset },
 };

@@ -241,10 +241,20 @@ bcmusb_ccb_attach(device_t parent, device_t self, void *aux)
 	/*
 	 * Bring the PHYs out of reset.
 	 */
+/*
 	bus_space_write_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh,
 	    USBH_PHY_CTRL_P0, USBH_PHY_CTRL_INIT);
 	bus_space_write_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh,
 	    USBH_PHY_CTRL_P1, USBH_PHY_CTRL_INIT);
+*/
+	/* Set packet buffer OUT threshold */
+	bus_space_write_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh, 0x94,
+	    (bus_space_read_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh, 0x94) & 0xffff) |
+	    (0x80 << 16));
+
+	/* Enabling break memory transfer */
+	bus_space_write_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh, 0x9c,
+	    bus_space_read_4(usbsc->usbsc_bst, usbsc->usbsc_ehci_bsh, 0x9c) | 1);
 
 	/*
 	 * Disable interrupts

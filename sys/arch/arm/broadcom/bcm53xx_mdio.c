@@ -106,7 +106,7 @@ bcmmdio_ccb_attach(device_t parent, device_t self, void *aux)
 	aprint_naive("\n");
 	aprint_normal(": MDIO bus @ %u MHz\n", freq / 1000000);
 
-	/* BCM4707(Nothstar ax) USB3 PHY initialize */
+	/* BCM4707(Northstar ax) USB3 PHY initialize */
 	bcmmdio_busywait(sc);
 	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 31, 0x8000));
 	bcmmdio_busywait(sc);
@@ -145,7 +145,7 @@ static void
 bcmmdio_busywait(struct bcmmdio_softc *sc)
 {
 	while (bcmmdio_read_4(sc, MIIMGT) & MIIMGT_BSY) {
-		delay(1);
+		delay(100);
 	}
 }
 
