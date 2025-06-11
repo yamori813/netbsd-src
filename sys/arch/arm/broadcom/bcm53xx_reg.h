@@ -400,6 +400,8 @@
 #define LCPLL_CONTROL2_CH2_MDIV	__BITS(15,8)	// = (n ? n : 256), clk_ddr
 #define LCPLL_CONTROL2_CH3_MDIV	__BITS(7,0)	// = (n ? n : 256), clf_dft
 
+#define DMU_GENPLL		0x140
+
 #define DMU_CRU_RESET		0x200
 #define DMU_CRU_RESET_IPROC	__BIT(1)
 #define DMU_CRU_RESET_CMICD	__BIT(0)

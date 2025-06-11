@@ -56,6 +56,7 @@ struct bcmdmu_softc {
 
 static int bcmdmu_ccb_match(device_t, cfdata_t, void *);
 static void bcmdmu_ccb_attach(device_t, device_t, void *);
+static void bcmdmu_usb20_phy_init(struct bcmdmu_softc *);
 static void bcmdmu_sysctl_init(struct bcmdmu_softc *);
 static int sysctl_cputemp(SYSCTLFN_ARGS);
 
@@ -106,6 +107,52 @@ bcmdmu_ccb_attach(device_t parent, device_t self, void *aux)
 	aprint_normal("\n");
 
 	bcmdmu_sysctl_init(sc);
+
+	bcmdmu_usb20_phy_init(sc);
+}
+
+static void
+bcmdmu_usb20_phy_init(struct bcmdmu_softc *sc)
+{
+	uint32_t val, ndiv, pdiv, ch2_mdiv, ch2_freq;
+	uint32_t usb_pll_pdiv, usb_pll_ndiv;
+
+	/* get divider integer from the cru_genpll_control5 */
+	val = bcmdmu_read_4(sc, DMU_GENPLL + 0x5 * 4);
+	ndiv = (val >> 20) & 0x3ff;
+	if (ndiv == 0)
+		ndiv = 1 << 10;
+
+	/* get pdiv and ch2_mdiv from the cru_genpll_control6 */
+	val = bcmdmu_read_4(sc, DMU_GENPLL + 0x6 * 4);
+	pdiv = (val >> 24) & 0x7;
+	pdiv = (pdiv == 0) ? (1 << 3) : pdiv;
+
+	ch2_mdiv = val & 0xff;
+	ch2_mdiv = (ch2_mdiv == 0) ? (1 << 8) : ch2_mdiv;
+
+	/* calculate ch2_freq based on 25MHz reference clock */
+	ch2_freq = (25000000 / (pdiv * ch2_mdiv)) * ndiv;
+
+	/* get usb_pll_pdiv from the cru_usb2_control */
+	val = bcmdmu_read_4(sc, DMU_GENPLL + 0x9 * 4);
+	usb_pll_pdiv = (val >> 12) & 0x7;
+	usb_pll_pdiv = (usb_pll_pdiv == 0) ? (1 << 3) : usb_pll_pdiv;
+
+	/* calculate usb_pll_ndiv based on a solid 1920MHz that is for USB2 phy */
+	usb_pll_ndiv = (1920000000 * usb_pll_pdiv) / ch2_freq;
+
+	/* unlock in cru_clkset_key */
+	bcmdmu_write_4(sc, DMU_GENPLL + 0x10 * 4, 0x0000ea68);
+
+	/* set usb_pll_ndiv to cru_usb2_control */
+	val &= ~(0x3ff << 2);
+	val |= (usb_pll_ndiv << 2);
+	bcmdmu_write_4(sc, DMU_GENPLL + 0x9 * 4, val);
+
+        /* lock in cru_clkset_key */
+	bcmdmu_write_4(sc, DMU_GENPLL + 0x10 * 4, 0x00000000);
+
 }
 
 static void
