@@ -153,9 +153,11 @@ makeoptions	COPY_SYMTAB=1
 
 ## USB Debugging options
 options USB_DEBUG
+options XHCI_DEBUG
 #options EHCI_DEBUG
 options OHCI_DEBUG
 options UHUB_DEBUG
+options USBHIST_PRINT
 
 
 # Valid options for BOOT_ARGS:
