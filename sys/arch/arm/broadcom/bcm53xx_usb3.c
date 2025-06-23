@@ -60,7 +60,7 @@ struct bcmxusb_softc {
 
 	device_t usbsc_xhci_dev;
 	void *usbsc_xhci_sc;
-	void *usbsc_ih[5];
+	void *usbsc_ih[6];
 };
 
 struct bcmxusb_attach_args {
@@ -188,12 +188,12 @@ bcmxusb_ccb_attach(device_t parent, device_t self, void *aux)
 	if (usbsc->usbsc_xhci_dev != NULL)
 		usbsc->usbsc_xhci_sc = device_private(usbsc->usbsc_xhci_dev);
 
-	for (size_t i = 0; i < 5; i++) {
+	for (int i = 0; i < 5; ++i) {
 		usbsc->usbsc_ih[i] = intr_establish(loc->loc_intrs[0] + i, IPL_USB,
 		    IST_LEVEL, bcmxusb_intr, usbsc);
-		if (usbsc->usbsc_ih == NULL) {
+		if (usbsc->usbsc_ih[i] == NULL) {
 			aprint_error_dev(self, "failed to establish interrupt %d\n",
-			     loc->loc_intrs[0]);
+			     loc->loc_intrs[0] + i);
 			return;
 		}
 	}
