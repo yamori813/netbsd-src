@@ -60,7 +60,7 @@ struct bcmxusb_softc {
 
 	device_t usbsc_xhci_dev;
 	void *usbsc_xhci_sc;
-	void *usbsc_ih[6];
+	void *usbsc_ih[5];
 };
 
 struct bcmxusb_attach_args {
