@@ -107,6 +107,7 @@ bcmmdio_ccb_attach(device_t parent, device_t self, void *aux)
 	aprint_normal(": MDIO bus @ %u MHz\n", freq / 1000000);
 
 	/* BCM4707(Northstar ax) USB3 PHY initialize */
+/*
 	bcmmdio_busywait(sc);
 	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 31, 0x8000));
 	bcmmdio_busywait(sc);
@@ -121,6 +122,22 @@ bcmmdio_ccb_attach(device_t parent, device_t self, void *aux)
 	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 2, 0x21d3));
 	bcmmdio_busywait(sc);
 	bcmmdio_write_4(sc, MIICMD, MIICMD_WR(16, 1, 0x1003));
+	bcmmdio_busywait(sc);
+*/
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x587e8000);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x582a6400);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x587e80e0);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x580a009c);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x587e8040);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x580a21d3);
+	bcmmdio_busywait(sc);
+	bcmmdio_write_4(sc, MIICMD, 0x58061003);
 	bcmmdio_busywait(sc);
 }
 
