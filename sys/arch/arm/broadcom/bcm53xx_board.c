@@ -338,6 +338,8 @@ bcm53xx_lcpll_clock_init(struct bcm53xx_clock_info *clk, uint32_t control1,
 static void
 bcm53xx_usb_clock_init(struct bcm53xx_clock_info *clk, uint32_t usb2_control)
 {
+/* same as OpenWRT. xhci root have work but device not work */
+#if 0
 	const uint32_t pdiv = bcm53xx_value_wrap(usb2_control,
 	    USB2_CONTROL_PDIV);
 	const uint32_t ndiv = bcm53xx_value_wrap(usb2_control,
@@ -369,6 +371,19 @@ bcm53xx_usb_clock_init(struct bcm53xx_clock_info *clk, uint32_t usb2_control)
 	}
 
 	clk->clk_usb_ref = usb_ref;
+#else
+	// Allow Clocks to be modified
+	bus_space_write_4(bcm53xx_ioreg_bst, bcm53xx_ioreg_bsh,
+	    CRU_BASE + CRU_CLKSET_KEY, CRU_CLKSET_KEY_MAGIC);
+
+	// Update USB2 clock generator
+	bus_space_write_4(bcm53xx_ioreg_bst, bcm53xx_ioreg_bsh,
+	    CRU_BASE + CRU_USB2_CONTROL, 0x00dd10c3);
+
+	// Prevent Clock modification
+	bus_space_write_4(bcm53xx_ioreg_bst, bcm53xx_ioreg_bsh,
+	    CRU_BASE + CRU_CLKSET_KEY, 0);
+#endif
 }
 
 
