@@ -25,7 +25,7 @@ options 	UVMHIST
 #options 	UVMHIST_PRINT,A9WDT_PERIOD_DEFAULT=30
 #options 	BCM53XX_CONSOLE_EARLY
 options 	BCMETH_COUNTERS
-#options 	MULTIPROCESSOR
+options 	MULTIPROCESSOR
 options 	CPU_CORTEX
 options 	BCM5301X
 #options 	PMAPCOUNTERS
@@ -176,8 +176,8 @@ config		netbsd		root on sd0 type ffs
 mainbus0	at root
 
 # The boot cpu
-cpu0		at mainbus?
-#cpu*		at mainbus?
+#cpu0		at mainbus?
+cpu*		at mainbus?
 
 # The MPCore interrupt controller and global timer
 armperiph0	at mainbus?		# A9 On-Chip Peripherals

@@ -587,6 +587,9 @@ bcm53xx_bootstrap(vaddr_t iobase)
 	curcpu()->ci_data.cpu_cc_freq = clk->clk_cpu;
 
 #if NARML2CC > 0
+	/* disable L2CC first */
+	bus_space_write_4(bcm53xx_armcore_bst, bcm53xx_armcore_bsh,
+	    ARMCORE_L2C_BASE + 0x100, 0);
 	arml2cc_init(bcm53xx_armcore_bst, bcm53xx_armcore_bsh,
 	    ARMCORE_L2C_BASE);
 #endif

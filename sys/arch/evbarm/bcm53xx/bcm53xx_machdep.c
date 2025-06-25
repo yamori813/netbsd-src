@@ -237,7 +237,10 @@ bcm53xx_mpstart(void)
 	 */
 	bus_space_write_4(bcm53xx_rom_bst, bcm53xx_rom_entry_bsh, 0, mpstart);
 
-	dsb(sy);
+	bus_space_unmap(bcm53xx_rom_bst, bcm53xx_rom_entry_bsh, 4);
+
+//	dsb(sy);
+	dsb(ishst);
 	sev();
 
 	/* Bitmask of CPUs (non-BP) to start */
