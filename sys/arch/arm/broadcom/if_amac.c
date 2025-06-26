@@ -670,9 +670,10 @@ amac_init(struct ifnet *ifp)
 	amac_write_4(sc, GMAC_DEVCONTROL, reg);
 
 	/* Setup lazy receive (at most 1ms). */
-	const struct cpu_softc * const cpu = curcpu()->ci_softc;
+//	const struct cpu_softc * const cpu = curcpu()->ci_softc;
 	reg =  __SHIFTIN(4, INTRCVLAZY_FRAMECOUNT) |
-	    __SHIFTIN(cpu->cpu_clk.clk_apb / 1000, INTRCVLAZY_TIMEOUT);
+//	    __SHIFTIN(cpu->cpu_clk.clk_apb / 1000, INTRCVLAZY_TIMEOUT);
+	    __SHIFTIN(BCM53XX_APB_CLK / 1000, INTRCVLAZY_TIMEOUT);
 	amac_write_4(sc, GMAC_INTRCVLAZY, reg);
 
 	 /* 11. Enable transmit queues in TQUEUE, and ensure that the transmit
