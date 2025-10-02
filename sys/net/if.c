@@ -1,4 +1,4 @@
-/*	$NetBSD: if.c,v 1.528 2022/11/25 06:18:42 msaitoh Exp $	*/
+/*	$NetBSD: if.c,v 1.528.2.2 2025/10/01 14:58:36 martin Exp $	*/
 
 /*-
  * Copyright (c) 1999, 2000, 2001, 2008 The NetBSD Foundation, Inc.
@@ -90,7 +90,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: if.c,v 1.528 2022/11/25 06:18:42 msaitoh Exp $");
+__KERNEL_RCSID(0, "$NetBSD: if.c,v 1.528.2.2 2025/10/01 14:58:36 martin Exp $");
 
 #if defined(_KERNEL_OPT)
 #include "opt_inet.h"
@@ -2099,6 +2099,33 @@ ifa_ifwithladdr_psref(const struct sockaddr *addr, struct psref *psref)
 	return ifa;
 }
 
+struct ifaddr *
+if_first_addr(const struct ifnet *ifp, const int af)
+{
+	struct ifaddr *ifa = NULL;
+
+	IFADDR_READER_FOREACH(ifa, ifp) {
+		if (ifa->ifa_addr->sa_family == af)
+			break;
+	}
+	return ifa;
+}
+
+struct ifaddr *
+if_first_addr_psref(const struct ifnet *ifp, const int af, struct psref *psref)
+{
+	struct ifaddr *ifa;
+	int s;
+
+	s = pserialize_read_enter();
+	ifa = if_first_addr(ifp, af);
+	if (ifa != NULL)
+		ifa_acquire(ifa, psref);
+	pserialize_read_exit(s);
+
+	return ifa;
+}
+
 /*
  * Find an interface using a specific address family
  */
@@ -2113,12 +2140,10 @@ ifa_ifwithaf(int af)
 	IFNET_READER_FOREACH(ifp) {
 		if (if_is_deactivated(ifp))
 			continue;
-		IFADDR_READER_FOREACH(ifa, ifp) {
-			if (ifa->ifa_addr->sa_family == af)
-				goto out;
-		}
+		ifa = if_first_addr(ifp, af);
+		if (ifa != NULL)
+			break;
 	}
-out:
 	pserialize_read_exit(s);
 	return ifa;
 }
@@ -2418,7 +2443,9 @@ if_link_state_change_work(struct work *work, void *arg)
 	if (state == LINK_STATE_UNSET)
 		goto out;
 
+	IFNET_LOCK(ifp);
 	if_link_state_change_process(ifp, state);
+	IFNET_UNLOCK(ifp);
 
 	/* If there is a link state change to come, schedule it. */
 	IF_LINK_STATE_CHANGE_LOCK(ifp);

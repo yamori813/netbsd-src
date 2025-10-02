@@ -1,4 +1,4 @@
-# $NetBSD: CHANGES-10.2,v 1.1.2.33 2025/06/27 05:00:53 jdc Exp $
+# $NetBSD: CHANGES-10.2,v 1.1.2.57 2025/10/02 08:58:38 martin Exp $
 
 A complete list of changes from the NetBSD 10.1 release on 2024-12-16
 until the 10.2 release:
@@ -718,4 +718,414 @@ src/distrib/ia64/cdroms/installcd/Makefile	1.6
 	only on some machines (not sure why it worked on the old build cluster).
 	Use print-objdir in a source directory that is known to exist.
 	[martin, ticket #1129]
+
+xsrc/external/mit/xorg-server/dist/ChangeLog         up to 1.1.1.29
+xsrc/external/mit/xorg-server/dist/Makefile.in       up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/aclocal.m4        up to 1.1.1.23
+xsrc/external/mit/xorg-server/dist/compile           up to 1.1.1.13
+xsrc/external/mit/xorg-server/dist/config.guess      up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/config.sub        up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/configure         up to 1.22
+xsrc/external/mit/xorg-server/dist/configure.ac      up to 1.24
+xsrc/external/mit/xorg-server/dist/depcomp           up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/install-sh        up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/ltmain.sh         up to 1.1.1.15
+xsrc/external/mit/xorg-server/dist/meson.build       up to 1.1.1.19
+xsrc/external/mit/xorg-server/dist/missing           up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/test-driver       up to 1.1.1.9
+xsrc/external/mit/xorg-server/dist/xorg-server.pc.in up to 1.1.1.5
+xsrc/external/mit/xorg-server/dist/ylwrap            up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/Xext/Makefile.in  up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/Xi/Makefile.in    up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/Xi/xigrabdev.c    up to 1.5
+xsrc/external/mit/xorg-server/dist/composite/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/config/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/damageext/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/dbe/Makefile.in   up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/dix/Makefile.in   up to 1.1.1.19
+xsrc/external/mit/xorg-server/dist/dix/devices.c     up to 1.17
+xsrc/external/mit/xorg-server/dist/dix/dispatch.c    up to 1.10
+xsrc/external/mit/xorg-server/dist/dix/enterleave.c  up to 1.11
+xsrc/external/mit/xorg-server/dist/dix/events.c      up to 1.9
+xsrc/external/mit/xorg-server/dist/doc/Makefile.in   up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/doc/dtrace/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/dri3/Makefile.in  up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/exa/Makefile.in   up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/fb/Makefile.in    up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/glamor/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/glx/Makefile.in   up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/hw/Makefile.in    up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/kdrive/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/kdrive/ephyr/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/kdrive/ephyr/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/kdrive/src/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/mouseEmu3btn.c up to 1.2
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68k.h up to 1.11
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68kConfig.c up to 1.8
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68kInit.c up to 1.13
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68kIo.c up to 1.5
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68kKbd.c up to 1.19
+xsrc/external/mit/xorg-server/dist/hw/netbsd/x68k/x68kMouse.c up to 1.18
+xsrc/external/mit/xorg-server/dist/hw/sun/sun.h      up to 1.11
+xsrc/external/mit/xorg-server/dist/hw/sun/sunFbs.c   up to 1.5
+xsrc/external/mit/xorg-server/dist/hw/sun/sunInit.c  up to 1.17
+xsrc/external/mit/xorg-server/dist/hw/sun/sunIo.c    up to 1.10
+xsrc/external/mit/xorg-server/dist/hw/sun/sunKbd.c   up to 1.19
+xsrc/external/mit/xorg-server/dist/hw/sun/sunMouse.c up to 1.13
+xsrc/external/mit/xorg-server/dist/hw/vfb/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/vfb/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xfree86/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/common/Makefile.in up to 1.1.1.19
+xsrc/external/mit/xorg-server/dist/hw/xfree86/common/xf86Helper.c up to 1.8
+xsrc/external/mit/xorg-server/dist/hw/xfree86/ddc/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/dixmods/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/doc/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/dri/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/dri2/Makefile.in up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/hw/xfree86/dri2/pci_ids/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/inputtest/Makefile.in up to 1.1.1.6
+xsrc/external/mit/xorg-server/dist/hw/xfree86/drivers/modesetting/Makefile.in up to 1.1.1.13
+xsrc/external/mit/xorg-server/dist/hw/xfree86/exa/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/exa/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xfree86/fbdevhw/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/fbdevhw/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xfree86/glamor_egl/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/i2c/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/int10/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/loader/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/man/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/man/xorg.conf.man up to 1.1.1.6
+xsrc/external/mit/xorg-server/dist/hw/xfree86/modes/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/modes/xf86RandR12.c up to 1.8
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/bsd/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/bus/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/hurd/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/linux/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/misc/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/solaris/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/os-support/stub/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/hw/xfree86/parser/Makefile.in up to 1.1.1.20
+xsrc/external/mit/xorg-server/dist/hw/xfree86/ramdac/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/shadowfb/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/utils/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/utils/gtf/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/utils/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xfree86/vgahw/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/x86emu/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xfree86/xkb/Makefile.in up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/hw/xnest/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xnest/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xquartz/Makefile.in up to 1.1.1.19
+xsrc/external/mit/xorg-server/dist/hw/xquartz/GL/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xquartz/bundle/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xquartz/mach-startup/Makefile.in up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/hw/xquartz/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xquartz/pbproxy/Makefile.in up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/hw/xquartz/xpr/Makefile.in up to 1.1.1.17
+xsrc/external/mit/xorg-server/dist/hw/xwin/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/hw/xwin/dri/Makefile.in up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/hw/xwin/glx/Makefile.in up to 1.1.1.15
+xsrc/external/mit/xorg-server/dist/hw/xwin/man/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/hw/xwin/man/XWin.man up to 1.1.1.5
+xsrc/external/mit/xorg-server/dist/hw/xwin/winclipboard/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/include/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/include/meson.build up to 1.1.1.8
+xsrc/external/mit/xorg-server/dist/m4/libtool.m4     up to 1.6
+xsrc/external/mit/xorg-server/dist/m4/ltoptions.m4   up to 1.1.1.4
+xsrc/external/mit/xorg-server/dist/m4/ltsugar.m4     up to 1.1.1.4
+xsrc/external/mit/xorg-server/dist/m4/ltversion.m4   up to 1.4
+xsrc/external/mit/xorg-server/dist/m4/lt~obsolete.m4 up to 1.1.1.4
+xsrc/external/mit/xorg-server/dist/man/Makefile.in   up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/man/Xserver.man   up to 1.1.1.5
+xsrc/external/mit/xorg-server/dist/mi/Makefile.in    up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/mi/mipointer.c    up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/miext/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/miext/damage/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/miext/rootless/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/miext/shadow/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/miext/sync/Makefile.in up to 1.1.1.14
+xsrc/external/mit/xorg-server/dist/os/Makefile.in    up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/os/io.c           up to 1.7
+xsrc/external/mit/xorg-server/dist/present/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/pseudoramiX/Makefile.in up to 1.1.1.12
+xsrc/external/mit/xorg-server/dist/randr/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/randr/rrproviderproperty.c up to 1.1.1.3
+xsrc/external/mit/xorg-server/dist/record/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/record/record.c   up to 1.1.1.11
+xsrc/external/mit/xorg-server/dist/render/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/render/animcur.c  up to 1.1.1.8
+xsrc/external/mit/xorg-server/dist/render/render.c   up to 1.10
+xsrc/external/mit/xorg-server/dist/test/Makefile.in  up to 1.1.1.15
+xsrc/external/mit/xorg-server/dist/xfixes/Makefile.in up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/xfixes/disconnect.c up to 1.1.1.2
+xsrc/external/mit/xorg-server/dist/xkb/Makefile.in   up to 1.1.1.18
+xsrc/external/mit/xorg-server/dist/xkb/XKBAlloc.c    up to 1.1.1.6
+xsrc/external/mit/xorg-server/dist/xkb/XKBMAlloc.c   up to 1.1.1.8
+xsrc/external/mit/xorg-server/dist/xkb/xkbtext.c     up to 1.1.1.8
+xsrc/external/mit/xorg-server/include/dix-config.h   up to 1.55
+xsrc/external/mit/xorg-server/include/version-config.h up to 1.25
+xsrc/external/mit/xorg-server/include/xorg-config.h  up to 1.35
+xsrc/external/mit/xorg-server/include/xorg-server.h  up to 1.35
+share/mk/bsd.x11.mk				1.162
+
+	Import xorg-server 21.1.18.
+	[mrg, ticket #1130]
+
+distrib/notes/hppa/xfer				1.2
+
+	hppa: fix install notes, booting from CD is supported.
+	[skrll, ticket #1131]
+
+build.sh					1.399
+
+	build: PR 59512: make reproducable builds work when -P is
+	passed on the build.sh command line and MKREPRO_TIMESTAMP
+	is set manually via -V.
+	[hgutch, ticket #1132]
+
+sys/kern/vfs_vnops.c				1.246
+
+	PR 59519: fix lock leak.
+	[bad, ticket #1133]
+
+sys/kern/vfs_vnops.c				1.245
+
+	vn_bdev_openpath(): avoid a NULL specnode pointer dereference.
+	[mlelstv, ticket #1134]
+
+sbin/fsck_ffs/setup.c				1.110
+
+	fsck_ffs: don't truncate bitmap size to unsigned int, avoids
+	crashes on filesystems with more than 2^32 blocks.
+	[mlelstv, ticket #1135]
+
+sys/net/if.c					1.535
+sys/net/route.c					1.238,1.239
+
+	route: do ifa_rtrequest() before rt_addaddr()
+	route: lower the priority of the workqueues
+	if: protect if_link_state_change_process with IFNET_LOCK
+	[ozaki-r, ticket #1136]
+
+sys/netinet/ip_input.c				1.405
+
+	ip: work around a possible packet loop during interface
+	address/route initialization.
+	[ozaki-r, ticket #1137]
+
+sys/opencrypto/cryptosoft.c			1.65
+
+	opencrypto(9): avpoid a crash when hitting the current limit
+	of software sessisons.
+	[kim, ticket #1138]
+
+libexec/httpd/CHANGES				1.55,1.56
+libexec/httpd/auth-bozo.c			1.28
+libexec/httpd/bozohttpd.8			1.93-1.97,1.99,1.100
+libexec/httpd/bozohttpd.c			1.143-1.147
+libexec/httpd/cgi-bozo.c			1.55,1.56
+libexec/httpd/content-bozo.c			1.22
+libexec/httpd/main.c				1.31
+libexec/httpd/ssl-bozo.c			1.33,1.34
+
+	httpd(8): various fixes
+	 - serve .iso as "application/octet-stream".
+	 - fix some memory leaks.
+	 - enhance documentation.
+	 - improve SSL error messages.
+	[mrg, ticket #1139]
+
+sys/netinet/in_var.h				1.105
+sys/netinet/ip_input.c				1.406
+sys/netinet/ip_mroute.c				1.166
+sys/netinet/ip_output.c				1.327-1.330
+sys/netinet/sctp_output.c			1.39
+sys/netipsec/ipsecif.c				1.24
+sys/netipsec/xform_ipip.c			1.80
+
+	inet: PR 59527: fix race conditions on route deletion.
+	[ozaki-r, ticket #1140]
+
+sys/netinet/ip_mroute.h				1.36
+
+	PR 59561: do not hide struct igmpmsg under _KERNEL.
+	The struct is documented as a communication structure with userland.
+	[kim, ticket #1141]
+
+sys/dev/usb/if_urtwn.c				1.112
+sys/dev/usb/usbdevs				1.822
+sys/dev/usb/usbdevs.h				(regen)
+sys/dev/usb/usbdevs_data.h			(regen)
+
+	urtwn(4): add support for Asus USB-N10 Nano B1.
+	[hgutch, ticket #1142]
+
+sys/net/lagg/if_lagg.c				1.74
+
+	lagg(4): fix locking against myself in lagg_linkstate_changed.
+	[ozaki-r, ticket #1144]
+
+sys/arch/x86/x86/cpu.c				1.208
+
+	x86: call fpuinit_mxcsr_mask only once.
+	[rin, ticket #1145]
+
+usr.sbin/sysinst/util.c				1.78
+
+	sysinst(8): PR 59573: do not leave temporary files behind.
+	[kim, ticket #1146]
+
+etc/named.conf					1.12-1.14
+
+	named(8): adjust the default configuration following
+	recommendations from https://www.dnsflagday.net/2020/.
+	[kim, ticket #1147]
+
+sys/arch/amd64/conf/GENERIC			1.617
+sys/arch/evbarm/conf/GENERIC64			1.227
+sys/dev/pci/files.pci				1.451
+sys/dev/pci/pvscsi.c				1.1,1.2
+sys/dev/pci/pvscsi.h				1.1
+
+	Add support for the VMware PV SCSI controller found
+	in VMware's ESXi product.
+	[skrll, ticket #1148]
+
+sys/dev/stbi/stb_image.c			1.12
+
+	PR 57859: fix "option SPLASHSCREEN".
+	[hgutch, ticket #1149]
+
+sys/netipsec/ipsec_input.c			1.82
+
+	ipsec: fix "no key association" log.
+	[knakahara, ticket #1150]
+
+sys/netbt/hci.h					1.47
+
+	blutooth: fix definition of Sniff Subrating command.
+	[plunky, ticket #1151]
+
+share/man/man7/hier.7				1.145
+
+	hier(7): add entry for /var/shm.
+	[kim, ticket #1152]
+
+distrib/sets/lists/man/mi			1.1810 (adapted)
+share/man/man4/Makefile				1.748
+share/man/man4/genet.4				1.1,1.2
+
+	genet(4): add man page.
+	[wiz, ticket #1153]
+
+sys/net/nd.c					1.8
+tests/net/arp/t_arp.sh				1.49
+
+	nd: PR 59596: fix the number of requests for address resolution.
+	[ozaki-r, ticket #1154]
+
+distrib/miniroot/install.sh			1.29
+
+	sun3: place a ptyfs instance into the newly-written /etc/fstab,
+	so that e.g. sshd works out of the box after installation.
+	[thorpej, ticket #1155]
+
+sys/arch/arm/cortex/gicv3.c			1.55,1.56
+
+	gicv3: Appease KUBSAN (avoid undefined left-shift out of range).
+	[rin, ticket #1156]
+
+external/gpl3/binutils/dist/gas/config/tc-vax.c	1.22
+
+	vax: gas: PR 59326: use GOT for pointer for global function
+	in same file, instead of PLT.
+	[rin, ticket #1157]
+
+sys/dev/usb/if_urtwn.c				1.113-1.117
+
+	urtwn(4): fix possible buffer overflow,
+	use the right packet spacing for the 8192EU,
+	fix an xfer leak in the tx error path.
+	[nat, ticket #1158]
+
+sys/dev/usb/xhci.c				1.190
+
+	xhci(4): handle special case of USBD_FORCE_SHORT_XFER.
+	[nat, ticket #1159]
+
+sys/dev/hdaudio/hdaudiodevs			1.13
+sys/dev/hdaudio/hdaudiodevs.h			(regen)
+sys/dev/hdaudio/hdaudiodevs_data.h		(regen)
+
+	hdaudio(4): add NVIDIA GK208, REALTEK ALC897
+	[nia, ticket #1160]
+
+sys/arch/hppa/hppa/trap.c			1.124-1.128
+
+	hppa: fix inverted logic around probe access vs probe access immediate
+	instructions and cleanup.
+	[skrll, ticket #1161]
+
+usr.bin/elf2ecoff/elf2ecoff.c			1.34-1.38
+
+	elf2ecoff(1): PR 59234: fix buffer overflow.
+	[tsutsui, ticket #1162]
+
+external/cddl/osnet/dist/tools/ctf/cvt/ctfconvert.c 1.7
+external/cddl/osnet/dist/tools/ctf/cvt/fixup_tdescs.c 1.8,1.9
+
+	ctfconvert(1): PR 59659: make the tool version behave the same
+	way as the native.
+	[ozaki-r, ticket #1163]
+
+sys/dev/vmt/vmt_subr.c				1.11
+sys/net/if.c					1.532,1.533
+sys/net/if.h					1.307
+sys/net/if_spppsubr.c				1.270,1.271
+sys/net/link_proto.c				1.41
+sys/netinet/in_var.h				1.104
+sys/netinet/ip_icmp.c				1.180
+sys/netinet6/in6.c				1.293
+sys/netinet6/in6_var.h				1.105,1.106
+sys/netinet6/mld6.c				1.102
+sys/netinet6/nd6.c				1.284
+
+	Introduce if_first_addr(), in6ifa_first_lladdr()
+	and psref variants.
+	[ozaki-r, ticket #1164]
+
+bin/sh/mkoptions.sh				1.6-1.9
+bin/sh/option.list				1.12
+
+	sh(1): PR 59646: improve portability of option code generation
+	[kre, ticket #1165]
+
+sys/arch/arm/arm32/bus_dma.c			1.142,1.150
+sys/arch/arm/include/cpufunc.h			1.92
+
+	arm: PR 59654: adjust barriers issued in bus_dmamap_sync for
+	the coherent case.
+	[skrll, ticket #1166]
+
+share/man/man3/intro.3				1.37,1.38
+
+	intro(3): PR 59676: remove reference to non-existent -lhesiod.
+	[uwe, ticket #1167]
+
+sys/arch/amd64/amd64/locore.S			1.231-1.233 (patch)
+sys/arch/i386/i386/locore.S			1.202-1.204 (patch)
+sys/arch/i386/i386/genassym.cf			1.136 (partial, patch)
+sys/arch/xen/xen/hypervisor.c			1.100 (patch)
+
+	xen: fix PVH bootstrap code, don't assume the hvm_start_info
+	structure is at the end of the symbol table.
+	Fixes PVH dom0 boot under Xen 4.20.
+	[bouyer, ticket #1168]
+
+sys/dev/usb/ehci.c				1.333 (patch)
+
+	ehci(4): fix device-probe for some machines.
+	[rin, ticket #1169]
 
